@@ -21,6 +21,12 @@ type Point struct {
 	y *big.Int
 }
 
+//KeyPair contains secret and public keys for ElGamal cryptosystem
+type KeyPair struct {
+	secretKey *big.Int
+	publicKey Point
+}
+
 // creating big random value of type big int
 func randBigInt(E elliptic.Curve) *big.Int {
 	max := E.Params().P
@@ -36,6 +42,18 @@ func generateMessage(Ep *elliptic.CurveParams) Point {
 	byteY := y.Bytes()
 	Mx, My := Ep.ScalarMult(Ep.Gx, Ep.Gy, byteY)
 	return Point{Mx, My}
+}
+
+//generate new secret and public keys
+func generateKeyPair(E elliptic.Curve) KeyPair {
+	var Ep = E.Params()
+	//secret key
+	x := randBigInt(Ep)
+	byteX := x.Bytes()
+	//public key
+	Qx, Qy := Ep.ScalarMult(Ep.Gx, Ep.Gy, byteX)
+	var keyPair = KeyPair{x, Point{Qx, Qy}}
+	return keyPair
 }
 
 //encrypt message
@@ -75,26 +93,22 @@ func main() {
 	// creating elliptic curve
 	E := elliptic.P256()
 	Ep := E.Params()
-	//secret key
-	x := randBigInt(Ep)
-	Bytex := x.Bytes()
-	//public key
-	Qx, Qy := Ep.ScalarMult(Ep.Gx, Ep.Gy, Bytex)
-	var Q = Point{Qx, Qy}
+	// generating key
+	var key = generateKeyPair(E)
 	//1.
 	var M Point
 	var C [1]Ciphertext
 	for i := 0; i < 1; i++ {
 		M = generateMessage(Ep)
 		fmt.Println(M.x, M.y)
-		C[i] = encrypt(Ep, M, Q)
+		C[i] = encrypt(Ep, M, key.publicKey)
 	}
 	//3. calculate `C = (A, B)`
 	var genC Ciphertext
 	genC = aggregateMessage(Ep, C)
 	//5. Decrypt M
 	var newM Point
-	newM = decrypt(Ep, genC, x)
+	newM = decrypt(Ep, genC, key.secretKey)
 	fmt.Println(newM.x, newM.y)
 
 }
