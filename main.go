@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
 	"fmt"
 	"math/big"
 )
@@ -19,6 +20,10 @@ type Point struct {
 type Ciphertext struct {
 	A Point
 	B Point
+}
+type ZKproof struct {
+	e *big.Int
+	z *big.Int
 }
 
 //KeyPair contains secret and public keys for ElGamal cryptosystem
@@ -65,7 +70,7 @@ func (p *Participant) generateKeyPair(E elliptic.Curve) KeyPair {
 }
 
 //encrypt message
-func encrypt(Ep *elliptic.CurveParams, M Point, Q Point) Ciphertext {
+func encrypt(Ep *elliptic.CurveParams, M Point, Q Point) (Ciphertext, ZKproof) {
 	var r *big.Int
 	r = randBigInt(Ep)
 	byteR := r.Bytes()
@@ -75,7 +80,8 @@ func encrypt(Ep *elliptic.CurveParams, M Point, Q Point) Ciphertext {
 	A := Point{Ax, Ay}
 	B := Point{Bx, By}
 	var C = Ciphertext{A, B}
-	return C
+	var dlk = DLK(Ep, A, r)
+	return C, dlk
 }
 
 func aggregateMessage(Ep *elliptic.CurveParams, C [1]Ciphertext) Ciphertext {
@@ -119,6 +125,28 @@ func (p Participant) partialDecrypt(E elliptic.Curve, C Ciphertext) Point {
 	return Point{x, y}
 }
 
+func DLK(Ep *elliptic.CurveParams, A Point, x *big.Int) ZKproof {
+	var dlk ZKproof
+	w := randBigInt(Ep)
+	Bytew := w.Bytes()
+	var H Point
+	var mul *big.Int
+	H.x, H.y = Ep.ScalarMult(Ep.Gx, Ep.Gy, Bytew)
+	e := sha256.New()
+	e.Write(Ep.Gx.Bytes())
+	e.Write(Ep.Gy.Bytes())
+	e.Write(A.x.Bytes())
+	e.Write(A.y.Bytes())
+	e.Write(H.x.Bytes())
+	e.Write(H.y.Bytes())
+	e2 := e.Sum(nil)
+	e1 := e2[:]
+	dlk.e = new(big.Int).SetBytes(e1)
+	mul = new(big.Int).Mul(x, dlk.e)
+	dlk.z = new(big.Int).Sub(w, mul)
+	return dlk
+}
+
 func main() {
 	//number of parties
 	const n = 3
@@ -147,9 +175,10 @@ func main() {
 	//Encrypt some message with the common key
 	var M Point
 	M = generateMessage(Ep)
-	fmt.Println(M.x, M.y)
-	fmt.Println(parties[0].commonKey.publicKey)
-	var C = encrypt(Ep, M, parties[0].commonKey.publicKey)
+	//fmt.Println(M.x, M.y)
+	//fmt.Println(parties[0].commonKey.publicKey)
+	var C, Cdlk = encrypt(Ep, M, parties[0].commonKey.publicKey)
+	fmt.Println(C, Cdlk)
 	/*var C [n]Ciphertext
 	for i := 0; i < n; i++ {
 		M = generateMessage(Ep)
