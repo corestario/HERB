@@ -22,6 +22,7 @@ type Ciphertext struct {
 	B Point
 }
 type ZKproof struct {
+	Q Point
 	e *big.Int
 	z *big.Int
 }
@@ -144,7 +145,30 @@ func DLK(Ep *elliptic.CurveParams, A Point, x *big.Int) ZKproof {
 	dlk.e = new(big.Int).SetBytes(e1)
 	mul = new(big.Int).Mul(x, dlk.e)
 	dlk.z = new(big.Int).Sub(w, mul)
+	dlk.Q = A
 	return dlk
+}
+func checkDLK(Ep *elliptic.CurveParams, dl ZKproof) bool {
+	var H1, temp1, temp2 Point
+	var check = false
+	negz := new(big.Int).Mod(dl.z, Ep.N)
+	temp1.x, temp1.y = Ep.ScalarMult(Ep.Gx, Ep.Gy, negz.Bytes())
+	temp2.x, temp2.y = Ep.ScalarMult(dl.Q.x, dl.Q.y, dl.e.Bytes())
+	H1.x, H1.y = Ep.Add(temp1.x, temp1.y, temp2.x, temp2.y)
+	e := sha256.New()
+	e.Write(Ep.Gx.Bytes())
+	e.Write(Ep.Gy.Bytes())
+	e.Write(dl.Q.x.Bytes())
+	e.Write(dl.Q.y.Bytes())
+	e.Write(H1.x.Bytes())
+	e.Write(H1.y.Bytes())
+	e2 := e.Sum(nil)
+	e1 := e2[:]
+	temp := new(big.Int).SetBytes(e1)
+	if temp.Cmp(dl.e) == 0 {
+		check = true
+	}
+	return check
 }
 
 func main() {
@@ -178,7 +202,7 @@ func main() {
 	//fmt.Println(M.x, M.y)
 	//fmt.Println(parties[0].commonKey.publicKey)
 	var C, Cdlk = encrypt(Ep, M, parties[0].commonKey.publicKey)
-	fmt.Println(C, Cdlk)
+	fmt.Println(checkDLK(Ep, Cdlk))
 	/*var C [n]Ciphertext
 	for i := 0; i < n; i++ {
 		M = generateMessage(Ep)
