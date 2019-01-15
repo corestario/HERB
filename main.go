@@ -192,6 +192,33 @@ func DLE(Ep *elliptic.CurveParams, Y, T, Z Point, x *big.Int) (ZKproof, Point, P
 	dle.z = new(big.Int).Sub(w, mul)
 	return dle, Y, Z
 }
+func checkDLE(Ep *elliptic.CurveParams, dl ZKproof, Y, T, Z Point) bool {
+	var A1, A2, temp1, temp2 Point
+	var check = false
+	negz := new(big.Int).Mod(dl.z, Ep.N)
+	temp1.x, temp1.y = Ep.ScalarMult(T.x, T.y, negz.Bytes())
+	temp2.x, temp2.y = Ep.ScalarMult(Y.x, Y.y, dl.e.Bytes())
+	A1.x, A1.y = Ep.Add(temp1.x, temp1.y, temp2.x, temp2.y)
+	temp1.x, temp1.y = Ep.ScalarMult(Ep.Gx, Ep.Gy, negz.Bytes())
+	temp2.x, temp2.y = Ep.ScalarMult(Z.x, Z.y, dl.e.Bytes())
+	A2.x, A2.y = Ep.Add(temp1.x, temp1.y, temp2.x, temp2.y)
+	e := sha256.New()
+	e.Write(Y.x.Bytes())
+	e.Write(Y.y.Bytes())
+	e.Write(Z.x.Bytes())
+	e.Write(Z.y.Bytes())
+	e.Write(A1.x.Bytes())
+	e.Write(A1.y.Bytes())
+	e.Write(A2.x.Bytes())
+	e.Write(A2.y.Bytes())
+	e2 := e.Sum(nil)
+	e1 := e2[:]
+	temp := new(big.Int).SetBytes(e1)
+	if temp.Cmp(dl.e) == 0 {
+		check = true
+	}
+	return check
+}
 
 func main() {
 	//number of parties
@@ -230,7 +257,8 @@ func main() {
 	var AA, BB Point
 	AA.x, AA.y = Ep.ScalarMult(A.x, A.y, xx.Bytes())
 	BB.x, BB.y = Ep.ScalarMult(Ep.Gx, Ep.Gy, xx.Bytes())
-	fmt.Println(DLE(Ep, AA, A, BB, xx))
+	var dle, Y, Z = DLE(Ep, AA, A, BB, xx)
+	fmt.Println(checkDLE(Ep, dle, Y, A, Z))
 	/*var C [n]Ciphertext
 	for i := 0; i < n; i++ {
 		M = generateMessage(Ep)
