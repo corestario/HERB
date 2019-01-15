@@ -22,7 +22,6 @@ type Ciphertext struct {
 	B Point
 }
 type ZKproof struct {
-	Q Point
 	e *big.Int
 	z *big.Int
 }
@@ -71,7 +70,7 @@ func (p *Participant) generateKeyPair(E elliptic.Curve) KeyPair {
 }
 
 //encrypt message
-func encrypt(Ep *elliptic.CurveParams, M Point, Q Point) (Ciphertext, ZKproof) {
+func encrypt(Ep *elliptic.CurveParams, M Point, Q Point) (Ciphertext, ZKproof, Point) {
 	var r *big.Int
 	r = randBigInt(Ep)
 	byteR := r.Bytes()
@@ -81,8 +80,8 @@ func encrypt(Ep *elliptic.CurveParams, M Point, Q Point) (Ciphertext, ZKproof) {
 	A := Point{Ax, Ay}
 	B := Point{Bx, By}
 	var C = Ciphertext{A, B}
-	var dlk = DLK(Ep, A, r)
-	return C, dlk
+	var dlk, A1 = DLK(Ep, A, r)
+	return C, dlk, A1
 }
 
 func aggregateMessage(Ep *elliptic.CurveParams, C [1]Ciphertext) Ciphertext {
@@ -126,7 +125,7 @@ func (p Participant) partialDecrypt(E elliptic.Curve, C Ciphertext) Point {
 	return Point{x, y}
 }
 
-func DLK(Ep *elliptic.CurveParams, A Point, x *big.Int) ZKproof {
+func DLK(Ep *elliptic.CurveParams, A Point, x *big.Int) (ZKproof, Point) {
 	var dlk ZKproof
 	w := randBigInt(Ep)
 	Bytew := w.Bytes()
@@ -145,21 +144,20 @@ func DLK(Ep *elliptic.CurveParams, A Point, x *big.Int) ZKproof {
 	dlk.e = new(big.Int).SetBytes(e1)
 	mul = new(big.Int).Mul(x, dlk.e)
 	dlk.z = new(big.Int).Sub(w, mul)
-	dlk.Q = A
-	return dlk
+	return dlk, A
 }
-func checkDLK(Ep *elliptic.CurveParams, dl ZKproof) bool {
+func checkDLK(Ep *elliptic.CurveParams, dl ZKproof, A Point) bool {
 	var H1, temp1, temp2 Point
 	var check = false
 	negz := new(big.Int).Mod(dl.z, Ep.N)
 	temp1.x, temp1.y = Ep.ScalarMult(Ep.Gx, Ep.Gy, negz.Bytes())
-	temp2.x, temp2.y = Ep.ScalarMult(dl.Q.x, dl.Q.y, dl.e.Bytes())
+	temp2.x, temp2.y = Ep.ScalarMult(A.x, A.y, dl.e.Bytes())
 	H1.x, H1.y = Ep.Add(temp1.x, temp1.y, temp2.x, temp2.y)
 	e := sha256.New()
 	e.Write(Ep.Gx.Bytes())
 	e.Write(Ep.Gy.Bytes())
-	e.Write(dl.Q.x.Bytes())
-	e.Write(dl.Q.y.Bytes())
+	e.Write(A.x.Bytes())
+	e.Write(A.y.Bytes())
 	e.Write(H1.x.Bytes())
 	e.Write(H1.y.Bytes())
 	e2 := e.Sum(nil)
@@ -169,6 +167,30 @@ func checkDLK(Ep *elliptic.CurveParams, dl ZKproof) bool {
 		check = true
 	}
 	return check
+}
+func DLE(Ep *elliptic.CurveParams, Y, T, Z Point, x *big.Int) (ZKproof, Point, Point) {
+	var dle ZKproof
+	w := randBigInt(Ep)
+	Bytew := w.Bytes()
+	var A1, A2 Point
+	var mul *big.Int
+	A1.x, A1.y = Ep.ScalarMult(T.x, T.y, Bytew)
+	A2.x, A2.y = Ep.ScalarMult(Ep.Gx, Ep.Gy, Bytew)
+	e := sha256.New()
+	e.Write(Y.x.Bytes())
+	e.Write(Y.y.Bytes())
+	e.Write(Z.x.Bytes())
+	e.Write(Z.y.Bytes())
+	e.Write(A1.x.Bytes())
+	e.Write(A1.y.Bytes())
+	e.Write(A2.x.Bytes())
+	e.Write(A2.y.Bytes())
+	e2 := e.Sum(nil)
+	e1 := e2[:]
+	dle.e = new(big.Int).SetBytes(e1)
+	mul = new(big.Int).Mul(x, dle.e)
+	dle.z = new(big.Int).Sub(w, mul)
+	return dle, Y, Z
 }
 
 func main() {
@@ -201,8 +223,14 @@ func main() {
 	M = generateMessage(Ep)
 	//fmt.Println(M.x, M.y)
 	//fmt.Println(parties[0].commonKey.publicKey)
-	var C, Cdlk = encrypt(Ep, M, parties[0].commonKey.publicKey)
-	fmt.Println(checkDLK(Ep, Cdlk))
+	var C, Cdlk, A = encrypt(Ep, M, parties[0].commonKey.publicKey)
+	fmt.Println(checkDLK(Ep, Cdlk, A))
+	//create DLE for check. after delete
+	var xx = randBigInt(Ep)
+	var AA, BB Point
+	AA.x, AA.y = Ep.ScalarMult(A.x, A.y, xx.Bytes())
+	BB.x, BB.y = Ep.ScalarMult(Ep.Gx, Ep.Gy, xx.Bytes())
+	fmt.Println(DLE(Ep, AA, A, BB, xx))
 	/*var C [n]Ciphertext
 	for i := 0; i < n; i++ {
 		M = generateMessage(Ep)
