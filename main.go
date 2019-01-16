@@ -74,11 +74,10 @@ func encrypt(Ep *elliptic.CurveParams, M Point, Q Point) (Ciphertext, ZKproof, P
 	var r *big.Int
 	r = randBigInt(Ep)
 	byteR := r.Bytes()
-	var Ax, Ay = Ep.ScalarMult(Ep.Gx, Ep.Gy, byteR)
-	var Bx, By = Ep.ScalarMult(Q.x, Q.y, byteR)
-	Bx, By = Ep.Add(M.x, M.y, Bx, By)
-	A := Point{Ax, Ay}
-	B := Point{Bx, By}
+	var A, B Point
+	A.x, A.y = Ep.ScalarMult(Ep.Gx, Ep.Gy, byteR)
+	B = Q.mult(Ep, r)
+	B = B.add(Ep, M)
 	var C = Ciphertext{A, B}
 	var dlk, A1 = DLK(Ep, A, r)
 	return C, dlk, A1
@@ -113,6 +112,11 @@ func (p1 Point) add(E elliptic.Curve, p2 Point) Point {
 func (p1 Point) neg() Point {
 	var y = p1.y.Neg(p1.y)
 	return Point{p1.x, y}
+}
+
+func (p1 Point) mult(E elliptic.Curve, t *big.Int) Point {
+	x, y := E.ScalarMult(p1.x, p1.y, t.Bytes())
+	return Point{x, y}
 }
 
 func (firstKey KeyPair) publicKeyAdd(E elliptic.Curve, secondKey KeyPair) KeyPair {
