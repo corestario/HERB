@@ -12,23 +12,25 @@ func main() {
 	n := 3
 	// creating elliptic curve
 	E := elliptic.P256()
-	Ep := E.Params()
 	//generating key
 	parties := eg.DKG(E, n)
-	//Any system user generates some message and publishes it
+	//Any system user generates some message, enctrypts and publishes it
 	//We use our validators set (parties) just for example
-	publishedMessages := make([]eg.Point, n)
-	for i := range publishedMessages {
-		publishedMessages[i] = eg.GeneratePoint(E)
+	publishedCiphertextes := make([]eg.Ciphertext, n)
+	var newMessage eg.Point
+	for i := range publishedCiphertextes {
+		newMessage = eg.GeneratePoint(E)
+		publishedCiphertextes[i] = parties[i].Encrypt(E, newMessage)
 	}
-	M := eg.GeneratePoint(E)
-	C := parties[0].Encrypt(Ep, M)
+	//aggregate all ciphertextes
+	commonCiphertext := eg.AggregateCiphertext(E, publishedCiphertextes)
 	//fmt.Println(eg.VerifyDLK(Ep, Cdlk, A))
+
+	//decrypt the random
 	decryptParts := make([]eg.Point, n)
 	for i := range parties {
-		decryptParts[i] = parties[i].PartialDecrypt(E, C)
+		decryptParts[i] = parties[i].PartialDecrypt(E, commonCiphertext)
 	}
-	newM := eg.DecryptFromShares(E, decryptParts, C)
+	newM := eg.DecryptFromShares(E, decryptParts, commonCiphertext)
 	fmt.Println(newM.X(), newM.Y())
-	fmt.Println(M.X(), M.Y())
 }
