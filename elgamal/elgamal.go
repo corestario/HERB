@@ -41,6 +41,10 @@ type Participant struct {
 	ID         int
 }
 
+///////
+//Point-related functions
+///////
+
 //X coordinate of the point p
 func (p *Point) X() big.Int {
 	return *p.x
@@ -50,6 +54,25 @@ func (p *Point) X() big.Int {
 func (p *Point) Y() big.Int {
 	return *p.y
 }
+
+func (p Point) add(E elliptic.Curve, p2 Point) Point {
+	x, y := E.Params().Add(p.x, p.y, p2.x, p2.y)
+	return Point{x, y}
+}
+
+func (p Point) neg() Point {
+	var y = p.y.Neg(p.y)
+	return Point{p.x, y}
+}
+
+func (p Point) scalarMult(E elliptic.Curve, t *big.Int) Point {
+	x, y := E.ScalarMult(p.x, p.y, t.Bytes())
+	return Point{x, y}
+}
+
+///////
+//
+///////
 
 //randBigInt creates big random value in the Fp - curve's field
 func randBigInt(E elliptic.Curve) *big.Int {
@@ -88,19 +111,20 @@ func (p *Participant) Encrypt(E elliptic.Curve, M Point) Ciphertext {
 	//A = rG
 	A.x, A.y = Ep.ScalarMult(Ep.Gx, Ep.Gy, r.Bytes())
 	//B = rQ + M
-	B = p.CommonKey.ScalarMult(Ep, r)
-	B = B.Add(Ep, M)
+	B = p.CommonKey.scalarMult(Ep, r)
+	B = B.add(Ep, M)
 	var C = Ciphertext{A, B}
 	//var dlk, A1 = ProofDLK(Ep, A, r)
 	return C
 }
 
 //Decrypt the ciphertext C with the key x
+//Currently not in use
 func decrypt(E elliptic.Curve, C Ciphertext, x *big.Int) Point {
-	temp := C.A.ScalarMult(E, x)
+	temp := C.A.scalarMult(E, x)
 	temp.y = temp.y.Neg(temp.y)
 	//M = B - xA
-	M := C.B.Add(E, temp)
+	M := C.B.add(E, temp)
 	return M
 }
 
@@ -110,9 +134,9 @@ func DecryptFromShares(E elliptic.Curve, shares []Point, C Ciphertext) Point {
 	n := len(shares)
 	decryptKey := shares[0]
 	for i := 1; i < n; i++ {
-		decryptKey = decryptKey.Add(E, shares[i])
+		decryptKey = decryptKey.add(E, shares[i])
 	}
-	M := C.B.Add(E, decryptKey.Neg())
+	M := C.B.add(E, decryptKey.neg())
 	return M
 }
 
@@ -133,39 +157,19 @@ func AggregateCiphertext(E elliptic.Curve, parts []Ciphertext) Ciphertext {
 			C.A = parts[0].A
 			C.B = parts[0].B
 		} else {
-			C.A = C.A.Add(E, parts[0].A)
-			C.B = C.B.Add(E, parts[0].B)
+			C.A = C.A.add(E, parts[0].A)
+			C.B = C.B.add(E, parts[0].B)
 		}
 	}
 	return C
 }
-
-func (p1 Point) Add(E elliptic.Curve, p2 Point) Point {
-	x, y := E.Params().Add(p1.x, p1.y, p2.x, p2.y)
-	return Point{x, y}
-}
-
-func (p1 Point) Neg() Point {
-	var y = p1.y.Neg(p1.y)
-	return Point{p1.x, y}
-}
-
-func (p1 Point) ScalarMult(E elliptic.Curve, t *big.Int) Point {
-	x, y := E.ScalarMult(p1.x, p1.y, t.Bytes())
-	return Point{x, y}
-}
-
-/*func CurveGenerator(ec elliptic.Curve) Point {
-	Ep := ec.Params()
-	return Point{Ep.Gx, Ep.Gy}
-}*/
 
 //PublicKeyRecover recovers common public key from partial keys of participants
 func PublicKeyRecover(E elliptic.Curve, keys []Point) Point {
 	n := len(keys)
 	result := keys[0]
 	for i := 1; i < n; i++ {
-		result = result.Add(E, keys[i])
+		result = result.add(E, keys[i])
 	}
 	return result
 }
@@ -175,6 +179,8 @@ func (p Participant) PartialDecrypt(E elliptic.Curve, C Ciphertext) Point {
 	var x, y = E.ScalarMult(C.A.x, C.A.y, p.PartialKey.SecretKey.Bytes())
 	return Point{x, y}
 }
+
+//Proofs currently not in use
 
 //ProofDLK creates discrete logarithm knowledge proof for A = xG
 func ProofDLK(Ep *elliptic.CurveParams, A Point, x *big.Int) (ZKproof, Point) {
