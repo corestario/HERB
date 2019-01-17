@@ -41,6 +41,16 @@ type Participant struct {
 	ID         int
 }
 
+//X coordinate of the point p
+func (p *Point) X() big.Int {
+	return *p.x
+}
+
+//Y coordinate of the point p
+func (p *Point) Y() big.Int {
+	return *p.y
+}
+
 //randBigInt creates big random value in the Fp - curve's field
 func randBigInt(E elliptic.Curve) *big.Int {
 	max := E.Params().P
@@ -94,6 +104,18 @@ func decrypt(E elliptic.Curve, C Ciphertext, x *big.Int) Point {
 	return M
 }
 
+//DecryptFromShares takes decrypt parts (shares) from all participants and decrypt the ciphertext C
+func DecryptFromShares(E elliptic.Curve, shares []Point, C Ciphertext) Point {
+	//aggregating all parts
+	n := len(shares)
+	decryptKey := shares[0]
+	for i := 1; i < n; i++ {
+		decryptKey = decryptKey.Add(E, shares[i])
+	}
+	M := C.B.Add(E, decryptKey.Neg())
+	return M
+}
+
 //IsValidCiphertext return true if both part of the ciphertext C on the curve E.
 func IsValidCiphertext(C Ciphertext, E elliptic.Curve) bool {
 	statement1 := E.IsOnCurve(C.A.x, C.A.y)
@@ -133,21 +155,28 @@ func (p1 Point) ScalarMult(E elliptic.Curve, t *big.Int) Point {
 	return Point{x, y}
 }
 
-func CurveGenerator(ec elliptic.Curve) Point {
+/*func CurveGenerator(ec elliptic.Curve) Point {
 	Ep := ec.Params()
 	return Point{Ep.Gx, Ep.Gy}
+}*/
+
+//PublicKeyRecover recovers common public key from partial keys of participants
+func PublicKeyRecover(E elliptic.Curve, keys []Point) Point {
+	n := len(keys)
+	result := keys[0]
+	for i := 1; i < n; i++ {
+		result = result.Add(E, keys[i])
+	}
+	return result
 }
 
-func (firstKey KeyPair) PublicKeyAdd(E elliptic.Curve, secondKey KeyPair) KeyPair {
-	result := firstKey.PublicKey.Add(E, secondKey.PublicKey)
-	return KeyPair{firstKey.SecretKey, result}
-}
-
+//PartialDecrypt returns share of the decryption key for the particular ciphertext C
 func (p Participant) PartialDecrypt(E elliptic.Curve, C Ciphertext) Point {
 	var x, y = E.ScalarMult(C.A.x, C.A.y, p.PartialKey.SecretKey.Bytes())
 	return Point{x, y}
 }
 
+//ProofDLK creates discrete logarithm knowledge proof for A = xG
 func ProofDLK(Ep *elliptic.CurveParams, A Point, x *big.Int) (ZKproof, Point) {
 	var dlk ZKproof
 	w := randBigInt(Ep)
@@ -169,6 +198,8 @@ func ProofDLK(Ep *elliptic.CurveParams, A Point, x *big.Int) (ZKproof, Point) {
 	dlk.Z = new(big.Int).Sub(w, mul)
 	return dlk, A
 }
+
+//VerifyDLK verify discrete logarithm knowledge proof for A = xG
 func VerifyDLK(Ep *elliptic.CurveParams, dl ZKproof, A Point) bool {
 	var H1, temp1, temp2 Point
 	var check = false
@@ -191,6 +222,7 @@ func VerifyDLK(Ep *elliptic.CurveParams, dl ZKproof, A Point) bool {
 	}
 	return check
 }
+
 func ProofDLE(Ep *elliptic.CurveParams, Y, T, Z Point, x *big.Int) (ZKproof, Point, Point) {
 	var dle ZKproof
 	w := randBigInt(Ep)
@@ -249,16 +281,15 @@ func DKG(E elliptic.Curve, n int) []Participant {
 	for i := 0; i < n; i++ {
 		//each participant generates partial key
 		parties[i].GenerateKeyPair(E)
-		//then he publishes partialKey.publicKey and everyone knows the public key of i-th participant
 	}
-	//generating common public key as sum of all partial keys
-	commonKey := Point{parties[0].PartialKey.PublicKey.x, parties[0].PartialKey.PublicKey.y}
-	for i := 1; i < n; i++ {
-		commonKey = commonKey.Add(E, parties[i].PartialKey.PublicKey)
+	//then each party publishes partialKey.publicKey and everyone knows the public key of i-th participant
+	partialPublicKeys := make([]Point, n)
+	for i := range parties {
+		partialPublicKeys[i] = parties[i].PartialKey.PublicKey
 	}
-	//each participant saves new common key
+	//each participant generates common public key from partial keys
 	for i := 0; i < n; i++ {
-		parties[i].CommonKey = commonKey
+		parties[i].CommonKey = PublicKeyRecover(E, partialPublicKeys)
 	}
 
 	return parties

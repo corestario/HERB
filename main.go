@@ -22,20 +22,13 @@ func main() {
 		publishedMessages[i] = eg.GeneratePoint(E)
 	}
 	M := eg.GeneratePoint(E)
-	//fmt.Println(M.x, M.y)
-	fmt.Println(parties[0].CommonKey)
 	C := parties[0].Encrypt(Ep, M)
 	//fmt.Println(eg.VerifyDLK(Ep, Cdlk, A))
 	decryptParts := make([]eg.Point, n)
 	for i := range parties {
 		decryptParts[i] = parties[i].PartialDecrypt(E, C)
 	}
-	//aggregating all parts
-	decryptKey := decryptParts[0]
-	for i := 1; i < n; i++ {
-		decryptKey = decryptKey.Add(E, decryptParts[i])
-	}
-	//newM := C.B.Add(E, decryptKey.Neg())
-	//fmt.Println(newM.X, newM.Y)
-
+	newM := eg.DecryptFromShares(E, decryptParts, C)
+	fmt.Println(newM.X(), newM.Y())
+	fmt.Println(M.X(), M.Y())
 }
