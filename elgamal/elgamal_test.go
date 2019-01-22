@@ -54,7 +54,9 @@ func Test_Elgamal_Positive(t *testing.T) {
 	newM := DecryptFromShares(E, decryptParts, commonCiphertext)
 	fmt.Println(newM.X(), newM.Y())
 
-	deepEqual(t, decryptParts, newMessages)
+	expectedMessage := AggregateKeysToPoint(E, newMessages)
+
+	deepEqual(t, newM, expectedMessage)
 }
 
 func deepEqual(t *testing.T, obtained, expected interface{}) {
