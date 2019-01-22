@@ -4,7 +4,7 @@ import (
 	"crypto/elliptic"
 	"fmt"
 
-	eg "github.com/SK0M0R0H/HERB/elgamal"
+	eg "./elgamal"
 )
 
 func main() {
@@ -12,11 +12,14 @@ func main() {
 	n := 3
 	// creating elliptic curve
 	E := elliptic.P256()
+
 	//generating key
 	parties := eg.DKG(E, n)
+
 	//Any system user generates some message, enctrypts and publishes it
 	//We use our validators set (parties) just for example
 	publishedCiphertextes := make([]eg.Ciphertext, n)
+
 	var newMessage eg.Point
 	for i := range publishedCiphertextes {
 		newMessage = eg.GeneratePoint(E)
@@ -24,7 +27,7 @@ func main() {
 	}
 	//aggregate all ciphertextes
 	commonCiphertext := eg.AggregateCiphertext(E, publishedCiphertextes)
-	//fmt.Println(eg.VerifyDLK(Ep, Cdlk, A))
+	//fmt.Println(eg.VerifyDLK(Ep, Cdlk, a))
 
 	//decrypt the random
 	decryptParts := make([]eg.Point, n)
