@@ -11,7 +11,7 @@ import (
 )
 
 func Test_Elgamal_Positive(t *testing.T) {
-	testCases := []int{1,2,3,5,10,50,100,300}
+	testCases := []int{1, 2, 3, 5, 10, 50, 100, 300}
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("validators set %d", tc), func(t *testing.T) {
 			elgamalPositive(t, tc)
@@ -21,10 +21,10 @@ func Test_Elgamal_Positive(t *testing.T) {
 
 func elgamalPositive(t *testing.T, n int) {
 	// creating elliptic curve
-	E := elliptic.P256()
+	curve := elliptic.P256()
 
 	//generating key
-	parties := DKG(E, n)
+	parties := DKG(curve, n)
 
 	//Any system user generates some message, encrypts and publishes it
 	//We use our validators set (parties) just for example
@@ -32,37 +32,41 @@ func elgamalPositive(t *testing.T, n int) {
 
 	newMessages := make([]Point, n)
 	for i := range publishedCiphertextes {
-		newMessages[i] = GeneratePoint(E)
-		publishedCiphertextes[i] = parties[i].Encrypt(E, newMessages[i])
+		newMessages[i] = NewPoint(curve)
+		publishedCiphertextes[i] = parties[i].Encrypt(curve, newMessages[i])
 	}
 
 	for i := range publishedCiphertextes {
-		if !IsValidCiphertext(publishedCiphertextes[i], E) {
+		if !publishedCiphertextes[i].IsValid(curve) {
 			t.Errorf("Ciphertext is not valid: %v\nOriginal message: %v", publishedCiphertextes[i], newMessages[i])
 		}
 	}
 
 	//aggregate all ciphertextes
-	commonCiphertext := AggregateCiphertext(E, publishedCiphertextes)
+	commonCiphertext := AggregateCiphertext(curve, publishedCiphertextes)
 
-	if !IsValidCiphertext(commonCiphertext, E) {
+	if !commonCiphertext.IsValid(curve) {
 		t.Errorf("Common ciphertext is not valid: %v\nOriginal messages: %v", commonCiphertext, newMessages)
 	}
 
 	//decrypt the random
 	decryptParts := make([]Point, n)
 	for i := range parties {
-		decryptParts[i] = parties[i].PartialDecrypt(E, commonCiphertext)
+		decryptParts[i] = parties[i].PartialDecrypt(curve, commonCiphertext)
 	}
 
-	decryptedMessage := DecryptFromShares(E, decryptParts, commonCiphertext)
+	decryptedMessage := commonCiphertext.Decrypt(curve, decryptParts)
 
-	expectedMessage := AggregateKeysToPoint(E, newMessages)
+	expectedMessage := AggregateKeysToPoint(curve, newMessages)
 
 	deepEqual(t, decryptedMessage, expectedMessage)
 }
 
-func deepEqual(t *testing.T, obtained, expected interface{}) {
+type errorf interface {
+	Errorf(format string, args ...interface{})
+}
+
+func deepEqual(t errorf, obtained, expected interface{}) {
 	if !reflect.DeepEqual(obtained, expected) {
 		t.Errorf("... %s", diff(obtained, expected))
 	}
