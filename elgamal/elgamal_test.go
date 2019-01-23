@@ -11,9 +11,15 @@ import (
 )
 
 func Test_Elgamal_Positive(t *testing.T) {
-	//number of our participants (validators set)
-	n := 3
+	testCases := []int{1,2,3,5,10,50,100,300}
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("validators set %d", tc), func(t *testing.T) {
+			elgamalPositive(t, tc)
+		})
+	}
+}
 
+func elgamalPositive(t *testing.T, n int) {
 	// creating elliptic curve
 	E := elliptic.P256()
 
@@ -43,20 +49,17 @@ func Test_Elgamal_Positive(t *testing.T) {
 		t.Errorf("Common ciphertext is not valid: %v\nOriginal messages: %v", commonCiphertext, newMessages)
 	}
 
-	//fmt.Println(eg.VerifyDLK(Ep, Cdlk, a))
-
 	//decrypt the random
 	decryptParts := make([]Point, n)
 	for i := range parties {
 		decryptParts[i] = parties[i].PartialDecrypt(E, commonCiphertext)
 	}
 
-	newM := DecryptFromShares(E, decryptParts, commonCiphertext)
-	fmt.Println(newM.X(), newM.Y())
+	decryptedMessage := DecryptFromShares(E, decryptParts, commonCiphertext)
 
 	expectedMessage := AggregateKeysToPoint(E, newMessages)
 
-	deepEqual(t, newM, expectedMessage)
+	deepEqual(t, decryptedMessage, expectedMessage)
 }
 
 func deepEqual(t *testing.T, obtained, expected interface{}) {
