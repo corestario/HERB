@@ -6,27 +6,26 @@ import (
 	"testing"
 )
 
-func BenchmarkElgamal(b *testing.B) {
+func BenchmarkElGamal(b *testing.B) {
 	testCases := []int{1, 2, 3, 5, 10, 50, 100, 300}
 	for _, tc := range testCases {
 		b.Run(fmt.Sprintf("validators set %d", tc), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				curve := elliptic.P256()
+				parties, curve := initElGamal(tc)
 
 				b.StartTimer()
-				decryptedMessage, newMessages := elgamalBench(b, tc, curve)
+				decryptedMessage, newMessages := elGamalBench(parties, curve)
 				b.StopTimer()
 
-				expectedMessage := AggregateKeysToPoint(curve, newMessages)
+				expectedMessage := RecoverPoint(curve, newMessages)
 				deepEqual(b, decryptedMessage, expectedMessage)
 			}
 		})
 	}
 }
 
-func elgamalBench(b *testing.B, n int, curve elliptic.Curve) (Point, []Point) {
-	//generating key
-	parties := DKG(curve, n)
+func elGamalBench(parties []Participant, curve elliptic.Curve) (Point, []Point) {
+	n := len(parties)
 
 	//Any system user generates some message, encrypts and publishes it
 	//We use our validators set (parties) just for example

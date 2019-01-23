@@ -20,6 +20,21 @@ func NewPoint(curve elliptic.Curve) (pointM Point) {
 	return
 }
 
+//RecoverPoint recovers common public key from partial keys of participants
+func RecoverPoint(curve elliptic.Curve, keys []Point) Point {
+	if len(keys) == 0 {
+		//fixme: is it a correct return value?
+		return Point{}
+	}
+
+	result := keys[0]
+	for i := 1; i < len(keys); i++ {
+		result = result.add(curve, keys[i])
+	}
+
+	return result
+}
+
 //X coordinate of the point p
 func (p Point) X() big.Int {
 	return *p.x

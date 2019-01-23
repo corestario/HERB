@@ -6,7 +6,7 @@ import "crypto/elliptic"
 type Participant struct {
 	PartialKey KeyPair
 	CommonKey  Point
-	ID         int
+	Is         int
 }
 
 //NewParticipant fill pair of secret and public key into the participant p.

@@ -10,21 +10,26 @@ import (
 	"github.com/kr/pretty"
 )
 
-func Test_Elgamal_Positive(t *testing.T) {
+func Test_ElGamal_Positive(t *testing.T) {
 	testCases := []int{1, 2, 3, 5, 10, 50, 100, 300}
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("validators set %d", tc), func(t *testing.T) {
-			elgamalPositive(t, tc)
+			parties, curve := initElGamal(tc)
+			elGamalPositive(t, parties, curve)
 		})
 	}
 }
 
-func elgamalPositive(t *testing.T, n int) {
+func initElGamal(n int) ([]Participant, elliptic.Curve) {
 	// creating elliptic curve
 	curve := elliptic.P256()
 
 	//generating key
-	parties := DKG(curve, n)
+	return DKG(curve, n), curve
+}
+
+func elGamalPositive(t *testing.T, parties []Participant, curve elliptic.Curve) {
+	n := len(parties)
 
 	//Any system user generates some message, encrypts and publishes it
 	//We use our validators set (parties) just for example
@@ -57,7 +62,7 @@ func elgamalPositive(t *testing.T, n int) {
 
 	decryptedMessage := commonCiphertext.Decrypt(curve, decryptParts)
 
-	expectedMessage := AggregateKeysToPoint(curve, newMessages)
+	expectedMessage := RecoverPoint(curve, newMessages)
 
 	deepEqual(t, decryptedMessage, expectedMessage)
 }
