@@ -13,7 +13,6 @@ type ZKproof struct {
 	Z *big.Int
 }
 
-
 //Proofs currently not in use
 
 //ProofDLK creates discrete logarithm knowledge proof for a = xG

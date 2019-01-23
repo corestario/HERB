@@ -32,9 +32,13 @@ func elGamalBench(parties []Participant, curve elliptic.Curve) (Point, []Point) 
 	publishedCiphertextes := make([]Ciphertext, n)
 
 	newMessages := make([]Point, n)
-	for i := range publishedCiphertextes {
-		newMessages[i] = NewPoint(curve)
-		publishedCiphertextes[i] = parties[i].Encrypt(curve, newMessages[i])
+
+	publishChan := publishMessages(parties, curve)
+	for publishedMessage := range publishChan {
+		i := publishedMessage.id
+
+		newMessages[i] = publishedMessage.msg
+		publishedCiphertextes[i] = publishedMessage.published
 	}
 
 	//aggregate all ciphertextes
@@ -42,8 +46,10 @@ func elGamalBench(parties []Participant, curve elliptic.Curve) (Point, []Point) 
 
 	//decrypt the random
 	decryptParts := make([]Point, n)
-	for i := range parties {
-		decryptParts[i] = parties[i].PartialDecrypt(curve, commonCiphertext)
+	decrypted := decryptMessages(parties, curve, commonCiphertext)
+	for msg := range decrypted {
+		i := msg.id
+		decryptParts[i] = msg.msg
 	}
 
 	return commonCiphertext.Decrypt(curve, decryptParts), newMessages

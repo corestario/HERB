@@ -16,4 +16,3 @@ func randBigInt(curve elliptic.Curve) *big.Int {
 	//fixme we need to handle this err value somehow
 	return y
 }
-

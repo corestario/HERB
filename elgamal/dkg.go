@@ -7,7 +7,7 @@ func DKG(curve elliptic.Curve, n int) []Participant {
 	parties := make([]Participant, n)
 	for i := range parties {
 		//each participant generates partial key
-		parties[i] = NewParticipant(curve)
+		parties[i] = NewParticipant(curve, i)
 	}
 
 	//then each party publishes partialKey.publicKey and everyone knows the public key of i-th participant

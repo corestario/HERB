@@ -6,11 +6,11 @@ import "crypto/elliptic"
 type Participant struct {
 	PartialKey KeyPair
 	CommonKey  Point
-	Is         int
+	ID         int
 }
 
 //NewParticipant fill pair of secret and public key into the participant p.
-func NewParticipant(curve elliptic.Curve) Participant {
+func NewParticipant(curve elliptic.Curve, id int) Participant {
 	ep := curve.Params()
 	//secret key
 	x := randBigInt(ep)
@@ -19,7 +19,7 @@ func NewParticipant(curve elliptic.Curve) Participant {
 	qx, qy := ep.ScalarMult(ep.Gx, ep.Gy, x.Bytes())
 	keyPair := KeyPair{x, Point{qx, qy}}
 
-	return Participant{PartialKey: keyPair}
+	return Participant{PartialKey: keyPair, ID: id}
 }
 
 //Encrypt return encrypted message M and proof of t

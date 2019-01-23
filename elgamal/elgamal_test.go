@@ -5,6 +5,7 @@ import (
 	"crypto/elliptic"
 	"fmt"
 	"reflect"
+	"sync"
 	"testing"
 
 	"github.com/kr/pretty"
@@ -20,14 +21,6 @@ func Test_ElGamal_Positive(t *testing.T) {
 	}
 }
 
-func initElGamal(n int) ([]Participant, elliptic.Curve) {
-	// creating elliptic curve
-	curve := elliptic.P256()
-
-	//generating key
-	return DKG(curve, n), curve
-}
-
 func elGamalPositive(t *testing.T, parties []Participant, curve elliptic.Curve) {
 	n := len(parties)
 
@@ -36,9 +29,12 @@ func elGamalPositive(t *testing.T, parties []Participant, curve elliptic.Curve) 
 	publishedCiphertextes := make([]Ciphertext, n)
 
 	newMessages := make([]Point, n)
-	for i := range publishedCiphertextes {
-		newMessages[i] = NewPoint(curve)
-		publishedCiphertextes[i] = parties[i].Encrypt(curve, newMessages[i])
+	publishChan := publishMessages(parties, curve)
+	for publishedMessage := range publishChan {
+		i := publishedMessage.id
+
+		newMessages[i] = publishedMessage.msg
+		publishedCiphertextes[i] = publishedMessage.published
 	}
 
 	for i := range publishedCiphertextes {
@@ -56,8 +52,10 @@ func elGamalPositive(t *testing.T, parties []Participant, curve elliptic.Curve) 
 
 	//decrypt the random
 	decryptParts := make([]Point, n)
-	for i := range parties {
-		decryptParts[i] = parties[i].PartialDecrypt(curve, commonCiphertext)
+	decrypted := decryptMessages(parties, curve, commonCiphertext)
+	for msg := range decrypted {
+		i := msg.id
+		decryptParts[i] = msg.msg
 	}
 
 	decryptedMessage := commonCiphertext.Decrypt(curve, decryptParts)
@@ -89,4 +87,72 @@ func diff(obtained, expected interface{}) string {
 	}
 
 	return failMessage.String()
+}
+
+func initElGamal(n int) ([]Participant, elliptic.Curve) {
+	// creating elliptic curve
+	curve := elliptic.P256()
+
+	//generating key
+	return DKG(curve, n), curve
+}
+
+type publishedMessage struct {
+	id        int
+	msg       Point
+	published Ciphertext
+}
+
+func publishMessages(parties []Participant, curve elliptic.Curve) chan publishedMessage {
+	publish := make(chan publishedMessage, len(parties))
+
+	wg := sync.WaitGroup{}
+
+	go func() {
+		wg.Add(len(parties))
+
+		for i := range parties {
+			go func(id int) {
+				message := NewPoint(curve)
+				encryptedMessage := parties[id].Encrypt(curve, message)
+
+				publish <- publishedMessage{id, message, encryptedMessage}
+				wg.Done()
+			}(i)
+		}
+
+		wg.Wait()
+		close(publish)
+	}()
+
+	return publish
+}
+
+type decryptedMessage struct {
+	id  int
+	msg Point
+}
+
+func decryptMessages(parties []Participant, curve elliptic.Curve, commonCiphertext Ciphertext) chan decryptedMessage {
+	decrypted := make(chan decryptedMessage, len(parties))
+
+	wg := sync.WaitGroup{}
+
+	go func() {
+		wg.Add(len(parties))
+
+		for i := range parties {
+			go func(id int) {
+				decryptedMsg := parties[id].PartialDecrypt(curve, commonCiphertext)
+
+				decrypted <- decryptedMessage{id, decryptedMsg}
+				wg.Done()
+			}(i)
+		}
+
+		wg.Wait()
+		close(decrypted)
+	}()
+
+	return decrypted
 }
