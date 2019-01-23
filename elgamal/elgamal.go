@@ -201,20 +201,8 @@ func ProofDLK(ep *elliptic.CurveParams, pointA Point, x *big.Int) (ZKproof, Poin
 	var pointH Point
 	pointH.x, pointH.y = ep.ScalarMult(ep.Gx, ep.Gy, wBytes)
 
-	e := sha256.New()
-	e.Write(ep.Gx.Bytes())
-	e.Write(ep.Gy.Bytes())
-
-	e.Write(pointA.x.Bytes())
-	e.Write(pointA.y.Bytes())
-
-	e.Write(pointH.x.Bytes())
-	e.Write(pointH.y.Bytes())
-
-	e1 := e.Sum(nil)
-
 	var dlk ZKproof
-	dlk.E = new(big.Int).SetBytes(e1)
+	dlk.E = pointsProof(Point{ep.Gx, ep.Gy}, pointA, pointH)
 	mul := new(big.Int).Mul(x, dlk.E)
 	dlk.Z = new(big.Int).Sub(w, mul)
 
@@ -232,21 +220,9 @@ func VerifyDLK(ep *elliptic.CurveParams, dl ZKproof, pointA Point) bool {
 
 	pointH.x, pointH.y = ep.Add(pointTemp1.x, pointTemp1.y, pointTemp2.x, pointTemp2.y)
 
-	e := sha256.New()
-	e.Write(ep.Gx.Bytes())
-	e.Write(ep.Gy.Bytes())
+	proof := pointsProof(Point{ep.Gx, ep.Gy}, pointA, pointH)
 
-	e.Write(pointA.x.Bytes())
-	e.Write(pointA.y.Bytes())
-
-	e.Write(pointH.x.Bytes())
-	e.Write(pointH.y.Bytes())
-
-	//fixme: we need more meaningful names instead of temp, pointTemp1, pointTemp2
-	e1 := e.Sum(nil)
-	temp := new(big.Int).SetBytes(e1)
-
-	return temp.Cmp(dl.E) == 0
+	return proof.Cmp(dl.E) == 0
 }
 
 func ProofDLE(ep *elliptic.CurveParams, pointY, pointT, pointZ Point, x *big.Int) (ZKproof, Point, Point) {
@@ -256,26 +232,10 @@ func ProofDLE(ep *elliptic.CurveParams, pointY, pointT, pointZ Point, x *big.Int
 	var pointA1, pointA2 Point
 	var mul *big.Int
 	pointA1.x, pointA1.y = ep.ScalarMult(pointT.x, pointT.y, wBytes)
-
 	pointA2.x, pointA2.y = ep.ScalarMult(ep.Gx, ep.Gy, wBytes)
 
-	e := sha256.New()
-	e.Write(pointY.x.Bytes())
-	e.Write(pointY.y.Bytes())
-
-	e.Write(pointZ.x.Bytes())
-	e.Write(pointZ.y.Bytes())
-
-	e.Write(pointA1.x.Bytes())
-	e.Write(pointA1.y.Bytes())
-
-	e.Write(pointA2.x.Bytes())
-	e.Write(pointA2.y.Bytes())
-
-	e1 := e.Sum(nil)
-
 	var dle ZKproof
-	dle.E = new(big.Int).SetBytes(e1)
+	dle.E = pointsProof(pointY, pointZ, pointA1, pointA2)
 	mul = new(big.Int).Mul(x, dle.E)
 	dle.Z = new(big.Int).Sub(w, mul)
 
@@ -296,24 +256,21 @@ func VerifyDLE(ep *elliptic.CurveParams, dl ZKproof, pointY, pointT, pointZ Poin
 
 	pointA2.x, pointA2.y = ep.Add(pointTemp1.x, pointTemp1.y, pointTemp2.x, pointTemp2.y)
 
+	proof := pointsProof(pointY, pointZ, pointA1, pointA2)
+
+	return proof.Cmp(dl.E) == 0
+}
+
+func pointsProof(points ...Point) *big.Int {
 	e := sha256.New()
 
-	e.Write(pointY.x.Bytes())
-	e.Write(pointY.y.Bytes())
+	for _, point := range points {
+		e.Write(point.x.Bytes())
+		e.Write(point.y.Bytes())
+	}
 
-	e.Write(pointZ.x.Bytes())
-	e.Write(pointZ.y.Bytes())
-
-	e.Write(pointA1.x.Bytes())
-	e.Write(pointA1.y.Bytes())
-
-	e.Write(pointA2.x.Bytes())
-	e.Write(pointA2.y.Bytes())
-
-	e1 := e.Sum(nil)
-	temp := new(big.Int).SetBytes(e1)
-
-	return temp.Cmp(dl.E) == 0
+	pointsHash := e.Sum(nil)
+	return new(big.Int).SetBytes(pointsHash)
 }
 
 //DKG is n-n distributed key generation protocol
