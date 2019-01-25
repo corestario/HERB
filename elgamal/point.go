@@ -20,6 +20,14 @@ func NewPoint(curve elliptic.Curve) (pointM Point) {
 	return
 }
 
+//PointAtInfinity returns neutral element of the elliptic curve group
+func PointAtInfinity(curve elliptic.Curve) (pointInf Point) {
+	ep := curve.Params()
+	n := ep.N
+	pointInf.x, pointInf.y = ep.ScalarMult(ep.Gx, ep.Gy, n.Bytes())
+	return
+}
+
 //RecoverPoint recovers common public key from partial keys of participants
 func RecoverPoint(curve elliptic.Curve, keys []Point) Point {
 	if len(keys) == 0 {
@@ -58,6 +66,10 @@ func (p Point) neg() Point {
 func (p Point) scalarMult(curve elliptic.Curve, t *big.Int) (point Point) {
 	point.x, point.y = curve.ScalarMult(p.x, p.y, t.Bytes())
 	return
+}
+
+func (p Point) sub(curve elliptic.Curve, p2 Point) (point Point) {
+	return p.add(curve, p2.neg())
 }
 
 //Decrypt the ciphertext C with the key x

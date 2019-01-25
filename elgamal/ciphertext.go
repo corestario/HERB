@@ -9,11 +9,15 @@ type Ciphertext struct {
 	pointB Point
 }
 
+//IdentityCiphertext creates ciphertext which is neutral with respect to plaintext group operation (after ciphertext aggregation operation)
+func IdentityCiphertext(curve elliptic.Curve) Ciphertext {
+	return Ciphertext{PointAtInfinity(curve), PointAtInfinity(curve)}
+}
+
 //Decrypt takes decrypt parts (shares) from all participants and decrypt the ciphertext C
 func (ct Ciphertext) Decrypt(curve elliptic.Curve, shares []Point) Point {
 	if len(shares) == 0 {
-		//fixme: is it a correct return value?
-		return Point{}
+		return PointAtInfinity(curve)
 	}
 
 	//aggregating all parts
@@ -38,8 +42,7 @@ func (ct Ciphertext) IsValid(curve elliptic.Curve) bool {
 //and returns aggregated ciphertext C = (A1 + A2 + ... + An, B1 + B2 + ... + Bn)
 func AggregateCiphertext(curve elliptic.Curve, parts []Ciphertext) Ciphertext {
 	if len(parts) == 0 {
-		//fixme: is it a correct return value?
-		return Ciphertext{}
+		return IdentityCiphertext(curve)
 	}
 
 	ct := Ciphertext{parts[0].pointA, parts[0].pointB}

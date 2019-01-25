@@ -47,6 +47,7 @@ func VerifyDLK(ep *elliptic.CurveParams, dl ZKproof, pointA Point) bool {
 	return proof.Cmp(dl.E) == 0
 }
 
+//ProofDLE creates discrete logarithm equality proof for pointY = x*pointT, pointZ = x * G
 func ProofDLE(ep *elliptic.CurveParams, pointY, pointT, pointZ Point, x *big.Int) (ZKproof, Point, Point) {
 	w := randBigInt(ep)
 	wBytes := w.Bytes()
@@ -64,6 +65,7 @@ func ProofDLE(ep *elliptic.CurveParams, pointY, pointT, pointZ Point, x *big.Int
 	return dle, pointY, pointZ
 }
 
+//VerifyDLE verify discrete logarithm equality proof for pointY = x*pointT, pointZ = x * G
 func VerifyDLE(ep *elliptic.CurveParams, dl ZKproof, pointY, pointT, pointZ Point) bool {
 	var pointA1, pointA2, pointTemp1, pointTemp2 Point
 
