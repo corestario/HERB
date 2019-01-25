@@ -13,6 +13,10 @@ type ZKproof struct {
 	Z *big.Int
 }
 
+func (z ZKproof) IsEqual(z1 ZKproof) bool {
+	return z.E.Cmp(z1.E) == 0 && z.Z.Cmp(z1.Z) == 0
+}
+
 //Proofs currently not in use
 
 //ProofDLK creates discrete logarithm knowledge proof for a = xG

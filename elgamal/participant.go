@@ -43,3 +43,7 @@ func (p Participant) PartialDecrypt(curve elliptic.Curve, ct Ciphertext) (point 
 	point.x, point.y = curve.ScalarMult(ct.pointA.x, ct.pointA.y, p.PartialKey.SecretKey.Bytes())
 	return
 }
+
+func (p Participant) IsEqual(p1 Participant) bool {
+	return p.CommonKey.IsEqual(p1.CommonKey) && p.ID == p1.ID && p.PartialKey.IsEqual(p1.PartialKey)
+}

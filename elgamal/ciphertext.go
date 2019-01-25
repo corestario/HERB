@@ -37,6 +37,10 @@ func (ct Ciphertext) IsValid(curve elliptic.Curve) bool {
 	return statement1 && statement2
 }
 
+func (ct Ciphertext) IsEqual(ct1 Ciphertext) bool {
+	return ct.pointA.IsEqual(ct1.pointA) && ct.pointB.IsEqual(ct1.pointB)
+}
+
 //AggregateCiphertext takes the set of ciphertextes parts:
 //parts[0] = (A0, B0), ..., parts[n] = (An, Bn)
 //and returns aggregated ciphertext C = (A1 + A2 + ... + An, B1 + B2 + ... + Bn)

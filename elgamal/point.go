@@ -2,6 +2,7 @@ package elgamal
 
 import (
 	"crypto/elliptic"
+	"fmt"
 	"math/big"
 )
 
@@ -44,13 +45,13 @@ func RecoverPoint(curve elliptic.Curve, keys []Point) Point {
 }
 
 //X coordinate of the point p
-func (p Point) X() big.Int {
-	return *p.x
+func (p Point) X() *big.Int {
+	return new(big.Int).Set(p.x)
 }
 
 //Y coordinate of the point p
-func (p Point) Y() big.Int {
-	return *p.y
+func (p Point) Y() *big.Int {
+	return new(big.Int).Set(p.y)
 }
 
 func (p Point) add(curve elliptic.Curve, p2 Point) (point Point) {
@@ -59,17 +60,26 @@ func (p Point) add(curve elliptic.Curve, p2 Point) (point Point) {
 }
 
 func (p Point) neg() Point {
-	p.y = p.y.Neg(p.y)
+	p.y.Set(p.y.Neg(p.y))
 	return p
 }
 
-func (p Point) scalarMult(curve elliptic.Curve, t *big.Int) (point Point) {
-	point.x, point.y = curve.ScalarMult(p.x, p.y, t.Bytes())
-	return
+func (p Point) scalarMult(curve elliptic.Curve, t *big.Int) Point {
+	x, y := curve.ScalarMult(p.x, p.y, t.Bytes())
+	point := Point{x, y}
+	return point
 }
 
 func (p Point) sub(curve elliptic.Curve, p2 Point) (point Point) {
 	return p.add(curve, p2.neg())
+}
+
+func (p Point) String() string {
+	return fmt.Sprintf("Point{%s, %s}", p.x, p.y)
+}
+
+func (p Point) IsEqual(p1 Point) bool {
+	return p.x.Cmp(p1.x) == 0 && p.y.Cmp(p1.y) == 0
 }
 
 //Decrypt the ciphertext C with the key x
