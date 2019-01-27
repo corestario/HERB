@@ -16,7 +16,7 @@ type Point struct {
 //NewPoint allows to generate random point on the elliptic curve E
 func NewPoint(curve elliptic.Curve) (pointM Point) {
 	ep := curve.Params()
-	y := randBigInt(ep)
+	y := randEllipticKey(ep)
 	pointM.x, pointM.y = ep.ScalarMult(ep.Gx, ep.Gy, y.Bytes())
 	return
 }

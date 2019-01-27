@@ -22,7 +22,7 @@ func (z ZKproof) IsEqual(z1 ZKproof) bool {
 
 //ProofDLK creates discrete logarithm knowledge proof for a = xG
 func ProofDLK(ep *elliptic.CurveParams, pointA Point, x *big.Int) (ZKproof, Point) {
-	w := randBigInt(ep)
+	w := randEllipticKey(ep)
 	wBytes := w.Bytes()
 
 	var pointH Point
@@ -54,7 +54,7 @@ func VerifyDLK(ep *elliptic.CurveParams, dl ZKproof, pointA Point) bool {
 
 //ProofDLE creates discrete logarithm equality proof for pointY = x*pointT, pointZ = x * G
 func ProofDLE(ep *elliptic.CurveParams, pointY, pointT, pointZ Point, x *big.Int) (ZKproof, Point, Point) {
-	w := randBigInt(ep)
+	w := randEllipticKey(ep)
 	wBytes := w.Bytes()
 
 	var pointA1, pointA2 Point

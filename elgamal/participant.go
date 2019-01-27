@@ -13,7 +13,7 @@ type Participant struct {
 func NewParticipant(curve elliptic.Curve, id int) Participant {
 	ep := curve.Params()
 	//secret key
-	x := randBigInt(ep)
+	x := randEllipticKey(ep)
 	//public key
 
 	qx, qy := ep.ScalarMult(ep.Gx, ep.Gy, x.Bytes())
@@ -25,7 +25,7 @@ func NewParticipant(curve elliptic.Curve, id int) Participant {
 //Encrypt return encrypted message M and proof of t
 func (p Participant) Encrypt(curve elliptic.Curve, pointM Point) Ciphertext {
 	ep := curve.Params()
-	r := randBigInt(ep)
+	r := randEllipticKey(ep)
 
 	var pointA, pointB Point
 	//pointA = rG
