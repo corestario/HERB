@@ -26,14 +26,12 @@ func Test_PointAtInfinity_Positive(t *testing.T) {
 	curve := elliptic.P256()
 	curveParams := curve.Params()
 	genPoint := Point{curveParams.Gx, curveParams.Gy}
-	//I just try to get the value of N
-	//n := big.NewInt(1)
-	//*n = *curveParams.N
-	//genPoint.scalarMult(curve, n.Sub(n, big.NewInt(1)))
-	testCases := []Point{genPoint, genPoint.scalarMult(curve, big.NewInt(13))}
+	n1 := big.NewInt(1)
+	n1.Sub(curveParams.N, big.NewInt(1))
+	testCases := []Point{PointAtInfinity(curve), genPoint, genPoint.scalarMult(curve, big.NewInt(13)), genPoint.scalarMult(curve, n1)}
 	pointInf := PointAtInfinity(curve)
 	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("Scalar multiplication, point %d * G:", i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Scalar multiplication, point %d:", i), func(t *testing.T) {
 			scalarMultPositive(t, curve, tc, pointInf)
 		})
 		t.Run(fmt.Sprintf("Addition, point %d:", i), func(t *testing.T) {
@@ -48,11 +46,9 @@ func Test_IdentityCiphertext_Positive(t *testing.T) {
 	curve := elliptic.P256()
 	party := DKG(curve, 1)
 	genPoint := Point{curve.Params().Gx, curve.Params().Gy}
-	//I just try to get the value of N, probably there is more convenient way to do it
-	//n := big.NewInt(1)
-	//*n = *curve.Params().N
-	//genPoint.scalarMult(curve, n.Sub(n, big.NewInt(1)))
-	messages := []Point{PointAtInfinity(curve), genPoint, genPoint.scalarMult(curve, big.NewInt(13))}
+	n1 := big.NewInt(1)
+	n1.Sub(curve.Params().N, big.NewInt(1))
+	messages := []Point{PointAtInfinity(curve), genPoint, genPoint.scalarMult(curve, big.NewInt(13)), genPoint.scalarMult(curve, n1)}
 	testCases := make([]Ciphertext, len(messages))
 	for i, m := range messages {
 		testCases[i] = party[0].Encrypt(curve, m)
@@ -175,7 +171,6 @@ func deepEqual(t errorf, obtained, expected interface{}) {
 			ok = valueA.IsEqual(valueB)
 		}
 	}
-
 
 	// If we can't use IsEqual methods, we call DeepReflect
 	if !ok && !reflect.DeepEqual(obtained, expected) {

@@ -13,6 +13,7 @@ type ZKproof struct {
 	Z *big.Int
 }
 
+//IsEqual compares two proofs and returns true if they are equal
 func (z ZKproof) IsEqual(z1 ZKproof) bool {
 	return z.E.Cmp(z1.E) == 0 && z.Z.Cmp(z1.Z) == 0
 }

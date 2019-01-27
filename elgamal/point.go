@@ -78,6 +78,7 @@ func (p Point) String() string {
 	return fmt.Sprintf("Point{%s, %s}", p.x, p.y)
 }
 
+//IsEqual compares two points and returns true if their x and y-coordinates are match
 func (p Point) IsEqual(p1 Point) bool {
 	return p.x.Cmp(p1.x) == 0 && p.y.Cmp(p1.y) == 0
 }

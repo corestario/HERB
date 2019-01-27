@@ -37,6 +37,7 @@ func (ct Ciphertext) IsValid(curve elliptic.Curve) bool {
 	return statement1 && statement2
 }
 
+//IsEqual compares two ciphertexts and returns true if ct = ct1
 func (ct Ciphertext) IsEqual(ct1 Ciphertext) bool {
 	return ct.pointA.IsEqual(ct1.pointA) && ct.pointB.IsEqual(ct1.pointB)
 }
