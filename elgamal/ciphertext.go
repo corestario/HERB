@@ -23,10 +23,10 @@ func (ct Ciphertext) Decrypt(curve elliptic.Curve, shares []Point) Point {
 	//aggregating all parts
 	decryptKey := shares[0]
 	for i := 1; i < len(shares); i++ {
-		decryptKey = decryptKey.add(curve, shares[i])
+		decryptKey = decryptKey.Add(curve, shares[i])
 	}
 
-	M := ct.pointB.add(curve, decryptKey.neg())
+	M := ct.pointB.Add(curve, decryptKey.Neg())
 	return M
 }
 
@@ -52,8 +52,8 @@ func AggregateCiphertext(curve elliptic.Curve, parts []Ciphertext) Ciphertext {
 
 	ct := Ciphertext{parts[0].pointA, parts[0].pointB}
 	for i := 1; i < len(parts); i++ {
-		ct.pointA = ct.pointA.add(curve, parts[i].pointA)
-		ct.pointB = ct.pointB.add(curve, parts[i].pointB)
+		ct.pointA = ct.pointA.Add(curve, parts[i].pointA)
+		ct.pointB = ct.pointB.Add(curve, parts[i].pointB)
 	}
 
 	return ct

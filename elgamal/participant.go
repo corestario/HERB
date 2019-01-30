@@ -32,7 +32,7 @@ func (p Participant) Encrypt(curve elliptic.Curve, pointM Point) Ciphertext {
 	pointA.x, pointA.y = ep.ScalarMult(ep.Gx, ep.Gy, r.Bytes())
 
 	//pointB = rQ + M
-	pointB = p.CommonKey.scalarMult(ep, r).add(ep, pointM)
+	pointB = p.CommonKey.ScalarMult(ep, r).Add(ep, pointM)
 
 	//var dlk, A1 = ProofDLK(Ep, pointA, r)
 	return Ciphertext{pointA, pointB}

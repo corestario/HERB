@@ -1,4 +1,4 @@
-package elgamal
+package tests
 
 import (
 	"bytes"
@@ -10,13 +10,15 @@ import (
 	"testing"
 
 	"github.com/kr/pretty"
+
+	. "github.com/dgamingfoundation/HERB/elgamal"
 )
 
 func Test_ElGamal_Positive(t *testing.T) {
 	testCases := []int{1, 2, 3, 5, 10, 50, 100, 300}
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("validators set %d", tc), func(t *testing.T) {
-			parties, curve := initElGamal(tc)
+			parties, curve := initElGamal(t, tc)
 			elGamalPositive(t, parties, curve)
 		})
 	}
@@ -25,16 +27,25 @@ func Test_ElGamal_Positive(t *testing.T) {
 func Test_PointAtInfinity_Positive(t *testing.T) {
 	curve := elliptic.P256()
 	curveParams := curve.Params()
-	genPoint := Point{curveParams.Gx, curveParams.Gy}
+
+	genPoint, err := FromCoordinates(curve, curveParams.Gx, curveParams.Gy)
+	if err != nil {
+		t.Errorf("can't make genPoint: %s", err)
+	}
+
 	n1 := big.NewInt(1)
 	n1.Sub(curveParams.N, big.NewInt(1))
-	testCases := []Point{PointAtInfinity(curve), genPoint, genPoint.scalarMult(curve, big.NewInt(13)), genPoint.scalarMult(curve, n1)}
+
+	testCases := []Point{PointAtInfinity(curve), genPoint,
+		genPoint.ScalarMult(curve, big.NewInt(13)), genPoint.ScalarMult(curve, n1)}
+
 	pointInf := PointAtInfinity(curve)
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("Scalar multiplication, point %d:", i), func(t *testing.T) {
 			scalarMultPositive(t, curve, tc, pointInf)
 		})
 		t.Run(fmt.Sprintf("Addition, point %d:", i), func(t *testing.T) {
+			addPositive(t, curve, tc, pointInf)
 		})
 		t.Run(fmt.Sprintf("Substraction, point %d:", i), func(t *testing.T) {
 			subPositive(t, curve, tc, pointInf)
@@ -44,15 +55,27 @@ func Test_PointAtInfinity_Positive(t *testing.T) {
 
 func Test_IdentityCiphertext_Positive(t *testing.T) {
 	curve := elliptic.P256()
-	party := DKG(curve, 1)
-	genPoint := Point{curve.Params().Gx, curve.Params().Gy}
+	party, err := DKG(curve, 1)
+	if err != nil {
+		t.Errorf("can't init DKG with error %q", err)
+	}
+
+	genPoint, err := FromCoordinates(curve, curve.Params().Gx, curve.Params().Gy)
+	if err != nil {
+		t.Errorf("can't make genPoint: %s", err)
+	}
+
 	n1 := big.NewInt(1)
 	n1.Sub(curve.Params().N, big.NewInt(1))
-	messages := []Point{PointAtInfinity(curve), genPoint, genPoint.scalarMult(curve, big.NewInt(13)), genPoint.scalarMult(curve, n1)}
+
+	messages := []Point{PointAtInfinity(curve), genPoint,
+		genPoint.ScalarMult(curve, big.NewInt(13)), genPoint.ScalarMult(curve, n1)}
+
 	testCases := make([]Ciphertext, len(messages))
 	for i, m := range messages {
 		testCases[i] = party[0].Encrypt(curve, m)
 	}
+
 	neutralCiphertext := IdentityCiphertext(curve)
 	for i, tc := range testCases {
 		t.Run(fmt.Sprintf("Ciphertext %d:", i), func(t *testing.T) {
@@ -64,10 +87,13 @@ func Test_IdentityCiphertext_Positive(t *testing.T) {
 func neutralCiphertextAggregate(t *testing.T, curve elliptic.Curve, ct Ciphertext, neutral Ciphertext, party Participant) {
 	parts := []Ciphertext{ct, neutral}
 	resultCT := AggregateCiphertext(curve, parts)
+
 	originalDecryptShares := []Point{party.PartialDecrypt(curve, ct)}
 	plaintext := ct.Decrypt(curve, originalDecryptShares)
+
 	newDecryptShares := []Point{party.PartialDecrypt(curve, resultCT)}
 	resultPlaintext := resultCT.Decrypt(curve, newDecryptShares)
+
 	deepEqual(t, resultPlaintext, plaintext)
 }
 
@@ -75,17 +101,17 @@ func scalarMultPositive(t *testing.T, curve elliptic.Curve, p Point, pointInf Po
 	/*z := randBigInt(curve)
 	z.SetInt64(5)*/
 	curveParams := curve.Params()
-	multResult := p.scalarMult(curve, curveParams.N)
+	multResult := p.ScalarMult(curve, curveParams.N)
 	deepEqual(t, pointInf, multResult)
 }
 
 func addPositive(t *testing.T, curve elliptic.Curve, p Point, pointInf Point) {
-	addResult := p.add(curve, pointInf)
+	addResult := p.Add(curve, pointInf)
 	deepEqual(t, p, addResult)
 }
 
 func subPositive(t *testing.T, curve elliptic.Curve, p Point, pointInf Point) {
-	subResult := p.sub(curve, pointInf)
+	subResult := p.Sub(curve, pointInf)
 	deepEqual(t, p, subResult)
 }
 
@@ -128,7 +154,10 @@ func elGamalPositive(t *testing.T, parties []Participant, curve elliptic.Curve) 
 
 	decryptedMessage := commonCiphertext.Decrypt(curve, decryptParts)
 
-	expectedMessage := RecoverPoint(curve, newMessages)
+	expectedMessage, err := RecoverPoint(curve, newMessages)
+	if err != nil {
+		t.Errorf("can't recover the point with error: %q", err)
+	}
 
 	deepEqual(t, decryptedMessage, expectedMessage)
 }
@@ -192,12 +221,17 @@ func diff(obtained, expected interface{}) string {
 	return failMessage.String()
 }
 
-func initElGamal(n int) ([]Participant, elliptic.Curve) {
+func initElGamal(t errorf, n int) ([]Participant, elliptic.Curve) {
 	// creating elliptic curve
 	curve := elliptic.P256()
 
 	//generating key
-	return DKG(curve, n), curve
+	parties, err := DKG(curve, n)
+	if err != nil {
+		t.Errorf("can't init DKG with error %q", err)
+	}
+
+	return parties, curve
 }
 
 type publishedMessage struct {
