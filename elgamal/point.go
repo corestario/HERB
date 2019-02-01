@@ -2,6 +2,7 @@ package elgamal
 
 import (
 	"crypto/elliptic"
+	"errors"
 	"fmt"
 	"math/big"
 )
@@ -21,27 +22,25 @@ func NewPoint(curve elliptic.Curve) (pointM Point) {
 	return
 }
 
-//PointAtInfinity returns neutral element of the elliptic curve group
-func PointAtInfinity(curve elliptic.Curve) (pointInf Point) {
-	ep := curve.Params()
-	n := ep.N
-	pointInf.x, pointInf.y = ep.ScalarMult(ep.Gx, ep.Gy, n.Bytes())
-	return
+func FromCoordinates(curve elliptic.Curve, x, y *big.Int) (Point, error) {
+	if !curve.IsOnCurve(x, y) {
+		return Point{}, fmt.Errorf("point(%s, %s) is not on the curve: %v", x.String(), y.String(), curve.Params())
+	}
+	return Point{x, y}, nil
 }
 
 //RecoverPoint recovers common public key from partial keys of participants
-func RecoverPoint(curve elliptic.Curve, keys []Point) Point {
+func RecoverPoint(curve elliptic.Curve, keys []Point) (Point, error) {
 	if len(keys) == 0 {
-		//fixme: is it a correct return value?
-		return Point{}
+		return PointAtInfinity(curve), errors.New("more than 0 partial keys should be given")
 	}
 
 	result := keys[0]
 	for i := 1; i < len(keys); i++ {
-		result = result.add(curve, keys[i])
+		result = result.Add(curve, keys[i])
 	}
 
-	return result
+	return result, nil
 }
 
 //X coordinate of the point p
@@ -54,24 +53,24 @@ func (p Point) Y() *big.Int {
 	return new(big.Int).Set(p.y)
 }
 
-func (p Point) add(curve elliptic.Curve, p2 Point) (point Point) {
+func (p Point) Add(curve elliptic.Curve, p2 Point) (point Point) {
 	point.x, point.y = curve.Params().Add(p.x, p.y, p2.x, p2.y)
 	return
 }
 
-func (p Point) neg() Point {
+func (p Point) Neg() Point {
 	p.y.Set(p.y.Neg(p.y))
 	return p
 }
 
-func (p Point) scalarMult(curve elliptic.Curve, t *big.Int) Point {
+func (p Point) ScalarMult(curve elliptic.Curve, t *big.Int) Point {
 	x, y := curve.ScalarMult(p.x, p.y, t.Bytes())
 	point := Point{x, y}
 	return point
 }
 
-func (p Point) sub(curve elliptic.Curve, p2 Point) (point Point) {
-	return p.add(curve, p2.neg())
+func (p Point) Sub(curve elliptic.Curve, p2 Point) (point Point) {
+	return p.Add(curve, p2.Neg())
 }
 
 func (p Point) String() string {
@@ -86,9 +85,9 @@ func (p Point) IsEqual(p1 Point) bool {
 //Decrypt the ciphertext C with the key x
 //Currently not in use
 func decrypt(curve elliptic.Curve, ct Ciphertext, x *big.Int) Point {
-	pointTemp := ct.pointA.scalarMult(curve, x)
+	pointTemp := ct.pointA.ScalarMult(curve, x)
 	pointTemp.y = pointTemp.y.Neg(pointTemp.y)
 
 	//M = b - xA
-	return ct.pointB.add(curve, pointTemp)
+	return ct.pointB.Add(curve, pointTemp)
 }

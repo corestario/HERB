@@ -1,9 +1,11 @@
-package elgamal
+package tests
 
 import (
 	"crypto/elliptic"
 	"fmt"
 	"testing"
+
+	. "github.com/dgamingfoundation/HERB/elgamal"
 )
 
 func BenchmarkElGamal(b *testing.B) {
@@ -11,13 +13,17 @@ func BenchmarkElGamal(b *testing.B) {
 	for _, tc := range testCases {
 		b.Run(fmt.Sprintf("validators set %d", tc), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				parties, curve := initElGamal(tc)
+				parties, curve := initElGamal(b, tc)
 
 				b.StartTimer()
 				decryptedMessage, newMessages := elGamalBench(parties, curve)
 				b.StopTimer()
 
-				expectedMessage := RecoverPoint(curve, newMessages)
+				expectedMessage, err := RecoverPoint(curve, newMessages)
+				if err != nil {
+					b.Errorf("can't recover the point with error: %q", err)
+				}
+
 				deepEqual(b, decryptedMessage, expectedMessage)
 			}
 		})

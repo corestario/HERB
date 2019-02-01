@@ -3,7 +3,7 @@ package elgamal
 import "crypto/elliptic"
 
 //DKG is n-n distributed key generation protocol
-func DKG(curve elliptic.Curve, n int) []Participant {
+func DKG(curve elliptic.Curve, n int) ([]Participant, error) {
 	parties := make([]Participant, n)
 	for i := range parties {
 		//each participant generates partial key
@@ -17,9 +17,13 @@ func DKG(curve elliptic.Curve, n int) []Participant {
 	}
 
 	//each participant generates common public key from partial keys
+	var err error
 	for i := range parties {
-		parties[i].CommonKey = RecoverPoint(curve, partialPublicKeys)
+		parties[i].CommonKey, err = RecoverPoint(curve, partialPublicKeys)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return parties
+	return parties, nil
 }
