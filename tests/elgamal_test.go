@@ -5,10 +5,10 @@ import (
 	"crypto/elliptic"
 	"fmt"
 	"math/big"
-	"reflect"
 	"sync"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/kr/pretty"
 
 	. "github.com/dgamingfoundation/HERB/elgamal"
@@ -167,42 +167,7 @@ type errorf interface {
 }
 
 func deepEqual(t errorf, obtained, expected interface{}) {
-	var ok bool
-	switch valueA := expected.(type) {
-	case Point:
-		var valueB Point
-		valueB, ok = obtained.(Point)
-		if ok {
-			ok = valueA.IsEqual(valueB)
-		}
-	case Ciphertext:
-		var valueB Ciphertext
-		valueB, ok = obtained.(Ciphertext)
-		if ok {
-			ok = valueA.IsEqual(valueB)
-		}
-	case KeyPair:
-		var valueB KeyPair
-		valueB, ok = obtained.(KeyPair)
-		if ok {
-			ok = valueA.IsEqual(valueB)
-		}
-	case Participant:
-		var valueB Participant
-		valueB, ok = obtained.(Participant)
-		if ok {
-			ok = valueA.IsEqual(valueB)
-		}
-	case ZKproof:
-		var valueB ZKproof
-		valueB, ok = obtained.(ZKproof)
-		if ok {
-			ok = valueA.IsEqual(valueB)
-		}
-	}
-
-	// If we can't use IsEqual methods, we call DeepReflect
-	if !ok && !reflect.DeepEqual(obtained, expected) {
+	if !cmp.Equal(obtained, expected) {
 		t.Errorf("... %s", diff(obtained, expected))
 	}
 }

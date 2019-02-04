@@ -10,7 +10,7 @@ type KeyPair struct {
 	PublicKey Point
 }
 
-//IsEqual compares two key pairs and returns true if their secret and public keys are match
-func (kp KeyPair) IsEqual(kp1 KeyPair) bool {
-	return kp.SecretKey.Cmp(kp1.SecretKey) == 0 && kp.PublicKey.IsEqual(kp1.PublicKey)
+//Equal compares two key pairs and returns true if their secret and public keys are match
+func (kp KeyPair) Equal(kp1 KeyPair) bool {
+	return kp.SecretKey.Cmp(kp1.SecretKey) == 0 && kp.PublicKey.Equal(kp1.PublicKey)
 }
