@@ -46,7 +46,7 @@ func Test_FromCoordinates_PointOnCurve_Success(t *testing.T) {
 	for _, ellipticCase := range cases {
 		for _, testCase := range ellipticCase {
 
-			t.Run(fmt.Sprintf("curve %q, point (%v)", testCase.curve.Params().Name, testCase.expected),
+			t.Run(fmt.Sprintf("curve %q, point (%v, %v)", testCase.curve.Params().Name, testCase.x, testCase.y),
 				func(t *testing.T) {
 					point, err := FromCoordinates(testCase.curve, testCase.x, testCase.y)
 					if err != nil {
@@ -96,8 +96,11 @@ func Test_FromCoordinates_PointOnNotCurve_Fail(t *testing.T) {
 
 	for _, testCase := range cases {
 		_, err := FromCoordinates(testCase.curve, testCase.x, testCase.y)
-		if !strings.Contains(err.Error(), "is not on the curve") {
-			t.Errorf("error 'point is not on the curve' expected, got %v", err)
-		}
+		t.Run(fmt.Sprintf("curve %q, point (%v, %v)", testCase.curve.Params().Name, testCase.x, testCase.y),
+			func(t *testing.T) {
+				if !strings.Contains(err.Error(), "is not on the curve") {
+					t.Errorf("error 'point is not on the curve' expected, got %v", err)
+				}
+			})
 	}
 }
