@@ -60,8 +60,13 @@ func Test_FromCoordinates_PointOnNotCurve_Fail(t *testing.T) {
 	}
 
 	getTestCase := func(curve elliptic.Curve) testCase {
-		x := big.NewInt(2)
-		y := big.NewInt(2)
+		x := big.NewInt(0)
+		var y *big.Int
+		if curve.Params().B != big.NewInt(1) {
+			y = big.NewInt(1)
+		} else {
+			y = big.NewInt(2)
+		}
 
 		return testCase{
 			curve,
