@@ -11,10 +11,6 @@ type Curve struct {
 }
 
 func (curve Curve) IsOnCurve(x, y *big.Int) bool {
-	if x.Sign() == 0 && y.Sign() == 0 {
-		return true
-	}
-
 	if IsPointAtInfinity(curve, x, y) {
 		return true
 	}
