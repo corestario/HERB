@@ -1,23 +1,28 @@
 package elgamal
 
-import "crypto/elliptic"
+import (
+	"crypto/elliptic"
+	"math/big"
+
+	"github.com/dgamingfoundation/HERB/point"
+)
 
 //Ciphertext is usual ElGamal ciphertext C = (a, b)
 //Here a, b - the elliptic curve's points
 type Ciphertext struct {
-	pointA Point
-	pointB Point
+	pointA point.Point
+	pointB point.Point
 }
 
 //IdentityCiphertext creates ciphertext which is neutral with respect to plaintext group operation (after ciphertext aggregation operation)
 func IdentityCiphertext(curve elliptic.Curve) Ciphertext {
-	return Ciphertext{PointAtInfinity(curve), PointAtInfinity(curve)}
+	return Ciphertext{point.PointAtInfinity(curve), point.PointAtInfinity(curve)}
 }
 
 //Decrypt takes decrypt parts (shares) from all participants and decrypt the ciphertext C
-func (ct Ciphertext) Decrypt(curve elliptic.Curve, shares []Point) Point {
+func (ct Ciphertext) Decrypt(curve elliptic.Curve, shares []point.Point) point.Point {
 	if len(shares) == 0 {
-		return PointAtInfinity(curve)
+		return point.PointAtInfinity(curve)
 	}
 
 	//aggregating all parts
@@ -32,8 +37,8 @@ func (ct Ciphertext) Decrypt(curve elliptic.Curve, shares []Point) Point {
 
 //IsValid return true if both part of the ciphertext C on the curve E.
 func (ct Ciphertext) IsValid(curve elliptic.Curve) bool {
-	statement1 := curve.IsOnCurve(ct.pointA.x, ct.pointA.y)
-	statement2 := curve.IsOnCurve(ct.pointB.x, ct.pointB.y)
+	statement1 := curve.IsOnCurve(ct.pointA.GetX(), ct.pointA.GetY())
+	statement2 := curve.IsOnCurve(ct.pointB.GetX(), ct.pointB.GetY())
 	return statement1 && statement2
 }
 
@@ -57,4 +62,15 @@ func AggregateCiphertext(curve elliptic.Curve, parts []Ciphertext) Ciphertext {
 	}
 
 	return ct
+}
+
+//Decrypt the ciphertext C with the key x
+//Currently not in use
+func decrypt(curve elliptic.Curve, ct Ciphertext, x *big.Int) point.Point {
+	pointTemp := ct.pointA.ScalarMult(curve, x)
+	pointTempY := pointTemp.GetY()
+	pointTempY.Neg(pointTempY)
+
+	//M = b - xA
+	return ct.pointB.Add(curve, pointTemp)
 }

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	. "github.com/dgamingfoundation/HERB/elgamal"
+	"github.com/dgamingfoundation/HERB/point"
 )
 
 func BenchmarkElGamal(b *testing.B) {
@@ -19,7 +20,7 @@ func BenchmarkElGamal(b *testing.B) {
 				decryptedMessage, newMessages := elGamalBench(parties, curve)
 				b.StopTimer()
 
-				expectedMessage, err := RecoverPoint(curve, newMessages)
+				expectedMessage, err := point.Recover(curve, newMessages)
 				if err != nil {
 					b.Errorf("can't recover the point with error: %q", err)
 				}
@@ -30,14 +31,14 @@ func BenchmarkElGamal(b *testing.B) {
 	}
 }
 
-func elGamalBench(parties []Participant, curve elliptic.Curve) (Point, []Point) {
+func elGamalBench(parties []Participant, curve elliptic.Curve) (point.Point, []point.Point) {
 	n := len(parties)
 
 	//Any system user generates some message, encrypts and publishes it
 	//We use our validators set (parties) just for example
 	publishedCiphertextes := make([]Ciphertext, n)
 
-	newMessages := make([]Point, n)
+	newMessages := make([]point.Point, n)
 
 	publishChan := publishMessages(parties, curve)
 	for publishedMessage := range publishChan {
@@ -51,7 +52,7 @@ func elGamalBench(parties []Participant, curve elliptic.Curve) (Point, []Point) 
 	commonCiphertext := AggregateCiphertext(curve, publishedCiphertextes)
 
 	//decrypt the random
-	decryptParts := make([]Point, n)
+	decryptParts := make([]point.Point, n)
 	decrypted := decryptMessages(parties, curve, commonCiphertext)
 	for msg := range decrypted {
 		i := msg.id

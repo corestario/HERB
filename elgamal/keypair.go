@@ -2,12 +2,14 @@ package elgamal
 
 import (
 	"math/big"
+
+	"github.com/dgamingfoundation/HERB/point"
 )
 
 //KeyPair contains secret and public keys for ElGamal cryptosystem
 type KeyPair struct {
 	SecretKey *big.Int
-	PublicKey Point
+	PublicKey point.Point
 }
 
 //IsEqual compares two key pairs and returns true if their secret and public keys are match

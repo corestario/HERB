@@ -1,7 +1,8 @@
-package elgamal
+package point
 
 import (
 	"crypto/elliptic"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -20,34 +21,46 @@ func Test_FromCoordinates_PointOnCurve_Success(t *testing.T) {
 		n1.Sub(curve.Params().N, big.NewInt(1))
 
 		genPoint := Point{curve.Params().Gx, curve.Params().Gy}
-		testPoints := []Point{PointAtInfinity(curve), genPoint,
-			genPoint.ScalarMult(curve, big.NewInt(13)), genPoint.ScalarMult(curve, n1)}
+		testPoints := []Point{
+			PointAtInfinity(curve),
+			genPoint,
+			genPoint.ScalarMult(curve, big.NewInt(13)),
+			genPoint.ScalarMult(curve, n1),
+		}
 
 		var testCases []testCase
 		for _, point := range testPoints {
 			testCases = append(testCases,
-				testCase{curve, point.x, point.y, point})
+				testCase{curve, point.GetX(), point.GetY(), point})
 		}
 
 		return testCases
 	}
 
 	cases := [][]testCase{
-		getTestCase(elliptic.P256()),
-		getTestCase(elliptic.P384()),
-		getTestCase(elliptic.P521()),
+		getTestCase(Curve{elliptic.P256()}),
+		getTestCase(Curve{elliptic.P384()}),
+		getTestCase(Curve{elliptic.P521()}),
 	}
 
 	for _, ellipticCase := range cases {
 		for _, testCase := range ellipticCase {
-			point, err := FromCoordinates(testCase.curve, testCase.x, testCase.y)
-			if err != nil {
-				t.Errorf("can't get point (%s, %s) on curve %v: %q", testCase.x, testCase.y, testCase.curve, err)
-			}
 
-			if !point.IsEqual(testCase.expected) {
-				t.Errorf("point %q was expected, got %q", testCase.expected, point)
-			}
+			t.Run(fmt.Sprintf("curve %q, point (%v)", testCase.curve.Params().Name, testCase.expected),
+				func(t *testing.T) {
+					point, err := FromCoordinates(testCase.curve, testCase.x, testCase.y)
+					if err != nil {
+						t.Errorf("can't get point (%s, %s) on curve %v: %q", testCase.x, testCase.y, testCase.curve, err)
+					}
+
+					if !testCase.curve.IsOnCurve(testCase.x, testCase.y) {
+						t.Errorf("point(%s, %s) is not on the curve: %v", testCase.x.String(), testCase.y.String(), testCase.curve.Params())
+					}
+
+					if !point.IsEqual(testCase.expected) {
+						t.Errorf("point %q was expected, got %q", testCase.expected, point)
+					}
+				})
 		}
 	}
 }
@@ -76,9 +89,9 @@ func Test_FromCoordinates_PointOnNotCurve_Fail(t *testing.T) {
 	}
 
 	cases := []testCase{
-		getTestCase(elliptic.P256()),
-		getTestCase(elliptic.P384()),
-		getTestCase(elliptic.P521()),
+		getTestCase(Curve{elliptic.P256()}),
+		getTestCase(Curve{elliptic.P384()}),
+		getTestCase(Curve{elliptic.P521()}),
 	}
 
 	for _, testCase := range cases {
