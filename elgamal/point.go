@@ -23,10 +23,14 @@ func NewPoint(curve elliptic.Curve) (pointM Point) {
 }
 
 func FromCoordinates(curve elliptic.Curve, x, y *big.Int) (Point, error) {
+	expectedPoint := Point{x, y}
+	if expectedPoint.IsPointAtInfinity(curve) {
+		return Point{x, y}, nil
+	}
 	if !curve.IsOnCurve(x, y) {
 		return Point{}, fmt.Errorf("point(%s, %s) is not on the curve: %v", x.String(), y.String(), curve.Params())
 	}
-	return Point{x, y}, nil
+	return expectedPoint, nil
 }
 
 //RecoverPoint recovers common public key from partial keys of participants
@@ -85,6 +89,11 @@ func (p Point) String() string {
 //IsEqual compares two points and returns true if their x and y-coordinates are match
 func (p Point) IsEqual(p1 Point) bool {
 	return p.x.Cmp(p1.x) == 0 && p.y.Cmp(p1.y) == 0
+}
+
+//IsPointAtInfinity check p is point-at-infinity on the curve or not
+func (p Point) IsPointAtInfinity(curve elliptic.Curve) bool {
+	return p.IsEqual(PointAtInfinity(curve))
 }
 
 //Decrypt the ciphertext C with the key x

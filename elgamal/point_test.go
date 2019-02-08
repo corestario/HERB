@@ -15,32 +15,39 @@ func Test_FromCoordinates_PointOnCurve_Success(t *testing.T) {
 		expected Point
 	}
 
-	getTestCase := func(curve elliptic.Curve) testCase {
-		x := curve.Params().Gx
-		y := curve.Params().Gy
+	getTestCase := func(curve elliptic.Curve) []testCase {
+		n1 := big.NewInt(1)
+		n1.Sub(curve.Params().N, big.NewInt(1))
 
-		return testCase{
-			curve,
-			x,
-			y,
-			Point{x, y},
+		genPoint := Point{curve.Params().Gx, curve.Params().Gy}
+		testPoints := []Point{PointAtInfinity(curve), genPoint,
+			genPoint.ScalarMult(curve, big.NewInt(13)), genPoint.ScalarMult(curve, n1)}
+
+		var testCases []testCase
+		for _, point := range testPoints {
+			testCases = append(testCases,
+				testCase{curve, point.x, point.y, point})
 		}
+
+		return testCases
 	}
 
-	cases := []testCase{
+	cases := [][]testCase{
 		getTestCase(elliptic.P256()),
 		getTestCase(elliptic.P384()),
 		getTestCase(elliptic.P521()),
 	}
 
-	for _, testCase := range cases {
-		point, err := FromCoordinates(testCase.curve, testCase.x, testCase.y)
-		if err != nil {
-			t.Errorf("can't get point (%s, %s) on curve %v: %q", testCase.x, testCase.y, testCase.curve, err)
-		}
+	for _, ellipticCase := range cases {
+		for _, testCase := range ellipticCase {
+			point, err := FromCoordinates(testCase.curve, testCase.x, testCase.y)
+			if err != nil {
+				t.Errorf("can't get point (%s, %s) on curve %v: %q", testCase.x, testCase.y, testCase.curve, err)
+			}
 
-		if !point.IsEqual(testCase.expected) {
-			t.Errorf("point %q was expected, got %q", testCase.expected, point)
+			if !point.IsEqual(testCase.expected) {
+				t.Errorf("point %q was expected, got %q", testCase.expected, point)
+			}
 		}
 	}
 }
