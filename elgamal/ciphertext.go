@@ -26,7 +26,7 @@ func (ct Ciphertext) Decrypt(curve elliptic.Curve, shares []Point) Point {
 		decryptKey = decryptKey.Add(curve, shares[i])
 	}
 
-	M := ct.pointB.Add(curve, decryptKey.Neg())
+	M := ct.pointB.Add(curve, decryptKey.Neg(curve))
 	return M
 }
 

@@ -58,9 +58,14 @@ func (p Point) Add(curve elliptic.Curve, p2 Point) (point Point) {
 	return
 }
 
-func (p Point) Neg() Point {
-	p.y.Set(p.y.Neg(p.y))
-	return p
+func (p Point) Neg(curve elliptic.Curve) Point {
+	y := big.NewInt(1)
+	x := big.NewInt(1)
+	x.Set(p.x)
+	y.Neg(p.y)
+	y.Add(y, curve.Params().P)
+	y.Mod(y, curve.Params().P)
+	return Point{x, y}
 }
 
 func (p Point) ScalarMult(curve elliptic.Curve, t *big.Int) Point {
@@ -70,7 +75,7 @@ func (p Point) ScalarMult(curve elliptic.Curve, t *big.Int) Point {
 }
 
 func (p Point) Sub(curve elliptic.Curve, p2 Point) (point Point) {
-	return p.Add(curve, p2.Neg())
+	return p.Add(curve, p2.Neg(curve))
 }
 
 func (p Point) String() string {

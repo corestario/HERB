@@ -47,8 +47,11 @@ func Test_PointAtInfinity_Positive(t *testing.T) {
 		t.Run(fmt.Sprintf("Addition, point %d:", i), func(t *testing.T) {
 			addPositive(t, curve, tc, pointInf)
 		})
-		t.Run(fmt.Sprintf("Substraction, point %d:", i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Substraction (point at infinity), point %d:", i), func(t *testing.T) {
 			subPositive(t, curve, tc, pointInf)
+		})
+		t.Run(fmt.Sprintf("Substraction (two equal points), point %d:", i), func(t *testing.T) {
+			subTwoEqualPositive(t, curve, tc, pointInf)
 		})
 	}
 }
@@ -98,8 +101,6 @@ func neutralCiphertextAggregate(t *testing.T, curve elliptic.Curve, ct Ciphertex
 }
 
 func scalarMultPositive(t *testing.T, curve elliptic.Curve, p Point, pointInf Point) {
-	/*z := randBigInt(curve)
-	z.SetInt64(5)*/
 	curveParams := curve.Params()
 	multResult := p.ScalarMult(curve, curveParams.N)
 	deepEqual(t, pointInf, multResult)
@@ -113,6 +114,13 @@ func addPositive(t *testing.T, curve elliptic.Curve, p Point, pointInf Point) {
 func subPositive(t *testing.T, curve elliptic.Curve, p Point, pointInf Point) {
 	subResult := p.Sub(curve, pointInf)
 	deepEqual(t, p, subResult)
+}
+
+func subTwoEqualPositive(t *testing.T, curve elliptic.Curve, p Point, pointInf Point) {
+	fmt.Println(p.X(), p.Y())
+	subResult := p.Sub(curve, p)
+	fmt.Println(p.X(), p.Y(), subResult.X(), subResult.Y())
+	deepEqual(t, pointInf, subResult)
 }
 
 func elGamalPositive(t *testing.T, parties []Participant, curve elliptic.Curve) {
