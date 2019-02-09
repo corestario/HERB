@@ -57,7 +57,7 @@ func Test_FromCoordinates_PointOnCurve_Success(t *testing.T) {
 						t.Errorf("point(%s, %s) is not on the curve: %v", testCase.x.String(), testCase.y.String(), testCase.curve.Params())
 					}
 
-					if !point.IsEqual(testCase.expected) {
+					if !point.Equal(testCase.expected) {
 						t.Errorf("point %q was expected, got %q", testCase.expected, point)
 					}
 				})

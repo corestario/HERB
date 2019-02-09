@@ -2,6 +2,19 @@
 
 
 [[projects]]
+  digest = "1:dc05096238235f47dca6f3674dc98366c0aa1ef5af8cfaacc966f8e99a3fd280"
+  name = "github.com/google/go-cmp"
+  packages = [
+    "cmp",
+    "cmp/internal/diff",
+    "cmp/internal/function",
+    "cmp/internal/value",
+  ]
+  pruneopts = "U"
+  revision = "3af367b6b30c263d47e8895973edcca9a49cf029"
+  version = "v0.2.0"
+
+[[projects]]
   digest = "1:3108ec0946181c60040ff51b811908f89d03e521e2b4ade5ef5c65b3c0e911ae"
   name = "github.com/kr/pretty"
   packages = ["."]
@@ -20,6 +33,9 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = ["github.com/kr/pretty"]
+  input-imports = [
+    "github.com/google/go-cmp/cmp",
+    "github.com/kr/pretty",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -49,7 +49,7 @@ func (p Participant) PartialDecrypt(curve elliptic.Curve, ct Ciphertext) (point 
 	return
 }
 
-//IsEqual compares two participants and returns true if they have equal ID, common key and public key
-func (p Participant) IsEqual(p1 Participant) bool {
-	return p.CommonKey.IsEqual(p1.CommonKey) && p.ID == p1.ID && p.PartialKey.IsEqual(p1.PartialKey)
+//Equal compares two participants and returns true if they have equal ID, common key and public key
+func (p Participant) Equal(p1 Participant) bool {
+	return p.CommonKey.Equal(p1.CommonKey) && p.ID == p1.ID && p.PartialKey.Equal(p1.PartialKey)
 }

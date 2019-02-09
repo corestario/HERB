@@ -111,12 +111,12 @@ func (p Point) String() string {
 	return fmt.Sprintf("Point{%s, %s}", p.X, p.Y)
 }
 
-//IsEqual compares two points and returns true if their x and y-coordinates are match
-func (p Point) IsEqual(p1 Point) bool {
+//Equal compares two points and returns true if their x and y-coordinates are match
+func (p Point) Equal(p1 Point) bool {
 	return p.X.Cmp(p1.X) == 0 && p.Y.Cmp(p1.Y) == 0
 }
 
 //IsPointAtInfinity check p is point-at-infinity on the curve or not
 func (p Point) IsPointAtInfinity(curve elliptic.Curve) bool {
-	return p.IsEqual(PointAtInfinity(curve))
+	return p.Equal(PointAtInfinity(curve))
 }
