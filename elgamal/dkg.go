@@ -1,6 +1,10 @@
 package elgamal
 
-import "crypto/elliptic"
+import (
+	"crypto/elliptic"
+
+	"github.com/dgamingfoundation/HERB/point"
+)
 
 //DKG is n-n distributed key generation protocol
 func DKG(curve elliptic.Curve, n int) ([]Participant, error) {
@@ -11,7 +15,7 @@ func DKG(curve elliptic.Curve, n int) ([]Participant, error) {
 	}
 
 	//then each party publishes partialKey.publicKey and everyone knows the public key of i-th participant
-	partialPublicKeys := make([]Point, n)
+	partialPublicKeys := make([]point.Point, n)
 	for i := range parties {
 		partialPublicKeys[i] = parties[i].PartialKey.PublicKey
 	}
@@ -19,7 +23,7 @@ func DKG(curve elliptic.Curve, n int) ([]Participant, error) {
 	//each participant generates common public key from partial keys
 	var err error
 	for i := range parties {
-		parties[i].CommonKey, err = RecoverPoint(curve, partialPublicKeys)
+		parties[i].CommonKey, err = point.Recover(curve, partialPublicKeys)
 		if err != nil {
 			return nil, err
 		}

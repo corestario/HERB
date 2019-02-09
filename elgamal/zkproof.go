@@ -3,6 +3,8 @@ package elgamal
 import (
 	"crypto/elliptic"
 	"crypto/sha256"
+	"github.com/dgamingfoundation/HERB/point"
+	"github.com/dgamingfoundation/HERB/rand"
 	"math/big"
 )
 
@@ -21,15 +23,15 @@ func (z ZKproof) IsEqual(z1 ZKproof) bool {
 //Proofs currently not in use
 
 //ProofDLK creates discrete logarithm knowledge proof for a = xG
-func ProofDLK(ep *elliptic.CurveParams, pointA Point, x *big.Int) (ZKproof, Point) {
-	w := randEllipticKey(ep)
+func ProofDLK(ep *elliptic.CurveParams, pointA point.Point, x *big.Int) (ZKproof, point.Point) {
+	w := rand.RandEllipticKey(ep)
 	wBytes := w.Bytes()
 
-	var pointH Point
-	pointH.x, pointH.y = ep.ScalarMult(ep.Gx, ep.Gy, wBytes)
+	var pointH point.Point
+	pointH.Set(ep.ScalarMult(ep.Gx, ep.Gy, wBytes))
 
 	var dlk ZKproof
-	dlk.E = hashPoints(Point{ep.Gx, ep.Gy}, pointA, pointH)
+	dlk.E = hashPoints(point.Point{ep.Gx, ep.Gy}, pointA, pointH)
 	mul := new(big.Int).Mul(x, dlk.E)
 	dlk.Z = new(big.Int).Sub(w, mul)
 
@@ -37,30 +39,30 @@ func ProofDLK(ep *elliptic.CurveParams, pointA Point, x *big.Int) (ZKproof, Poin
 }
 
 //VerifyDLK verify discrete logarithm knowledge proof for a = xG
-func VerifyDLK(ep *elliptic.CurveParams, dl ZKproof, pointA Point) bool {
-	var pointH, pointTemp1, pointTemp2 Point
+func VerifyDLK(ep *elliptic.CurveParams, dl ZKproof, pointA point.Point) bool {
+	var pointH, pointTemp1, pointTemp2 point.Point
 
 	negZ := new(big.Int).Mod(dl.Z, ep.N)
 
-	pointTemp1.x, pointTemp1.y = ep.ScalarMult(ep.Gx, ep.Gy, negZ.Bytes())
-	pointTemp2.x, pointTemp2.y = ep.ScalarMult(pointA.x, pointA.y, dl.E.Bytes())
+	pointTemp1.Set(ep.ScalarMult(ep.Gx, ep.Gy, negZ.Bytes()))
+	pointTemp2.Set(ep.ScalarMult(pointA.GetX(), pointA.GetY(), dl.E.Bytes()))
 
-	pointH.x, pointH.y = ep.Add(pointTemp1.x, pointTemp1.y, pointTemp2.x, pointTemp2.y)
+	pointH.Set(ep.Add(pointTemp1.GetX(), pointTemp1.GetY(), pointTemp2.GetX(), pointTemp2.GetY()))
 
-	proof := hashPoints(Point{ep.Gx, ep.Gy}, pointA, pointH)
+	proof := hashPoints(point.Point{ep.Gx, ep.Gy}, pointA, pointH)
 
 	return proof.Cmp(dl.E) == 0
 }
 
 //ProofDLE creates discrete logarithm equality proof for pointY = x*pointT, pointZ = x * G
-func ProofDLE(ep *elliptic.CurveParams, pointY, pointT, pointZ Point, x *big.Int) (ZKproof, Point, Point) {
-	w := randEllipticKey(ep)
+func ProofDLE(ep *elliptic.CurveParams, pointY, pointT, pointZ point.Point, x *big.Int) (ZKproof, point.Point, point.Point) {
+	w := rand.RandEllipticKey(ep)
 	wBytes := w.Bytes()
 
-	var pointA1, pointA2 Point
+	var pointA1, pointA2 point.Point
 	var mul *big.Int
-	pointA1.x, pointA1.y = ep.ScalarMult(pointT.x, pointT.y, wBytes)
-	pointA2.x, pointA2.y = ep.ScalarMult(ep.Gx, ep.Gy, wBytes)
+	pointA1.Set(ep.ScalarMult(pointT.GetX(), pointT.GetY(), wBytes))
+	pointA2.Set(ep.ScalarMult(ep.Gx, ep.Gy, wBytes))
 
 	var dle ZKproof
 	dle.E = hashPoints(pointY, pointZ, pointA1, pointA2)
@@ -71,31 +73,31 @@ func ProofDLE(ep *elliptic.CurveParams, pointY, pointT, pointZ Point, x *big.Int
 }
 
 //VerifyDLE verify discrete logarithm equality proof for pointY = x*pointT, pointZ = x * G
-func VerifyDLE(ep *elliptic.CurveParams, dl ZKproof, pointY, pointT, pointZ Point) bool {
-	var pointA1, pointA2, pointTemp1, pointTemp2 Point
+func VerifyDLE(ep *elliptic.CurveParams, dl ZKproof, pointY, pointT, pointZ point.Point) bool {
+	var pointA1, pointA2, pointTemp1, pointTemp2 point.Point
 
 	negz := new(big.Int).Mod(dl.Z, ep.N)
-	pointTemp1.x, pointTemp1.y = ep.ScalarMult(pointT.x, pointT.y, negz.Bytes())
-	pointTemp2.x, pointTemp2.y = ep.ScalarMult(pointY.x, pointY.y, dl.E.Bytes())
+	pointTemp1.Set(ep.ScalarMult(pointT.GetX(), pointT.GetY(), negz.Bytes()))
+	pointTemp2.Set(ep.ScalarMult(pointY.GetX(), pointY.GetY(), dl.E.Bytes()))
 
-	pointA1.x, pointA1.y = ep.Add(pointTemp1.x, pointTemp1.y, pointTemp2.x, pointTemp2.y)
+	pointA1.Set(ep.Add(pointTemp1.GetX(), pointTemp1.GetY(), pointTemp2.GetX(), pointTemp2.GetY()))
 
-	pointTemp1.x, pointTemp1.y = ep.ScalarMult(ep.Gx, ep.Gy, negz.Bytes())
-	pointTemp2.x, pointTemp2.y = ep.ScalarMult(pointZ.x, pointZ.y, dl.E.Bytes())
+	pointTemp1.Set(ep.ScalarMult(ep.Gx, ep.Gy, negz.Bytes()))
+	pointTemp2.Set(ep.ScalarMult(pointZ.GetX(), pointZ.GetY(), dl.E.Bytes()))
 
-	pointA2.x, pointA2.y = ep.Add(pointTemp1.x, pointTemp1.y, pointTemp2.x, pointTemp2.y)
+	pointA2.Set(ep.Add(pointTemp1.GetX(), pointTemp1.GetY(), pointTemp2.GetX(), pointTemp2.GetY()))
 
 	proof := hashPoints(pointY, pointZ, pointA1, pointA2)
 
 	return proof.Cmp(dl.E) == 0
 }
 
-func hashPoints(points ...Point) *big.Int {
+func hashPoints(points ...point.Point) *big.Int {
 	e := sha256.New()
 
 	for _, point := range points {
-		e.Write(point.x.Bytes())
-		e.Write(point.y.Bytes())
+		e.Write(point.GetX().Bytes())
+		e.Write(point.GetY().Bytes())
 	}
 
 	pointsHash := e.Sum(nil)
