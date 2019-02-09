@@ -1,11 +1,16 @@
 package elgamal
 
-import "crypto/elliptic"
+import (
+	"crypto/elliptic"
+
+	"github.com/dgamingfoundation/HERB/point"
+	"github.com/dgamingfoundation/HERB/rand"
+)
 
 //Participant of the random generation process
 type Participant struct {
 	PartialKey KeyPair
-	CommonKey  Point
+	CommonKey  point.Point
 	ID         int
 }
 
@@ -13,23 +18,23 @@ type Participant struct {
 func NewParticipant(curve elliptic.Curve, id int) Participant {
 	ep := curve.Params()
 	//secret key
-	x := randEllipticKey(ep)
+	x := rand.RandEllipticKey(ep)
 	//public key
 
 	qx, qy := ep.ScalarMult(ep.Gx, ep.Gy, x.Bytes())
-	keyPair := KeyPair{x, Point{qx, qy}}
+	keyPair := KeyPair{x, point.Point{qx, qy}}
 
 	return Participant{PartialKey: keyPair, ID: id}
 }
 
 //Encrypt return encrypted message M and proof of t
-func (p Participant) Encrypt(curve elliptic.Curve, pointM Point) Ciphertext {
+func (p Participant) Encrypt(curve elliptic.Curve, pointM point.Point) Ciphertext {
 	ep := curve.Params()
-	r := randEllipticKey(ep)
+	r := rand.RandEllipticKey(ep)
 
-	var pointA, pointB Point
+	var pointA, pointB point.Point
 	//pointA = rG
-	pointA.x, pointA.y = ep.ScalarMult(ep.Gx, ep.Gy, r.Bytes())
+	pointA.Set(ep.ScalarMult(ep.Gx, ep.Gy, r.Bytes()))
 
 	//pointB = rQ + M
 	pointB = p.CommonKey.ScalarMult(ep, r).Add(ep, pointM)
@@ -39,8 +44,8 @@ func (p Participant) Encrypt(curve elliptic.Curve, pointM Point) Ciphertext {
 }
 
 //PartialDecrypt returns share of the decryption key for the particular ciphertext C
-func (p Participant) PartialDecrypt(curve elliptic.Curve, ct Ciphertext) (point Point) {
-	point.x, point.y = curve.ScalarMult(ct.pointA.x, ct.pointA.y, p.PartialKey.SecretKey.Bytes())
+func (p Participant) PartialDecrypt(curve elliptic.Curve, ct Ciphertext) (point point.Point) {
+	point.Set(curve.ScalarMult(ct.pointA.GetX(), ct.pointA.GetY(), p.PartialKey.SecretKey.Bytes()))
 	return
 }
 
