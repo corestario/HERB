@@ -18,9 +18,8 @@ type Participant struct {
 //}
 
 //Encrypt return encrypted message M and proof of t
-func (p Participant) Encrypt(group kyber.Group, message []byte) (
-	ct Ciphertext, M kyber.Point) {
-	M = group.Point().Embed(message, random.New())
+func (p Participant) Encrypt(group kyber.Group, M kyber.Point) (
+	ct Ciphertext) {
 	k := group.Scalar().Pick(random.New())
 	S := group.Point().Mul(k, p.CommonKey)
 	ct = Ciphertext{group.Point().Mul(k, nil), S.Add(S, M)}
