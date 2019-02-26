@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -13,8 +14,8 @@ import (
 )
 
 func Test_ElGamal_Positive(t *testing.T) {
-	testCasesN := []int{2, 3, 5, 10, 50, 100}
-	testCasesT := []int{1, 2, 3, 4, 35, 50}
+	testCasesN := []int{3, 5, 10, 50, 100}
+	testCasesT := []int{2, 3, 4, 35, 50}
 	for i, tc := range testCasesN {
 		t.Run(fmt.Sprintf("validators set %d", tc), func(t *testing.T) {
 			parties, curve, err := initElGamal(t, tc, testCasesT[i])
@@ -137,33 +138,15 @@ func elGamalPositive(t *testing.T, parties []elgamal.Participant, curve kyber.Gr
 		expectedMessage = curve.Point().Add(expectedMessage, newMessages[i])
 	}
 
-	decryptedMessage.Equal(expectedMessage)
+	if !decryptedMessage.Equal(expectedMessage) {
+		err := errors.New("decryptedMessage isn't equal with expectedMessage")
+		t.Errorf("messages isn't equal %q", err)
+	}
 }
 
 type errorf interface {
 	Errorf(format string, args ...interface{})
 }
-
-/*
-func deepEqual(t errorf, obtained, expected interface{}) {
-	if !cmp.Equal(obtained, expected) {
-		t.Errorf("... %s", diff(obtained, expected))
-	}
-}
-
-func diff(obtained, expected interface{}) string {
-	var failMessage bytes.Buffer
-	diffs := pretty.Diff(obtained, expected)
-
-	if len(diffs) > 0 {
-		failMessage.WriteString("Obtained:\t\tExpected:")
-		for _, singleDiff := range diffs {
-			failMessage.WriteString(fmt.Sprintf("\n%v", singleDiff))
-		}
-	}
-
-	return failMessage.String()
-}*/
 
 func initElGamal(t errorf, n int, tr int) ([]elgamal.Participant, kyber.Group, error) {
 	// creating elliptic curve
