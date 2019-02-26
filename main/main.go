@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/dgamingfoundation/Herb/elgamal"
+	"github.com/dgamingfoundation/distributed-key-generation/dkg"
 	"go.dedis.ch/kyber"
 	"go.dedis.ch/kyber/group/nist"
 )
@@ -12,7 +13,7 @@ func main() {
 	suite := nist.NewBlakeSHA256P256()
 	t := 4
 	n := 10
-	parties, err := elgamal.DKG(suite, n, t)
+	parties, err := dkg.DKG(suite, n, t)
 	if err != nil {
 		println("DKG Error")
 		println(err)

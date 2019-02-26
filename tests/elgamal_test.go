@@ -11,11 +11,12 @@ import (
 	"go.dedis.ch/kyber/util/random"
 
 	"github.com/dgamingfoundation/Herb/elgamal"
+	"github.com/dgamingfoundation/distributed-key-generation/dkg"
 )
 
 func Test_ElGamal_Positive(t *testing.T) {
-	testCasesN := []int{3, 5, 10, 50, 100}
-	testCasesT := []int{2, 3, 4, 35, 50}
+	testCasesN := []int{3, 5, 10}
+	testCasesT := []int{2, 3, 4}
 	for i, tc := range testCasesN {
 		t.Run(fmt.Sprintf("validators set %d", tc), func(t *testing.T) {
 			parties, curve, err := initElGamal(t, tc, testCasesT[i])
@@ -153,7 +154,7 @@ func initElGamal(t errorf, n int, tr int) ([]elgamal.Participant, kyber.Group, e
 	suite := nist.NewBlakeSHA256P256()
 
 	//generating key
-	parties, err := elgamal.DKG(suite, n, tr)
+	parties, err := dkg.DKG(suite, n, tr)
 	if err != nil {
 		return nil, nil, err
 	}
