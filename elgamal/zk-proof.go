@@ -5,17 +5,35 @@ import (
 	"go.dedis.ch/kyber/proof"
 )
 
-func DLK(group proof.Suite, B kyber.Point, x kyber.Scalar, X kyber.Point) (DLKproof []byte, predDLK proof.Predicate, err error) {
-	predDLK = proof.Rep("X", "x", "B")
+func DLK(group proof.Suite, B kyber.Point, x kyber.Scalar, X kyber.Point) (DLKproof []byte, err error) {
+	predDLK := proof.Rep("X", "x", "B")
 	sval := map[string]kyber.Scalar{"x": x}
 	pval := map[string]kyber.Point{"B": B, "X": X}
 	prover := predDLK.Prover(group, sval, pval, nil)
 	DLKproof, err = proof.HashProve(group, "DLK", prover)
 	return
 }
-func DLKVerify(group proof.Suite, X kyber.Point, B kyber.Point, predDLK proof.Predicate, DLKproof []byte) (err error) {
+func RK(group proof.Suite, B1 kyber.Point, x1 kyber.Scalar, B2 kyber.Point, x2 kyber.Scalar, X kyber.Point) (RKproof []byte, err error) {
+	predRK := proof.Rep("X", "x1", "B1", "x2", "B2")
+	sval := map[string]kyber.Scalar{"x1": x1, "x2": x2}
+	pval := map[string]kyber.Point{"B1": B1, "B2": B2, "X": X}
+	prover := predRK.Prover(group, sval, pval, nil)
+	RKproof, err = proof.HashProve(group, "RK", prover)
+	return
+}
+
+func DLKVerify(group proof.Suite, X kyber.Point, B kyber.Point, DLKproof []byte) (err error) {
+	predDLK := proof.Rep("X", "x", "B")
 	pval := map[string]kyber.Point{"B": B, "X": X}
 	verifier := predDLK.Verifier(group, pval)
 	err = proof.HashVerify(group, "DLK", verifier, DLKproof)
+	return
+}
+
+func RKVerify(group proof.Suite, X kyber.Point, B1 kyber.Point, B2 kyber.Point, RKproof []byte) (err error) {
+	predRK := proof.Rep("X", "x1", "B1", "x2", "B2")
+	pval := map[string]kyber.Point{"B1": B1, "B2": B2, "X": X}
+	verifier := predRK.Verifier(group, pval)
+	err = proof.HashVerify(group, "RK", verifier, RKproof)
 	return
 }
