@@ -53,6 +53,26 @@ func Test_RKproof_Positive(t *testing.T) {
 	}
 }
 
+func Test_DLEproof_Positive(t *testing.T) {
+	suite := nist.NewBlakeSHA256P256()
+	B := suite.Point().Base()
+	X := suite.Point().Mul(suite.Scalar().SetInt64(25), B)
+	testCases := []int64{-1, 0, 1, 5, 342545}
+	for _, y := range testCases {
+		t.Run("start", func(t *testing.T) {
+			x := suite.Scalar().SetInt64(y)
+			DLEproof, xB, xX, err := elgamal.DLE(suite, B, X, x)
+			if err != nil {
+				t.Errorf("can't doing ZKProof with error %q", err)
+			}
+			res := elgamal.DLEVerify(suite, DLEproof, B, X, xB, xX)
+			if res != nil {
+				t.Errorf("Zkproof isn't valid because of %q", res)
+			}
+		})
+	}
+}
+
 //(N-1)*B == -1*B in kyber ?
 func Test_EqualityPoints_Positive(t *testing.T) {
 	suite := nist.NewBlakeSHA256P256()
