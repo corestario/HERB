@@ -2,6 +2,8 @@ package elgamal
 
 import (
 	"go.dedis.ch/kyber"
+	"go.dedis.ch/kyber/proof"
+	"go.dedis.ch/kyber/proof/dleq"
 	"go.dedis.ch/kyber/util/random"
 )
 
@@ -18,18 +20,37 @@ type Participant struct {
 //}
 
 //Encrypt return encrypted message M and proof of t
-func (p Participant) Encrypt(group kyber.Group, M kyber.Point) (
-	ct Ciphertext) {
+func (p Participant) Encrypt(group proof.Suite) (ct Ciphertext, M kyber.Point, DLKproof []byte, RKproof []byte, DLKerr error, RKerr error) {
+	y := group.Scalar().Pick(random.New())
+	M = group.Point().Mul(y, nil)
 	k := group.Scalar().Pick(random.New())
 	S := group.Point().Mul(k, p.CommonKey)
-	ct = Ciphertext{group.Point().Mul(k, nil), S.Add(S, M)}
+	A := group.Point().Mul(k, nil)
+	B := S.Add(S, M)
+	ct = Ciphertext{A, B}
+	DLKproof, DLKerr = DLK(group, group.Point().Base(), k, A)
+	RKproof, RKerr = RK(group, group.Point().Base(), y, p.CommonKey, k, B)
+	return
+}
+
+// Verify DLK-proof and RK-proof for ciphertexts
+func (p Participant) VerifyCiphertext(group proof.Suite, DLKproof []byte, ct Ciphertext, RKproof []byte) (DLKerr error, RKerr error) {
+	DLKerr = DLKVerify(group, ct.PointA, group.Point().Base(), DLKproof)
+	RKerr = RKVerify(group, ct.PointB, group.Point().Base(), p.CommonKey, RKproof)
 	return
 }
 
 //PartialDecrypt returns share of the decryption key for the particular ciphertext C
-func (p Participant) PartialDecrypt(group kyber.Group, C Ciphertext) (
-	D kyber.Point) {
+func (p Participant) PartialDecrypt(group proof.Suite, C Ciphertext) (
+	D kyber.Point, DLEproof *dleq.Proof, H kyber.Point) {
 	D = group.Point().Mul(p.PartialKey, C.PointA)
+	DLEproof, H, _, _ = DLE(group, group.Point().Base(), C.PointA, p.PartialKey)
+	return
+}
+
+//verify DLE-prooffor decryption shares
+func (p Participant) VerifyDecParts(group proof.Suite, DLEproof *dleq.Proof, ct Ciphertext, D, H kyber.Point) (DLEerr error) {
+	DLEerr = DLEVerify(group, DLEproof, group.Point().Base(), ct.PointA, H, D)
 	return
 }
 

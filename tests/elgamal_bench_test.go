@@ -7,6 +7,7 @@ import (
 
 	"github.com/dgamingfoundation/Herb/elgamal"
 	"go.dedis.ch/kyber"
+	"go.dedis.ch/kyber/proof"
 )
 
 func BenchmarkElGamal(b *testing.B) {
@@ -38,7 +39,7 @@ func BenchmarkElGamal(b *testing.B) {
 	}
 }
 
-func elGamalBench(parties []elgamal.Participant, curve kyber.Group, tr int) (kyber.Point, []kyber.Point) {
+func elGamalBench(parties []elgamal.Participant, curve proof.Suite, tr int) (kyber.Point, []kyber.Point) {
 	n := len(parties)
 
 	//Any system user generates some message, encrypts and publishes it

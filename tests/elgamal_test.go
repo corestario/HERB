@@ -8,7 +8,8 @@ import (
 
 	"go.dedis.ch/kyber"
 	"go.dedis.ch/kyber/group/nist"
-	"go.dedis.ch/kyber/util/random"
+	"go.dedis.ch/kyber/proof"
+	"go.dedis.ch/kyber/proof/dleq"
 
 	"github.com/dgamingfoundation/Herb/elgamal"
 	"github.com/dgamingfoundation/distributed-key-generation/dkg"
@@ -96,20 +97,32 @@ func subTwoEqualPositive(t *testing.T, curve elliptic.Curve, p point.Point, poin
 	deepEqual(t, pointInf, subResult)
 }*/
 
-func elGamalPositive(t *testing.T, parties []elgamal.Participant, curve kyber.Group, tr int) {
+func elGamalPositive(t *testing.T, parties []elgamal.Participant, curve proof.Suite, tr int) {
 	n := len(parties)
 
 	//Any system user generates some message, encrypts and publishes it
 	//We use our validators set (parties) just for example
 	publishedCiphertextes := make([]elgamal.Ciphertext, n)
-
+	DLKproofs := make([][]byte, n)
+	RKproofs := make([][]byte, n)
 	newMessages := make([]kyber.Point, n)
 	publishChan := publishMessages(parties, curve)
 	for publishedMessage := range publishChan {
 		i := publishedMessage.id
-
+		DLKproofs[i] = publishedMessage.DLKproof
+		RKproofs[i] = publishedMessage.RKproof
 		newMessages[i] = publishedMessage.msg
 		publishedCiphertextes[i] = publishedMessage.published
+	}
+	//verify all ciphertexts by parties[1]
+	for i := 0; i < n; i++ {
+		errDLK, errRK := parties[1].VerifyCiphertext(curve, DLKproofs[i], publishedCiphertextes[i], RKproofs[i])
+		if errDLK != nil {
+			t.Errorf("DLK proof isn't verified with error %q", errDLK)
+		}
+		if errRK != nil {
+			t.Errorf("RK proof isn't verified with error %q", errRK)
+		}
 	}
 
 	//	for i := range publishedCiphertextes {
@@ -126,12 +139,22 @@ func elGamalPositive(t *testing.T, parties []elgamal.Participant, curve kyber.Gr
 
 	//decrypt the random
 	decryptParts := make([]kyber.Point, tr)
+	DLEproofs := make([]*dleq.Proof, tr)
+	verKeys := make([]kyber.Point, tr)
 	decrypted := decryptMessages(parties, curve, commonCiphertext, tr)
 	for msg := range decrypted {
 		i := msg.id
 		decryptParts[i] = msg.msg
+		DLEproofs[i] = msg.DLEproof
+		verKeys[i] = msg.H
 	}
-
+	//verify decrypted parts
+	for i := 0; i < tr; i++ {
+		errDLE := parties[1].VerifyDecParts(curve, DLEproofs[i], commonCiphertext, decryptParts[i], verKeys[i])
+		if errDLE != nil {
+			t.Errorf("DLE proof isn't verified with error %q", errDLE)
+		}
+	}
 	decryptedMessage := elgamal.Decrypt(curve, commonCiphertext, decryptParts, n)
 
 	expectedMessage := curve.Point().Null()
@@ -149,7 +172,7 @@ type errorf interface {
 	Errorf(format string, args ...interface{})
 }
 
-func initElGamal(t errorf, n int, tr int) ([]elgamal.Participant, kyber.Group, error) {
+func initElGamal(t errorf, n int, tr int) ([]elgamal.Participant, proof.Suite, error) {
 	// creating elliptic curve
 	suite := nist.NewBlakeSHA256P256()
 
@@ -175,9 +198,11 @@ type publishedMessage struct {
 	id        int
 	msg       kyber.Point
 	published elgamal.Ciphertext
+	DLKproof  []byte
+	RKproof   []byte
 }
 
-func publishMessages(parties []elgamal.Participant, curve kyber.Group) chan publishedMessage {
+func publishMessages(parties []elgamal.Participant, curve proof.Suite) chan publishedMessage {
 	publish := make(chan publishedMessage, len(parties))
 
 	wg := sync.WaitGroup{}
@@ -187,11 +212,11 @@ func publishMessages(parties []elgamal.Participant, curve kyber.Group) chan publ
 
 		for i := range parties {
 			go func(id int) {
-				M := []byte("ILSON")
-				message := curve.Point().Embed(M, random.New())
-				encryptedMessage := parties[id].Encrypt(curve, message)
+				//M := []byte("ILSON")
+				//message := curve.Point().Embed(M, random.New())
+				encryptedMessage, message, DLKproof, RKproof, _, _ := parties[id].Encrypt(curve)
 
-				publish <- publishedMessage{id, message, encryptedMessage}
+				publish <- publishedMessage{id, message, encryptedMessage, DLKproof, RKproof}
 				wg.Done()
 			}(i)
 		}
@@ -204,11 +229,13 @@ func publishMessages(parties []elgamal.Participant, curve kyber.Group) chan publ
 }
 
 type decryptedMessage struct {
-	id  int
-	msg kyber.Point
+	id       int
+	msg      kyber.Point
+	DLEproof *dleq.Proof
+	H        kyber.Point
 }
 
-func decryptMessages(participant []elgamal.Participant, curve kyber.Group, commonCiphertext elgamal.Ciphertext, tr int) chan decryptedMessage {
+func decryptMessages(participant []elgamal.Participant, curve proof.Suite, commonCiphertext elgamal.Ciphertext, tr int) chan decryptedMessage {
 	parties := participant[:tr]
 	decrypted := make(chan decryptedMessage, len(parties))
 
@@ -219,9 +246,9 @@ func decryptMessages(participant []elgamal.Participant, curve kyber.Group, commo
 
 		for i := range parties {
 			go func(id int) {
-				decryptedMsg := parties[id].PartialDecrypt(curve, commonCiphertext)
+				decryptedMsg, DLEpr, H := parties[id].PartialDecrypt(curve, commonCiphertext)
 
-				decrypted <- decryptedMessage{id, decryptedMsg}
+				decrypted <- decryptedMessage{id, decryptedMsg, DLEpr, H}
 				wg.Done()
 			}(i)
 		}
