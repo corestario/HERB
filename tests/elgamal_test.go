@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"sync"
@@ -29,73 +31,6 @@ func Test_ElGamal_Positive(t *testing.T) {
 		})
 	}
 }
-
-/*func Test_IdentityCiphertext_Positive(t *testing.T) {
-	curve := elliptic.P256()
-	party, err := DKG(curve, 1)
-	if err != nil {
-		t.Errorf("can't init DKG with error %q", err)
-	}
-
-	genPoint, err := point.FromCoordinates(curve, curve.Params().Gx, curve.Params().Gy)
-	if err != nil {
-		t.Errorf("can't make genPoint: %s", err)
-	}
-
-	n1 := big.NewInt(1)
-	n1.Sub(curve.Params().N, big.NewInt(1))
-
-	messages := []point.Point{point.PointAtInfinity(curve), genPoint,
-		genPoint.ScalarMult(curve, big.NewInt(13)), genPoint.ScalarMult(curve, n1)}
-
-	testCases := make([]Ciphertext, len(messages))
-	for i, m := range messages {
-		testCases[i] = party[0].Encrypt(curve, m)
-	}
-
-	neutralCiphertext := IdentityCiphertext(curve)
-	for i, tc := range testCases {
-		t.Run(fmt.Sprintf("Ciphertext %d:", i), func(t *testing.T) {
-			neutralCiphertextAggregate(t, curve, tc, neutralCiphertext, party[0])
-		})
-	}
-}*/
-
-/*func neutralCiphertextAggregate(t *testing.T, curve elliptic.Curve, ct Ciphertext, neutral Ciphertext, party Participant) {
-	parts := []Ciphertext{ct, neutral}
-	resultCT := AggregateCiphertext(curve, parts)
-
-	originalDecryptShares := []point.Point{party.PartialDecrypt(curve, ct)}
-	plaintext := ct.Decrypt(curve, originalDecryptShares)
-
-	newDecryptShares := []point.Point{party.PartialDecrypt(curve, resultCT)}
-	resultPlaintext := resultCT.Decrypt(curve, newDecryptShares)
-
-	deepEqual(t, resultPlaintext, plaintext)
-}
-
-func scalarMultPositive(t *testing.T, curve elliptic.Curve, p point.Point, pointInf point.Point) {
-	curveParams := curve.Params()
-	multResult := p.ScalarMult(curve, curveParams.N)
-	deepEqual(t, pointInf, multResult)
-}
-
-func addPositive(t *testing.T, curve elliptic.Curve, p point.Point, pointInf point.Point) {
-	addResult := p.Add(curve, pointInf)
-	deepEqual(t, p, addResult)
-}
-
-func subPositive(t *testing.T, curve elliptic.Curve, p point.Point, pointInf point.Point) {
-	subResult := p.Sub(curve, pointInf)
-	deepEqual(t, p, subResult)
-}
-
-func subTwoEqualPositive(t *testing.T, curve elliptic.Curve, p point.Point, pointInf point.Point) {
-	fmt.Println(p.GetX(), p.GetY())
-	subResult := p.Sub(curve, p)
-	fmt.Println(p.GetX(), p.GetY(), subResult.GetX(), subResult.GetY())
-	deepEqual(t, pointInf, subResult)
-}*/
 
 func elGamalPositive(t *testing.T, parties []elgamal.Participant, curve proof.Suite, tr int) {
 	n := len(parties)
@@ -158,7 +93,7 @@ func elGamalPositive(t *testing.T, parties []elgamal.Participant, curve proof.Su
 	decryptedMessage := elgamal.Decrypt(curve, commonCiphertext, decryptParts, n)
 
 	expectedMessage := curve.Point().Null()
-	for i, _ := range newMessages {
+	for i := range newMessages {
 		expectedMessage = curve.Point().Add(expectedMessage, newMessages[i])
 	}
 
@@ -172,24 +107,56 @@ type errorf interface {
 	Errorf(format string, args ...interface{})
 }
 
+func getBytes(data interface{}) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(data)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func getInterface(bts []byte, data interface{}) error {
+	buf := bytes.NewBuffer(bts)
+	dec := gob.NewDecoder(buf)
+	err := dec.Decode(data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func initElGamal(t errorf, n int, tr int) ([]elgamal.Participant, proof.Suite, error) {
 	// creating elliptic curve
 	suite := nist.NewBlakeSHA256P256()
 
 	//generating key
-	parties, err := dkg.DKG(suite, n, tr)
+	keyShares, err := dkg.DKG("P256", n, tr)
 	if err != nil {
 		return nil, nil, err
 	}
 	participants := make([]elgamal.Participant, n)
-	for i, p := range parties {
-		keyShare, err := p.DistKeyShare()
+	for i, share := range keyShares {
+		participants[i].ID = i + 1
+		partialKeyBytes, errPK := getBytes(share.PriShare().V)
+		if errPK != nil {
+			return nil, nil, errPK
+		}
+		commonKeyBytes, errCK := getBytes(share.Public())
+		if errCK != nil {
+			return nil, nil, errPK
+		}
+		participants[i].PartialKey = suite.Scalar()
+		participants[i].CommonKey = suite.Point()
+		err := getInterface(partialKeyBytes, participants[i].PartialKey)
 		if err != nil {
 			return nil, nil, err
 		}
-		participants[i].ID = 1
-		participants[i].PartialKey = keyShare.PriShare().V
-		participants[i].CommonKey = keyShare.Public()
+		err = getInterface(commonKeyBytes, participants[i].CommonKey)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	return participants, suite, nil
 }
@@ -212,8 +179,6 @@ func publishMessages(parties []elgamal.Participant, curve proof.Suite) chan publ
 
 		for i := range parties {
 			go func(id int) {
-				//M := []byte("ILSON")
-				//message := curve.Point().Embed(M, random.New())
 				encryptedMessage, message, DLKproof, RKproof, _, _ := parties[id].Encrypt(curve)
 
 				publish <- publishedMessage{id, message, encryptedMessage, DLKproof, RKproof}

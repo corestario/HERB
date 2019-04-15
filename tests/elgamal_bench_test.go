@@ -39,7 +39,7 @@ func BenchmarkElGamal(b *testing.B) {
 						}
 					}
 					expectedMessage := curve.Point().Null()
-					for i, _ := range newMessages {
+					for i := range newMessages {
 						expectedMessage = curve.Point().Add(expectedMessage, newMessages[i])
 					}
 
