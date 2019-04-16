@@ -132,7 +132,7 @@ func initElGamal(t errorf, n int, tr int) ([]elgamal.Participant, proof.Suite, e
 	suite := nist.NewBlakeSHA256P256()
 
 	//generating key
-	keyShares, err := dkg.DKG("P256", n, tr)
+	keyShares, _, err := dkg.DKG("P256", n, tr)
 	if err != nil {
 		return nil, nil, err
 	}
