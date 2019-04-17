@@ -9,9 +9,10 @@ import (
 
 //Participant of the random generation process
 type Participant struct {
-	PartialKey kyber.Scalar
-	CommonKey  kyber.Point
-	ID         int
+	PartialKey      kyber.Scalar
+	CommonKey       kyber.Point
+	VerificationKey kyber.Point
+	ID              int
 }
 
 //NewParticipant fill pair of secret and public key into the participant p.
@@ -41,8 +42,7 @@ func (p Participant) VerifyCiphertext(group proof.Suite, DLKproof []byte, ct Cip
 }
 
 //PartialDecrypt returns share of the decryption key for the particular ciphertext C
-func (p Participant) PartialDecrypt(group proof.Suite, C Ciphertext) (
-	D kyber.Point, DLEproof *dleq.Proof, H kyber.Point) {
+func (p Participant) PartialDecrypt(group proof.Suite, C Ciphertext) (D kyber.Point, DLEproof *dleq.Proof, H kyber.Point) {
 	D = group.Point().Mul(p.PartialKey, C.PointA)
 	DLEproof, H, _, _ = DLE(group, group.Point().Base(), C.PointA, p.PartialKey)
 	return

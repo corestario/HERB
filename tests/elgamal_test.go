@@ -60,17 +60,8 @@ func elGamalPositive(t *testing.T, parties []elgamal.Participant, curve proof.Su
 		}
 	}
 
-	//	for i := range publishedCiphertextes {
-	//		if !publishedCiphertextes[i].IsValid(curve) {
-	//			t.Errorf("Ciphertext is not valid: %v\nOriginal message: %v", publishedCiphertextes[i], newMessages[i])
-	//		}
-	//	}
 	//aggregate all ciphertextes
 	commonCiphertext := elgamal.AggregateCiphertext(curve, publishedCiphertextes)
-
-	//if !commonCiphertext.IsValid(curve) {
-	//	t.Errorf("Common ciphertext is not valid: %v\nOriginal messages: %v", commonCiphertext, newMessages)
-	//}
 
 	//decrypt the random
 	decryptParts := make([]kyber.Point, tr)
@@ -85,7 +76,7 @@ func elGamalPositive(t *testing.T, parties []elgamal.Participant, curve proof.Su
 	}
 	//verify decrypted parts
 	for i := 0; i < tr; i++ {
-		errDLE := parties[1].VerifyDecParts(curve, DLEproofs[i], commonCiphertext, decryptParts[i], verKeys[i])
+		errDLE := parties[1].VerifyDecParts(curve, DLEproofs[i], commonCiphertext, decryptParts[i], parties[i].VerificationKey)
 		if errDLE != nil {
 			t.Errorf("DLE proof isn't verified with error %q", errDLE)
 		}
@@ -132,7 +123,8 @@ func initElGamal(t errorf, n int, tr int) ([]elgamal.Participant, proof.Suite, e
 	suite := nist.NewBlakeSHA256P256()
 
 	//generating key
-	keyShares, _, err := dkg.DKG("P256", n, tr)
+	keyShares, verificationKeysDKG, err := dkg.DKG("P256", n, tr)
+
 	if err != nil {
 		return nil, nil, err
 	}
@@ -143,17 +135,30 @@ func initElGamal(t errorf, n int, tr int) ([]elgamal.Participant, proof.Suite, e
 		if errPK != nil {
 			return nil, nil, errPK
 		}
+
 		commonKeyBytes, errCK := getBytes(share.Public())
 		if errCK != nil {
 			return nil, nil, errPK
 		}
+
+		verificationKeyBytes, errVK := getBytes(verificationKeysDKG[i])
+		if errVK != nil {
+			return nil, nil, errPK
+		}
+
 		participants[i].PartialKey = suite.Scalar()
 		participants[i].CommonKey = suite.Point()
+		participants[i].VerificationKey = suite.Point()
 		err := getInterface(partialKeyBytes, participants[i].PartialKey)
 		if err != nil {
 			return nil, nil, err
 		}
 		err = getInterface(commonKeyBytes, participants[i].CommonKey)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		err = getInterface(verificationKeyBytes, participants[i].VerificationKey)
 		if err != nil {
 			return nil, nil, err
 		}
