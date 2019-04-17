@@ -83,18 +83,16 @@ func elGamalBench(parties []elgamal.Participant, curve proof.Suite, tr int) (kyb
 	//decrypt the random
 	decryptParts := make([]kyber.Point, tr)
 	DLEproofs := make([]*dleq.Proof, tr)
-	verKeys := make([]kyber.Point, tr)
 	decrypted := decryptMessages(parties, curve, commonCiphertext, tr)
 	errDLE := make([]error, tr)
 	for msg := range decrypted {
 		i := msg.id
 		decryptParts[i] = msg.msg
 		DLEproofs[i] = msg.DLEproof
-		verKeys[i] = msg.H
 	}
 	//verify decrypted parts
 	for i := 0; i < tr; i++ {
-		errDLE[i] = parties[1].VerifyDecParts(curve, DLEproofs[i], commonCiphertext, decryptParts[i], verKeys[i])
+		errDLE[i] = parties[1].VerifyDecParts(curve, DLEproofs[i], commonCiphertext, decryptParts[i], parties[i].VerificationKey)
 	}
 	return elgamal.Decrypt(curve, commonCiphertext, decryptParts, n), newMessages, errDLE, errDLK, errRK
 }

@@ -66,13 +66,11 @@ func elGamalPositive(t *testing.T, parties []elgamal.Participant, curve proof.Su
 	//decrypt the random
 	decryptParts := make([]kyber.Point, tr)
 	DLEproofs := make([]*dleq.Proof, tr)
-	verKeys := make([]kyber.Point, tr)
 	decrypted := decryptMessages(parties, curve, commonCiphertext, tr)
 	for msg := range decrypted {
 		i := msg.id
 		decryptParts[i] = msg.msg
 		DLEproofs[i] = msg.DLEproof
-		verKeys[i] = msg.H
 	}
 	//verify decrypted parts
 	for i := 0; i < tr; i++ {
@@ -202,7 +200,6 @@ type decryptedMessage struct {
 	id       int
 	msg      kyber.Point
 	DLEproof *dleq.Proof
-	H        kyber.Point
 }
 
 func decryptMessages(participant []elgamal.Participant, curve proof.Suite, commonCiphertext elgamal.Ciphertext, tr int) chan decryptedMessage {
@@ -216,9 +213,9 @@ func decryptMessages(participant []elgamal.Participant, curve proof.Suite, commo
 
 		for i := range parties {
 			go func(id int) {
-				decryptedMsg, DLEpr, H := parties[id].PartialDecrypt(curve, commonCiphertext)
+				decryptedMsg, DLEpr := parties[id].PartialDecrypt(curve, commonCiphertext)
 
-				decrypted <- decryptedMessage{id, decryptedMsg, DLEpr, H}
+				decrypted <- decryptedMessage{id, decryptedMsg, DLEpr}
 				wg.Done()
 			}(i)
 		}

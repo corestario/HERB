@@ -42,9 +42,9 @@ func (p Participant) VerifyCiphertext(group proof.Suite, DLKproof []byte, ct Cip
 }
 
 //PartialDecrypt returns share of the decryption key for the particular ciphertext C
-func (p Participant) PartialDecrypt(group proof.Suite, C Ciphertext) (D kyber.Point, DLEproof *dleq.Proof, H kyber.Point) {
+func (p Participant) PartialDecrypt(group proof.Suite, C Ciphertext) (D kyber.Point, DLEproof *dleq.Proof) {
 	D = group.Point().Mul(p.PartialKey, C.PointA)
-	DLEproof, H, _, _ = DLE(group, group.Point().Base(), C.PointA, p.PartialKey)
+	DLEproof, _, _, _ = DLE(group, group.Point().Base(), C.PointA, p.PartialKey)
 	return
 }
 
