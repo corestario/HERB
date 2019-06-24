@@ -3,10 +3,11 @@ package main
 import (
 	"fmt"
 
-	"github.com/dgamingfoundation/Herb/elgamal"
+	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/distributed-key-generation/dkg"
 	"go.dedis.ch/kyber"
 	"go.dedis.ch/kyber/group/nist"
+
 )
 
 func main() {
