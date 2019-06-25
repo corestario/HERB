@@ -1,6 +1,8 @@
 package herb
 
 import (
+	"encoding/binary"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	//"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
@@ -30,5 +32,22 @@ func (k Keeper) SetCiphertext(ctx sdk.Context, round uint64, ct types.Ciphertext
 	}
 
 	store := ctx.KVStore(k.storeKey)
-	ctList := store.Get(round)
+	bz := make([]byte, 8)
+	binary.LittleEndian.PutUint64(bz, round)
+	var ctList []types.CiphertextPart
+	if store.Has(bz) {
+		ctListBytes := store.Get(bz)
+		ctList, err := types.CiphertextArrayDeserialize(ctListBytes)
+		if err != nil {
+			return err
+		}
+		ctList = append(ctList, ct)
+	} else {
+		ctList = []types.CiphertextPart{ct}
+	}
+	if newCtListBytes, err := types.CiphertextArraySerialize(ctList); err != nil {
+		return err
+	}
+	store.Set(bz, newCtListBytes)
+	return nil
 }
