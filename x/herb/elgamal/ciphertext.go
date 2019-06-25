@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"go.dedis.ch/kyber"
-	"go.dedis.ch/kyber/pairing/bn256"
+	"go.dedis.ch/kyber/group/nist"
 	"go.dedis.ch/kyber/share"
 )
 
@@ -84,7 +84,7 @@ func (ctJSON *CiphertextJSON) Deserialize() (*Ciphertext, error) {
 		return nil, fmt.Errorf("failed to base64-decode point A: %v", err)
 	}
 	ADec := gob.NewDecoder(bytes.NewBuffer(ABytes))
-	pointA := bn256.NewSuite().G2().Point()
+	pointA := nist.NewBlakeSHA256P256().Point().Base()
 	if err := ADec.Decode(&pointA); err != nil {
 		return nil, fmt.Errorf("failed to decode point A : %v", err)
 	}
@@ -93,7 +93,7 @@ func (ctJSON *CiphertextJSON) Deserialize() (*Ciphertext, error) {
 		return nil, fmt.Errorf("failed to base64-decode point B: %v", err)
 	}
 	BDec := gob.NewDecoder(bytes.NewBuffer(BBytes))
-	pointB := bn256.NewSuite().G2().Point()
+	pointB := nist.NewBlakeSHA256P256().Point().Base()
 	if err := BDec.Decode(&pointB); err != nil {
 		return nil, fmt.Errorf("failed to decode point B : %v", err)
 	}
