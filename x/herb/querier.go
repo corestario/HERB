@@ -1,6 +1,7 @@
 package herb
 
 import (
+	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -33,7 +34,12 @@ func queryAggregatedCt(ctx sdk.Context, path []string, req abci.RequestQuery, ke
 		return nil, err2
 	}
 
-	bz, err := codec.MarshalJSONIndent(keeper.cdc, aggregatedCt)
+	ctJSON, err := elgamal.NewCiphertextJSON(aggregatedCt)
+	if err != nil {
+		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("coudn't get JSON ciphertext", err.Error()))
+	}
+
+	bz, err := codec.MarshalJSONIndent(keeper.cdc, ctJSON)
 	if err != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
 	}
