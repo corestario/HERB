@@ -2,6 +2,7 @@ package herb
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"go.dedis.ch/kyber"
 
@@ -30,7 +31,7 @@ func NewKeeper(storeKey sdk.StoreKey, group kyber.Group, cdc *codec.Codec) Keepe
 }
 
 // SetCiphertext store the ciphertext from the entropyProvider to the kv-store
-func (k Keeper) SetCiphertext(ctx sdk.Context, round uint64, ct types.CiphertextPart, entropyProvider sdk.AccAddress) sdk.Error {
+func (k Keeper) SetCiphertext(ctx sdk.Context, round uint64, ct *types.CiphertextPart, entropyProvider sdk.AccAddress) sdk.Error {
 	if entropyProvider.Empty() {
 		return sdk.ErrInvalidAddress("Entropy provider can't be empty!")
 	}
@@ -38,13 +39,13 @@ func (k Keeper) SetCiphertext(ctx sdk.Context, round uint64, ct types.Ciphertext
 	store := ctx.KVStore(k.storeKey)
 	key := make([]byte, 8)
 	binary.LittleEndian.PutUint64(key, round)
-	var ctList []types.CiphertextPart
+	var ctList []*types.CiphertextPart
 	if store.Has(key) {
 		ctListBytes := store.Get(key)
-		var ctListJSON []types.CiphertextPartJSON
+		var ctListJSON []*types.CiphertextPartJSON
 		err1 := k.cdc.UnmarshalJSON(ctListBytes, ctListJSON)
 		if err1 != nil {
-			return err1
+			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal array from store: %v", err1))
 		}
 		ctList, err := types.CiphertextArrayDeserialize(ctListJSON)
 		if err != nil {
@@ -52,19 +53,22 @@ func (k Keeper) SetCiphertext(ctx sdk.Context, round uint64, ct types.Ciphertext
 		}
 		ctList = append(ctList, ct)
 	} else {
-		ctList = []types.CiphertextPart{ct}
+		ctList = []*types.CiphertextPart{ct}
 	}
 	newCtListJSON, err := types.CiphertextArraySerialize(ctList)
 	if err != nil {
 		return err
 	}
-	newCtListBytes, err := k.cdc.MarshalJSON(newCtListJSON)
+	newCtListBytes, err4 := k.cdc.MarshalJSON(newCtListJSON)
+	if err4 != nil {
+		sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal array for store: %v", err4))
+	}
 	store.Set(key, newCtListBytes)
 	return nil
 }
 
 // GetAllCiphertext returns all ciphertext parts for the given round
-func (k Keeper) GetAllCiphertext(ctx sdk.Context, round uint64) ([]types.CiphertextPart, sdk.Error) {
+func (k Keeper) GetAllCiphertext(ctx sdk.Context, round uint64) ([]*types.CiphertextPart, sdk.Error) {
 	store := ctx.KVStore(k.storeKey)
 	key := make([]byte, 8)
 	binary.LittleEndian.PutUint64(key, round)
@@ -72,10 +76,10 @@ func (k Keeper) GetAllCiphertext(ctx sdk.Context, round uint64) ([]types.Ciphert
 		return nil, sdk.ErrUnknownRequest("Unknown round")
 	}
 	ctListBytes := store.Get(key)
-	var ctListJSON []types.CiphertextPartJSON
+	var ctListJSON []*types.CiphertextPartJSON
 	err1 := k.cdc.UnmarshalJSON(ctListBytes, ctListJSON)
 	if err1 != nil {
-		return nil, err1
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal array from store: %v", err1))
 	}
 	ctList, err := types.CiphertextArrayDeserialize(ctListJSON)
 	if err != nil {
