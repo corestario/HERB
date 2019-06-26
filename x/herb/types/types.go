@@ -55,10 +55,27 @@ func (ctJSON *CiphertextPartJSON) Deserialize() (*CiphertextPart, sdk.Error) {
 		EntropyProvider: ctJSON.EntropyProvider,
 	}, nil
 }
-func CiphertextArrayDeserialize([]byte) ([]CiphertextPart, sdk.Error) {
-	return nil, nil
+
+func CiphertextArraySerialize(ctArray []*CiphertextPart) ([]*CiphertextPartJSON, sdk.Error) {
+	ctJSONArray := make([]*CiphertextPartJSON, len(ctArray))
+	var err sdk.Error
+	for i, ct := range ctArray {
+		ctJSONArray[i], err = NewCiphertextPartJSON(ct)
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize array: %v", err))
+		}
+	}
+	return ctJSONArray, nil
 }
 
-func CiphertextArraySerialize([]CiphertextPart) ([]byte, sdk.Error) {
-	return nil, nil
+func CiphertextArrayDeserialize(ctJSONArray []*CiphertextPartJSON) ([]*CiphertextPart, sdk.Error) {
+	ctArray := make([]*CiphertextPart, len(ctJSONArray))
+	var err sdk.Error
+	for i, ct := range ctJSONArray {
+		ctArray[i], err = ct.Deserialize()
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize array: %v", err))
+		}
+	}
+	return ctArray, nil
 }

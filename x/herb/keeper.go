@@ -41,7 +41,12 @@ func (k Keeper) SetCiphertext(ctx sdk.Context, round uint64, ct types.Ciphertext
 	var ctList []types.CiphertextPart
 	if store.Has(key) {
 		ctListBytes := store.Get(key)
-		ctList, err := types.CiphertextArrayDeserialize(ctListBytes)
+		var ctListJSON []types.CiphertextPartJSON
+		err1 := k.cdc.UnmarshalJSON(ctListBytes, ctListJSON)
+		if err1 != nil {
+			return err1
+		}
+		ctList, err := types.CiphertextArrayDeserialize(ctListJSON)
 		if err != nil {
 			return err
 		}
@@ -49,10 +54,11 @@ func (k Keeper) SetCiphertext(ctx sdk.Context, round uint64, ct types.Ciphertext
 	} else {
 		ctList = []types.CiphertextPart{ct}
 	}
-	newCtListBytes, err := types.CiphertextArraySerialize(ctList)
+	newCtListJSON, err := types.CiphertextArraySerialize(ctList)
 	if err != nil {
 		return err
 	}
+	newCtListBytes, err := k.cdc.MarshalJSON(newCtListJSON)
 	store.Set(key, newCtListBytes)
 	return nil
 }
@@ -66,7 +72,12 @@ func (k Keeper) GetAllCiphertext(ctx sdk.Context, round uint64) ([]types.Ciphert
 		return nil, sdk.ErrUnknownRequest("Unknown round")
 	}
 	ctListBytes := store.Get(key)
-	ctList, err := types.CiphertextArrayDeserialize(ctListBytes)
+	var ctListJSON []types.CiphertextPartJSON
+	err1 := k.cdc.UnmarshalJSON(ctListBytes, ctListJSON)
+	if err1 != nil {
+		return nil, err1
+	}
+	ctList, err := types.CiphertextArrayDeserialize(ctListJSON)
 	if err != nil {
 		return nil, err
 	}
