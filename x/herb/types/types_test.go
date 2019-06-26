@@ -21,7 +21,16 @@ func TestSerialization(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to json: %v", err)
 	}
-	newctPart, err2 := ctPartJSON.Deserialize()
+	ctPartBytes, err3 := ModuleCdc.MarshalJSON(ctPartJSON)
+	if err3 != nil {
+		t.Errorf("failed marshal: %v", err3)
+	}
+	var newctPartJSON CiphertextPartJSON
+	err4 := ModuleCdc.UnmarshalJSON(ctPartBytes, &newctPartJSON)
+	if err4 != nil {
+		t.Errorf("failed unmarshal: %v", err4)
+	}
+	newctPart, err2 := newctPartJSON.Deserialize()
 	if err2 != nil {
 		t.Errorf("failed to json: %v", err2)
 	}
