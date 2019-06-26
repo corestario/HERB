@@ -2,7 +2,8 @@ package herb
 
 import (
 	"encoding/binary"
-	"go.dedis.ch/kyber/v3"
+
+	"go.dedis.ch/kyber"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
@@ -14,7 +15,7 @@ import (
 // Keeper maintains the link to data storage and exposes methods for the HERB protocol actions
 type Keeper struct {
 	storeKey sdk.StoreKey
-	group kyber.Group
+	group    kyber.Group
 
 	cdc *codec.Codec
 }
@@ -23,7 +24,7 @@ type Keeper struct {
 func NewKeeper(storeKey sdk.StoreKey, group kyber.Group, cdc *codec.Codec) Keeper {
 	return Keeper{
 		storeKey: storeKey,
-		group: group,
+		group:    group,
 		cdc:      cdc,
 	}
 }

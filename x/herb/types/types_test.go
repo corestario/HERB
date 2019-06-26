@@ -21,7 +21,7 @@ func TestSerialization(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to json: %v", err)
 	}
-	newctPart, err2 := ctPartJSON.PartDeserialize()
+	newctPart, err2 := ctPartJSON.Deserialize()
 	if err2 != nil {
 		t.Errorf("failed to json: %v", err2)
 	}

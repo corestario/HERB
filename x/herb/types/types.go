@@ -36,7 +36,7 @@ func NewCiphertextPartJSON(ciphertextPart *CiphertextPart) (*CiphertextPartJSON,
 	}, nil
 }
 
-func (ctJSON *CiphertextPartJSON) PartDeserialize() (*CiphertextPart, sdk.Error) {
+func (ctJSON *CiphertextPartJSON) Deserialize() (*CiphertextPart, sdk.Error) {
 	ciphertextJSONBytes, err := base64.StdEncoding.DecodeString(ctJSON.Ciphertext)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to base64-decode ciphertextJSON: %v", err))
