@@ -39,6 +39,12 @@ func (ct Ciphertext) Equal(ct1 Ciphertext) bool {
 	return ct.PointA.Equal(ct1.PointA) && ct.PointB.Equal(ct1.PointB)
 }
 
+//String
+func (ct Ciphertext) String() string {
+	str := fmt.Sprintf("A: %v, B: %v", ct.PointA.String(), ct.PointB.String())
+	return str
+}
+
 //AggregateCiphertext takes the set of ciphertextes parts:
 //parts[0] = (A0, B0), ..., parts[n] = (An, Bn)
 //and returns aggregated ciphertext C = (A1 + A2 + ... + An, B1 + B2 + ... + Bn)
