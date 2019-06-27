@@ -27,7 +27,7 @@ func handleMsgSetCiphertextPart(ctx sdk.Context, keeper Keeper, msg types.MsgSet
 		return sdk.ErrUnknownRequest(fmt.Sprintf("coudn't deserialize ciphertext part: %v", err)).Result()
 	}
 
-	if err2 := keeper.SetCiphertext(ctx, msg.Round, ctPart, ctPart.EntropyProvider); err2 != nil {
+	if err2 := keeper.SetCiphertext(ctx, msg.Round, ctPart); err2 != nil {
 		return err2.Result()
 	}
 
