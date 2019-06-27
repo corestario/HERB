@@ -40,7 +40,7 @@ func GetCmdAggregatedCiphertext(queryRoute string, cdc *codec.Codec) *cobra.Comm
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 			round, err := strconv.ParseUint(args[0], 10, 64)
 			if err != nil {
-				return fmt.Errorf("proposal-id %s not a valid uint, please input a valid proposal-id", args[0])
+				return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
 			}
 			params := types.NewQueryAggregatedCtParams(round)
 			bz, err := cdc.MarshalJSON(params)
