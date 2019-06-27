@@ -23,7 +23,7 @@ type CiphertextPartJSON struct {
 	EntropyProvider sdk.AccAddress `json:"entropyprovider"`
 }
 
-func NewCiphertextPartJSON(ciphertextPart CiphertextPart) (*CiphertextPartJSON, sdk.Error) {
+func NewCiphertextPartJSON(ciphertextPart *CiphertextPart) (*CiphertextPartJSON, sdk.Error) {
 	ctBuf := bytes.NewBuffer(nil)
 	ctEnc := gob.NewEncoder(ctBuf)
 	ctJSON, _ := elgamal.NewCiphertextJSON(&ciphertextPart.Ciphertext)
