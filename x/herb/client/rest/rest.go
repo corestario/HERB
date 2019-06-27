@@ -25,7 +25,7 @@ func RegisterRoutes(cliCtx context.CLIContext, r *mux.Router, cdc *codec.Codec, 
 		getAggregatedCiphertextHandler(cdc, cliCtx, storeName),
 		).Methods("GET")
 	r.HandleFunc(
-		fmt.Sprintf("%s/ciphertexts/set", storeName),
+		fmt.Sprintf("%s/ciphertext_part", storeName),
 		setCiphertextPartHandler(cdc, cliCtx),
 		).Methods("POST")
 }

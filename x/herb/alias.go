@@ -18,4 +18,6 @@ var (
 
 type (
 	MsgSetCiphertextPart = types.MsgSetCiphertextPart
+	CiphertextPart = types.CiphertextPart
+	CiphertextPartJSON = types.CiphertextPartJSON
 )
