@@ -1,29 +1,30 @@
 package HERB
 
 import (
-	"github.com/cosmos/sdk-application-tutorial/x/nameservice"
+	"encoding/json"
 	"os"
 
-	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/x/auth/genaccounts"
-	"github.com/cosmos/cosmos-sdk/x/genutil"
+	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
+	"github.com/cosmos/cosmos-sdk/x/auth/genaccounts"
 	"github.com/cosmos/cosmos-sdk/x/bank"
-	"github.com/cosmos/cosmos-sdk/x/params"
-	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/cosmos/cosmos-sdk/x/distribution"
+	"github.com/cosmos/cosmos-sdk/x/genutil"
+	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
+	"github.com/cosmos/cosmos-sdk/x/staking"
 
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/tendermint/tendermint/libs/log"
-	dbm "github.com/tendermint/tendermint/libs/db"
+	abci "github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
+	dbm "github.com/tendermint/tendermint/libs/db"
+	"github.com/tendermint/tendermint/libs/log"
+	tmtypes "github.com/tendermint/tendermint/types"
 
 	"github.com/dgamingfoundation/HERB/x/herb"
-
 )
 
 const appName = "herb"
@@ -81,27 +82,27 @@ type herbApp struct {
 }
 
 // NewHERBApp is a constructor for HERB application
-func NewHERBApp(logger log.Logger, db dbm.DB) {
+func NewHERBApp(logger log.Logger, db dbm.DB) *herbApp {
 	cdc := MakeCodec()
 
 	// BaseApp handles interactions with Tendermint through the ABCI protocol
-	bApp := bam.NewBaseApp(appName, logger, db, auth.DefaultTxDecoder())
+	bApp := bam.NewBaseApp(appName, logger, db, auth.DefaultTxDecoder(cdc))
 
 	var app = &herbApp{
 		BaseApp: bApp,
-		cdc: cdc,
+		cdc:     cdc,
 
-		keyMain: sdk.NewKVStoreKey(bam.MainStoreKey),
-		keyAccount: sdk.NewKVStoreKey(auth.StoreKey),
+		keyMain:          sdk.NewKVStoreKey(bam.MainStoreKey),
+		keyAccount:       sdk.NewKVStoreKey(auth.StoreKey),
 		keyFeeCollection: sdk.NewKVStoreKey(auth.FeeStoreKey),
-		keyStaking: sdk.NewKVStoreKey(staking.StoreKey),
-		tkeyStaking: sdk.NewTransientStoreKey(staking.TStoreKey),
-		keyDistr: sdk.NewKVStoreKey(distribution.StoreKey),
-		tkeyDistr: sdk.NewTransientStoreKey(distribution.TStoreKey),
-		keyHERB: sdk.NewKVStoreKey(herb.StoreKey),
-		keyParams: sdk.NewKVStoreKey(params.StoreKey),
-		tkeyParams: sdk.NewTransientStoreKey(params.TStoreKey),
-		keySlashing: sdk.NewKVStoreKey(slashing.StoreKey),
+		keyStaking:       sdk.NewKVStoreKey(staking.StoreKey),
+		tkeyStaking:      sdk.NewTransientStoreKey(staking.TStoreKey),
+		keyDistr:         sdk.NewKVStoreKey(distribution.StoreKey),
+		tkeyDistr:        sdk.NewTransientStoreKey(distribution.TStoreKey),
+		keyHERB:          sdk.NewKVStoreKey(herb.StoreKey),
+		keyParams:        sdk.NewKVStoreKey(params.StoreKey),
+		tkeyParams:       sdk.NewTransientStoreKey(params.TStoreKey),
+		keySlashing:      sdk.NewKVStoreKey(slashing.StoreKey),
 	}
 
 	// The ParamsKeeper handles parameter storage for the application
@@ -118,13 +119,13 @@ func NewHERBApp(logger log.Logger, db dbm.DB) {
 		app.keyAccount,
 		authSubspace,
 		auth.ProtoBaseAccount,
-		)
+	)
 
 	app.bankKeeper = bank.NewBaseKeeper(
 		app.accountKeeper,
 		bankSubspace,
 		bank.DefaultCodespace,
-		)
+	)
 
 	// The FeeCollectionKeeper collects transaction fees and renders them to the fee distribution module
 	app.feeCollectionKeeper = auth.NewFeeCollectionKeeper(cdc, app.keyFeeCollection)
@@ -228,4 +229,59 @@ func NewHERBApp(logger log.Logger, db dbm.DB) {
 	}
 
 	return app
+}
+
+type GenesisState map[string]json.RawMessage
+
+func NewDefaultGenesisState() GenesisState {
+	return ModuleBasics.DefaultGenesis()
+}
+
+func (app *herbApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abci.ResponseInitChain {
+	var genesisState GenesisState
+
+	err := app.cdc.UnmarshalJSON(req.AppStateBytes, &genesisState)
+	if err != nil {
+		panic(err)
+	}
+
+	return app.mm.InitGenesis(ctx, genesisState)
+}
+
+func (app *herbApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
+	return app.mm.BeginBlock(ctx, req)
+}
+func (app *herbApp) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
+	return app.mm.EndBlock(ctx, req)
+}
+func (app *herbApp) LoadHeight(height int64) error {
+	return app.LoadVersion(height, app.keyMain)
+}
+
+func (app *herbApp) ExportAppStateAndValidators(forZeroHeight bool, jailWhiteList []string) (appState json.RawMessage,
+	validators []tmtypes.GenesisValidator,
+	err error,
+) {
+
+	// as if they could withdraw from the start of the next block
+	ctx := app.NewContext(true, abci.Header{Height: app.LastBlockHeight()})
+
+	genState := app.mm.ExportGenesis(ctx)
+	appState, err = codec.MarshalJSONIndent(app.cdc, genState)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	validators = staking.WriteValidators(ctx, app.stakingKeeper)
+
+	return appState, validators, nil
+}
+
+// MakeCodec generates the necessary codecs for Amino
+func MakeCodec() *codec.Codec {
+	var cdc = codec.New()
+	ModuleBasics.RegisterCodec(cdc)
+	sdk.RegisterCodec(cdc)
+	codec.RegisterCrypto(cdc)
+	return cdc
 }
