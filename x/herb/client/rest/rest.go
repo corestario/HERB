@@ -9,7 +9,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 
@@ -19,21 +18,22 @@ import (
 )
 
 // RegisterRoutes - Central function to define routes that get registered by the main application
-func RegisterRoutes(cliCtx context.CLIContext, r *mux.Router, cdc *codec.Codec, storeName string) {
+func RegisterRoutes(cliCtx context.CLIContext, r *mux.Router, storeName string) {
 	r.HandleFunc(
 		fmt.Sprintf("%s/ciphertexts/aggregated", storeName),
-		getAggregatedCiphertextHandler(cdc, cliCtx, storeName),
+		getAggregatedCiphertextHandler(cliCtx, storeName),
 		).Methods("GET")
 	r.HandleFunc(
 		fmt.Sprintf("%s/ciphertext_part", storeName),
-		setCiphertextPartHandler(cdc, cliCtx),
+		setCiphertextPartHandler(cliCtx),
 		).Methods("POST")
 }
 
 // QUERIES
 
-func getAggregatedCiphertextHandler(cdc *codec.Codec, cliCtx client.CLIContext, storeName string) http.HandlerFunc {
+func getAggregatedCiphertextHandler(cliCtx client.CLIContext, storeName string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		cdc := cliCtx.Codec
 		vars := mux.Vars(r)
 		param := vars["round"]
 
@@ -69,8 +69,9 @@ type setCiphertextPartReq struct {
 	Sender string `json:"entropyProvider"`
 }
 
-func setCiphertextPartHandler(cdc *codec.Codec, cliCtx context.CLIContext) http.HandlerFunc {
+func setCiphertextPartHandler(cliCtx context.CLIContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		cdc := cliCtx.Codec
 		var req setCiphertextPartReq
 
 		if !rest.ReadRESTReq(w, r, cdc, &req) {
