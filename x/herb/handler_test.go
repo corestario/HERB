@@ -6,7 +6,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
-	"github.com/dgamingfoundation/arcade/crypto/ed25519"
+	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/stretchr/testify/require"
 )
 

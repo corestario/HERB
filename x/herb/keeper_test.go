@@ -7,13 +7,12 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
-	"github.com/dgamingfoundation/arcade/crypto/ed25519"
-	"github.com/dgamingfoundation/cosmos-sdk/store"
+	"github.com/tendermint/tendermint/crypto/ed25519"
+	"github.com/cosmos/cosmos-sdk/store"
 	abci "github.com/tendermint/tendermint/abci/types"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
-	"go.dedis.ch/kyber/group/nist"
 )
 
 func Initialize() (ctx sdk.Context, keeperInstance Keeper, cdc *codec.Codec) {
@@ -21,8 +20,7 @@ func Initialize() (ctx sdk.Context, keeperInstance Keeper, cdc *codec.Codec) {
 	types.RegisterCodec(cdc)
 	codec.RegisterCrypto(cdc)
 	keyHERB := sdk.NewKVStoreKey(types.StoreKey)
-	suite := nist.NewBlakeSHA256P256()
-	keeperInstance = NewKeeper(keyHERB, suite, cdc)
+	keeperInstance = NewKeeper(keyHERB, cdc)
 	db := dbm.NewMemDB()
 	ms := store.NewCommitMultiStore(db)
 	ms.MountStoreWithDB(keyHERB, sdk.StoreTypeIAVL, db)

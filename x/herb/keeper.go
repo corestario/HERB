@@ -10,6 +10,8 @@ import (
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
 
+	"go.dedis.ch/kyber/group/nist"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -22,10 +24,10 @@ type Keeper struct {
 }
 
 // NewKeeper creates new instances of the HERB Keeper
-func NewKeeper(storeKey sdk.StoreKey, group kyber.Group, cdc *codec.Codec) Keeper {
+func NewKeeper(storeKey sdk.StoreKey, cdc *codec.Codec) Keeper {
 	return Keeper{
 		storeKey: storeKey,
-		group:    group,
+		group:    nist.NewBlakeSHA256P256(),
 		cdc:      cdc,
 	}
 }
