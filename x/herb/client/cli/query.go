@@ -2,8 +2,9 @@ package cli
 
 import (
 	"fmt"
-	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"strconv"
+
+	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
@@ -16,8 +17,8 @@ import (
 // GetQueryCmd returns the cli query commands for this module
 func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 	herbQueryCmd := &cobra.Command{
-		Use: types.ModuleName,
-		Short: "Querying commands for the herb module",
+		Use:                        types.ModuleName,
+		Short:                      "Querying commands for the herb module",
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,
@@ -25,7 +26,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 
 	herbQueryCmd.AddCommand(client.GetCommands(
 		GetCmdAggregatedCiphertext(storeKey, cdc),
-		)...)
+	)...)
 
 	return herbQueryCmd
 }
@@ -33,8 +34,8 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 // GetCmdAggregatedCiphertext implements the query aggregated ciphertext command.
 func GetCmdAggregatedCiphertext(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use: "aggregatedCt [round]",
-		Args: cobra.ExactArgs(1),
+		Use:   "aggregatedCt [round]",
+		Args:  cobra.ExactArgs(1),
 		Short: "Query aggregated elgamal ciphertext for the given round",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -58,8 +59,9 @@ func GetCmdAggregatedCiphertext(queryRoute string, cdc *codec.Codec) *cobra.Comm
 			if err != nil {
 				return err
 			}
-			return cliCtx.PrintOutput(out)
+			fmt.Println(out.String())
+			return nil
+			//return cliCtx.PrintOutput(outJSON)
 		},
 	}
 }
-
