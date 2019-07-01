@@ -6,11 +6,15 @@ import (
 
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 
+	"go.dedis.ch/kyber/v3/group/nist"
+
 	"encoding/base64"
 	"encoding/gob"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
+
+var P256 = nist.NewBlakeSHA256P256()
 
 // CiphertextPart represents ciphertext part and additional information for the first HERB phase.
 type CiphertextPart struct {
