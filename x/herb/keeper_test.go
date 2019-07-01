@@ -1,14 +1,15 @@
 package herb
 
 import (
+	"bytes"
+	"strconv"
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-	"github.com/cosmos/cosmos-sdk/store"
 	abci "github.com/tendermint/tendermint/abci/types"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
@@ -44,29 +45,28 @@ func TestSetGetCiphertext(t *testing.T) {
 	for round, r := range testCases {
 		var ciphertextParts []types.CiphertextPart
 		ctx, keeper, _ := Initialize()
-		userPk1 := ed25519.GenPrivKey().PubKey()
-		userAddr1 := sdk.AccAddress(userPk1.Address())
+		userAddrs := CreateTestAddrs(r)
 		g1 := keeper.group.Point().Base()
 		for i := 0; i < r; i++ {
 			g2 := keeper.group.Point().Mul(keeper.group.Scalar().SetInt64(int64(i)), g1)
 			ct := elgamal.Ciphertext{g1, g2}
-			ctPart := types.CiphertextPart{ct, userAddr1}
+			ctPart := types.CiphertextPart{ct, userAddrs[i]}
 			ciphertextParts = append(ciphertextParts, ctPart)
 			err := keeper.SetCiphertext(ctx, uint64(round), &ctPart)
 			if err != nil {
 				t.Errorf("failed set ciphertext: %v", err)
 			}
 		}
-		newciphertextParts, err := keeper.GetAllCiphertext(ctx, uint64(round))
+		newCiphertexts, err := keeper.GetAllCiphertexts(ctx, uint64(round))
 		if err != nil {
 			t.Errorf("failed get all ciphertexts: %v", err)
 		}
 		for i := 0; i < r; i++ {
-			if !newciphertextParts[i].EntropyProvider.Equals(ciphertextParts[i].EntropyProvider) {
-				t.Errorf("addresses don't equal")
+			if _, ok := newCiphertexts[ciphertextParts[i].EntropyProvider.String()]; !ok {
+				t.Errorf("new map doesn't contains original entropy provider, round: %v", round)
 			}
-			if !newciphertextParts[i].Ciphertext.Equal(ciphertextParts[i].Ciphertext) {
-				t.Errorf("ciphertexts don't equal")
+			if !newCiphertexts[ciphertextParts[i].EntropyProvider.String()].Equal(ciphertextParts[i].Ciphertext) {
+				t.Errorf("ciphertexts don't equal, round: %v", round)
 			}
 		}
 	}
@@ -76,15 +76,14 @@ func TestAggregatedCiphertext(t *testing.T) {
 	for round, r := range testCases {
 		ctx, keeper, _ := Initialize()
 		commonCiphertext := elgamal.Ciphertext{keeper.group.Point().Null(), keeper.group.Point().Null()}
-		userPk1 := ed25519.GenPrivKey().PubKey()
-		userAddr1 := sdk.AccAddress(userPk1.Address())
+		userAddrs := CreateTestAddrs(r)
 		g1 := keeper.group.Point().Base()
 		for i := 0; i < r; i++ {
 			g2 := keeper.group.Point().Mul(keeper.group.Scalar().SetInt64(int64(i)), g1)
 			ct := elgamal.Ciphertext{g1, g2}
 			commonCiphertext.PointA = keeper.group.Point().Add(commonCiphertext.PointA, ct.PointA)
 			commonCiphertext.PointB = keeper.group.Point().Add(commonCiphertext.PointB, ct.PointB)
-			ctPart := types.CiphertextPart{ct, userAddr1}
+			ctPart := types.CiphertextPart{ct, userAddrs[i]}
 			err := keeper.SetCiphertext(ctx, uint64(round), &ctPart)
 			if err != nil {
 				t.Errorf("failed set ciphertext: %v", err)
@@ -98,4 +97,46 @@ func TestAggregatedCiphertext(t *testing.T) {
 			t.Errorf("ciphertexts don't equal")
 		}
 	}
+}
+
+// CreateTestAddrs creates numAddrs account addresses
+func CreateTestAddrs(numAddrs int) []sdk.AccAddress {
+	var addresses []sdk.AccAddress
+	var buffer bytes.Buffer
+
+	// start at 100 so we can make up to 999 test addresses with valid test addresses
+	for i := 100; i < (numAddrs + 100); i++ {
+		numString := strconv.Itoa(i)
+		buffer.WriteString("A58856F0FD53BF058B4909A21AEC019107BA6") //base address string
+
+		buffer.WriteString(numString) //adding on final two digits to make addresses unique
+		res, _ := sdk.AccAddressFromHex(buffer.String())
+		bech := res.String()
+		addresses = append(addresses, testAddr(buffer.String(), bech))
+		buffer.Reset()
+	}
+	return addresses
+}
+
+// for incode address generation
+func testAddr(addr string, bech string) sdk.AccAddress {
+
+	res, err := sdk.AccAddressFromHex(addr)
+	if err != nil {
+		panic(err)
+	}
+	bechexpected := res.String()
+	if bech != bechexpected {
+		panic("Bech encoding doesn't match reference")
+	}
+
+	bechres, err := sdk.AccAddressFromBech32(bech)
+	if err != nil {
+		panic(err)
+	}
+	if !bytes.Equal(bechres, res) {
+		panic("Bech decode and hex decode don't match")
+	}
+
+	return res
 }

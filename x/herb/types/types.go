@@ -56,26 +56,26 @@ func (ctJSON *CiphertextPartJSON) Deserialize() (*CiphertextPart, sdk.Error) {
 	}, nil
 }
 
-func CiphertextArraySerialize(ctArray []*CiphertextPart) ([]*CiphertextPartJSON, sdk.Error) {
-	ctJSONArray := make([]*CiphertextPartJSON, len(ctArray))
-	var err sdk.Error
-	for i, ct := range ctArray {
-		ctJSONArray[i], err = NewCiphertextPartJSON(ct)
+func CiphertextMapSerialize(ctMap map[string]*elgamal.Ciphertext) (map[string]*elgamal.CiphertextJSON, sdk.Error) {
+	ctJSONMap := make(map[string]*elgamal.CiphertextJSON)
+	var err error
+	for addr, ct := range ctMap {
+		ctJSONMap[addr], err = elgamal.NewCiphertextJSON(ct)
 		if err != nil {
-			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize array: %v", err))
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize map: %v", err))
 		}
 	}
-	return ctJSONArray, nil
+	return ctJSONMap, nil
 }
 
-func CiphertextArrayDeserialize(ctJSONArray []*CiphertextPartJSON) ([]*CiphertextPart, sdk.Error) {
-	ctArray := make([]*CiphertextPart, len(ctJSONArray))
-	var err sdk.Error
-	for i, ct := range ctJSONArray {
-		ctArray[i], err = ct.Deserialize()
+func CiphertextMapDeserialize(ctJSONMap map[string]*elgamal.CiphertextJSON) (map[string]*elgamal.Ciphertext, sdk.Error) {
+	ctMap := make(map[string]*elgamal.Ciphertext)
+	var err error
+	for addr, ct := range ctJSONMap {
+		ctMap[addr], err = ct.Deserialize()
 		if err != nil {
-			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize array: %v", err))
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize ciphertext map: %v", err))
 		}
 	}
-	return ctArray, nil
+	return ctMap, nil
 }
