@@ -31,10 +31,10 @@ const appName = "herb"
 
 var (
 	// default home directories for the application CLI
-	DefaultCLIHome = os.ExpandEnv("$HOME/.nscli")
+	DefaultCLIHome = os.ExpandEnv("$HOME/.hcli")
 
 	// DefaultNodeHome sets the folder where the applcation data and configuration will be stored
-	DefaultNodeHome = os.ExpandEnv("$HOME/.nsd")
+	DefaultNodeHome = os.ExpandEnv("$HOME/.hd")
 
 	// ModuleBasicManager is in charge of setting up basic module elemnets
 	ModuleBasics = module.NewBasicManager(
