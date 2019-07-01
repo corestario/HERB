@@ -12,7 +12,7 @@ const RouterKey = ModuleName
 type MsgSetCiphertextPart struct {
 	Round  uint64         `json:"round"`
 	CiphertextPart CiphertextPartJSON    `json:"ciphertextPart"`
-	Sender sdk.AccAddress `json:"entropyProvider"`
+	Sender sdk.AccAddress `json:"sender"`
 }
 
 // NewMsgSetCiphertextPart is a constructor for set ciphertext part message (first HERB phase)
