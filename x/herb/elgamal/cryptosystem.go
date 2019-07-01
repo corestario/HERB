@@ -1,9 +1,9 @@
 package elgamal
 
 import (
-	"go.dedis.ch/kyber"
-	"go.dedis.ch/kyber/proof"
-	"go.dedis.ch/kyber/util/random"
+	"go.dedis.ch/kyber/v3"
+	"go.dedis.ch/kyber/v3/proof"
+	"go.dedis.ch/kyber/v3/util/random"
 )
 
 // RandomCiphertext creates an elgamal ciphertext with a random plaintext

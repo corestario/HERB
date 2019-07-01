@@ -1,10 +1,10 @@
 package elgamal
 
 import (
-	"go.dedis.ch/kyber"
-	"go.dedis.ch/kyber/proof"
-	"go.dedis.ch/kyber/proof/dleq"
-	"go.dedis.ch/kyber/util/random"
+	"go.dedis.ch/kyber/v3"
+	"go.dedis.ch/kyber/v3/proof"
+	"go.dedis.ch/kyber/v3/proof/dleq"
+	"go.dedis.ch/kyber/v3/util/random"
 )
 
 //Participant of the random generation process

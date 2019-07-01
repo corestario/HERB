@@ -5,8 +5,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
-	"github.com/dgamingfoundation/arcade/crypto/ed25519"
-	"go.dedis.ch/kyber/group/nist"
+	"github.com/tendermint/tendermint/crypto/ed25519"
+	"go.dedis.ch/kyber/v3/group/nist"
 )
 
 //delete in future

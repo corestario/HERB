@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/dgamingfoundation/Herb/elgamal"
-	"go.dedis.ch/kyber"
-	"go.dedis.ch/kyber/proof"
-	"go.dedis.ch/kyber/proof/dleq"
+	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
+	"go.dedis.ch/kyber/v3"
+	"go.dedis.ch/kyber/v3/proof"
+	"go.dedis.ch/kyber/v3/proof/dleq"
 )
 
 func BenchmarkElGamal(b *testing.B) {

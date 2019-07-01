@@ -4,13 +4,12 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"go.dedis.ch/kyber"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
 
-	"go.dedis.ch/kyber/group/nist"
+	"go.dedis.ch/kyber/v3"
+	"go.dedis.ch/kyber/v3/group/nist"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )

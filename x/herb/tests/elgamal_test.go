@@ -8,12 +8,12 @@ import (
 	"sync"
 	"testing"
 
-	"go.dedis.ch/kyber"
-	"go.dedis.ch/kyber/group/nist"
-	"go.dedis.ch/kyber/proof"
-	"go.dedis.ch/kyber/proof/dleq"
+	"go.dedis.ch/kyber/v3"
+	"go.dedis.ch/kyber/v3/group/nist"
+	"go.dedis.ch/kyber/v3/proof"
+	"go.dedis.ch/kyber/v3/proof/dleq"
 
-	"github.com/dgamingfoundation/Herb/elgamal"
+	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/distributed-key-generation/dkg"
 )
 

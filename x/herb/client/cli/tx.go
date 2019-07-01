@@ -16,7 +16,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"go.dedis.ch/kyber/group/nist"
+	"go.dedis.ch/kyber/v3/group/nist"
 )
 
 // GetTxCmd returns the transaction commands for this module
@@ -61,7 +61,7 @@ func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 			ct := elgamal.Ciphertext{A, B}
 			sender := cliCtx.GetFromAddress()
 			ctPart := types.CiphertextPart{ct, sender}
-			ctPartJSON, err := types.NewCiphertextPartJSON(ctPart)
+			ctPartJSON, err := types.NewCiphertextPartJSON(&ctPart)
 			if err != nil {
 				return  err
 			}

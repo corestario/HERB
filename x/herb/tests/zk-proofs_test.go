@@ -5,8 +5,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/dgamingfoundation/Herb/elgamal"
-	"go.dedis.ch/kyber/group/nist"
+	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
+	"go.dedis.ch/kyber/v3/group/nist"
 )
 
 func Test_DLKproof_Positive(t *testing.T) {

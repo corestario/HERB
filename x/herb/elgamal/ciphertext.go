@@ -6,9 +6,9 @@ import (
 	"encoding/gob"
 	"fmt"
 
-	"go.dedis.ch/kyber"
-	"go.dedis.ch/kyber/group/nist"
-	"go.dedis.ch/kyber/share"
+	"go.dedis.ch/kyber/v3"
+	"go.dedis.ch/kyber/v3/group/nist"
+	"go.dedis.ch/kyber/v3/share"
 )
 
 //Ciphertext is usual ElGamal ciphertext C = (a, b)

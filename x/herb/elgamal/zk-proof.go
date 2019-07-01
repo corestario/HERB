@@ -1,9 +1,9 @@
 package elgamal
 
 import (
-	"go.dedis.ch/kyber"
-	"go.dedis.ch/kyber/proof"
-	"go.dedis.ch/kyber/proof/dleq"
+	"go.dedis.ch/kyber/v3"
+	"go.dedis.ch/kyber/v3/proof"
+	"go.dedis.ch/kyber/v3/proof/dleq"
 )
 
 func DLK(group proof.Suite, B kyber.Point, x kyber.Scalar, X kyber.Point) (DLKproof []byte, err error) {
