@@ -9,7 +9,6 @@ import (
 	"github.com/dgamingfoundation/HERB/x/herb/types"
 
 	"go.dedis.ch/kyber/v3"
-	"go.dedis.ch/kyber/v3/group/nist"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -26,7 +25,7 @@ type Keeper struct {
 func NewKeeper(storeKey sdk.StoreKey, cdc *codec.Codec) Keeper {
 	return Keeper{
 		storeKey: storeKey,
-		group:    nist.NewBlakeSHA256P256(),
+		group:    P256,
 		cdc:      cdc,
 	}
 }

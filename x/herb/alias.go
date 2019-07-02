@@ -14,6 +14,7 @@ var (
 	NewMsgSetCiphertextPart = types.NewMsgSetCiphertextPart
 	ModuleCdc = types.ModuleCdc
 	RegisterCodec = types.RegisterCodec
+	P256 = types.P256
 )
 
 type (

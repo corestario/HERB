@@ -2,13 +2,13 @@ package cli
 
 import (
 	"fmt"
-	"strconv"
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
+	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -16,7 +16,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"go.dedis.ch/kyber/v3/group/nist"
+	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )
 
 // GetTxCmd returns the transaction commands for this module
@@ -39,26 +39,30 @@ func GetTxCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 // GetCmdSetCiphertext implements send ciphertext part transaction command.
 func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use: "ctPart [multiplayer]",
-		Short: "send ciphertextPart",
-		Args: cobra.ExactArgs(1),
+		Use: "ctPart [round] [commonPubKey]",
+		Short: "send random ciphertextPart",
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
-			round := uint64(0)
+			round, err := strconv.ParseUint(args[0], 10, 64)
+			if err != nil {
+				return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
+			}
+
+			group := types.P256
+			pubKey, err := kyberenc.StringHexToPoint(group, args[1])
+			if err != nil {
+				return fmt.Errorf("failed to decode common public key: %v", err)
+			}
 
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 
-			mult, err := strconv.ParseInt(args[0], 10, 64)
+			ct, _, _, err := elgamal.RandomCiphertext(group, pubKey)
 			if err != nil {
-				return fmt.Errorf("mult %s not a valid uint, please input a valid proposal-id", args[0])
+				return fmt.Errorf("failed to create random ciphertext: %v", err)
 			}
 
-			suite := nist.NewBlakeSHA256P256()
-			multScalar := suite.Scalar().SetInt64(mult)
-			A := suite.Point().Mul(multScalar, nil)
-			B := suite.Point().Mul(suite.Scalar().One(), nil)
-			ct := elgamal.Ciphertext{A, B}
 			sender := cliCtx.GetFromAddress()
 			ctPart := types.CiphertextPart{ct, sender}
 			ctPartJSON, err := types.NewCiphertextPartJSON(&ctPart)
