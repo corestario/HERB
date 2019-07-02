@@ -102,7 +102,7 @@ func setCiphertextPartHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		ctPart := types.CiphertextPartJSON{req.Ciphertext, entropyProvider}
+		ctPart := types.CiphertextPartJSON{req.Ciphertext, []byte{}, []byte{}, entropyProvider}
 
 		msg := types.NewMsgSetCiphertextPart(round, ctPart, sender)
 
