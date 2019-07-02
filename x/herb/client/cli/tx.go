@@ -95,7 +95,7 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
 			}
 			//Getting aggregated ciphertext
-			params := types.NewQueryCtParams(round)
+			params := types.NewQueryByRound(round)
 			bz, err := cdc.MarshalJSON(params)
 			if err != nil {
 				return err

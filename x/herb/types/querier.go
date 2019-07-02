@@ -2,16 +2,17 @@ package types
 
 const (
 	QueryAggregatedCt = "aggregatedCiphertext"
-	QueryAllCt        = "AllCiphertexts"
+	QueryAllCt        = "allCiphertexts"
+	QueryAllDescryptionShares = "allDecryptionShares"
 )
 
-type QueryCtParams struct {
+type QueryByRound struct {
 	Round uint64
 }
 
-// NewQueryCtParams creates a new instance of QueryCtParams
-func NewQueryCtParams(round uint64) QueryCtParams {
-	return QueryCtParams{
+// NewQueryByRound creates a new instance of QueryByRound
+func NewQueryByRound(round uint64) QueryByRound {
+	return QueryByRound{
 		Round: round,
 	}
 }

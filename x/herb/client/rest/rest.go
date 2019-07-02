@@ -42,7 +42,7 @@ func getAggregatedCiphertextHandler(cliCtx client.CLIContext, storeName string) 
 			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		params := types.NewQueryCtParams(round)
+		params := types.NewQueryByRound(round)
 		bz, err := cdc.MarshalJSON(params)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())

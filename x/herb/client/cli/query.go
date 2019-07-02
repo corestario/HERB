@@ -27,6 +27,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 	herbQueryCmd.AddCommand(client.GetCommands(
 		GetCmdAggregatedCiphertext(storeKey, cdc),
 		GetCmdAllCiphertexts(storeKey, cdc),
+		GetCmdAllDecryptionShares(storeKey, cdc),
 	)...)
 
 	return herbQueryCmd
@@ -44,7 +45,7 @@ func GetCmdAggregatedCiphertext(queryRoute string, cdc *codec.Codec) *cobra.Comm
 			if err != nil {
 				return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
 			}
-			params := types.NewQueryCtParams(round)
+			params := types.NewQueryByRound(round)
 			bz, err := cdc.MarshalJSON(params)
 			if err != nil {
 				return err
@@ -67,6 +68,7 @@ func GetCmdAggregatedCiphertext(queryRoute string, cdc *codec.Codec) *cobra.Comm
 	}
 }
 
+// GetCmdAllCiphertexts implements the query all ciphertexts command.
 func GetCmdAllCiphertexts(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "allCt [round]",
@@ -78,7 +80,7 @@ func GetCmdAllCiphertexts(queryRoute string, cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
 			}
-			params := types.NewQueryCtParams(round)
+			params := types.NewQueryByRound(round)
 			bz, err := cdc.MarshalJSON(params)
 			if err != nil {
 				return err
@@ -95,10 +97,48 @@ func GetCmdAllCiphertexts(queryRoute string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 			for _, ctPart := range out {
-				fmt.Println(ctPart.Ciphertext.String())
+				fmt.Printf("Entropy provider address: %v \n Ciphertext: %v \n", ctPart.EntropyProvider.String(), ctPart.Ciphertext.String())
 			}
 			return nil
 			//return cliCtx.PrintOutput(outJSON)
+		},
+	}
+}
+
+// GetCmdAllDecryptionShares implements the query all decryption shares command.
+func GetCmdAllDecryptionShares(queryRoute string, cdc *codec.Codec) *cobra.Command {
+	return  &cobra.Command {
+		Use: "allShares [round]",
+		Short: "Queries all decryption shares for the given round",
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			round, err := strconv.ParseUint(args[0], 10, 64)
+			if err != nil {
+				return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
+			}
+			params := types.NewQueryByRound(round)
+			bz, err := cdc.MarshalJSON(params)
+			if err != nil {
+				return err
+			}
+
+			res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryAllDescryptionShares), bz)
+			if err != nil {
+				return err
+			}
+
+			outJSON := make(map[string]*types.DecryptionShareJSON)
+			cdc.MustUnmarshalJSON(res, &outJSON)
+			out, err := types.DecryptionSharesMapDeserialize(outJSON)
+
+			if err != nil {
+				return err
+			}
+			for _, share := range out {
+				fmt.Printf("Key holder address: %v \n Descryption Share: %v \n", share.KeyHolder.String(), share.DecShare.String())
+			}
+			return nil
 		},
 	}
 }
