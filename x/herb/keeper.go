@@ -1,8 +1,8 @@
 package herb
 
 import (
-	"encoding/binary"
 	"fmt"
+	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
@@ -13,10 +13,27 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
+const (
+	// key prefixes for defining item in the store by round
+	keyCiphertextParts = "keyCt" //ciphtetextParts for the round
+	keyDecryptionShares = "keyDS" //descryption shares
+	keyRandomResult = "keyResult" // random point as result of the round
+	keyStage = "keyStage"
+
+	//round stages: ciphertext parts collecting, descryption shares collecting, fresh random number
+	stageCt = "ctCollecting"
+	stageDS = "dsCollecting"
+	stageCompleted = "completed"
+)
+
 // Keeper maintains the link to data storage and exposes methods for the HERB protocol actions
 type Keeper struct {
 	storeKey sdk.StoreKey
 	group    kyber.Group
+
+	currentRound uint64
+	thresholdDecryption uint64
+	thresholdParts uint64
 
 	cdc *codec.Codec
 }
@@ -26,6 +43,9 @@ func NewKeeper(storeKey sdk.StoreKey, cdc *codec.Codec) Keeper {
 	return Keeper{
 		storeKey: storeKey,
 		group:    P256,
+		currentRound: uint64(0),
+		thresholdDecryption: 1,
+		thresholdParts: 2,
 		cdc:      cdc,
 	}
 }
@@ -37,12 +57,11 @@ func (k Keeper) SetCiphertext(ctx sdk.Context, round uint64, ctPart *types.Ciphe
 	}
 
 	store := ctx.KVStore(k.storeKey)
-	roundBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(roundBytes, round)
+	keyBytes := getKeyBytes(round, keyCiphertextParts)
 	ctMap := make(map[string]*types.CiphertextPart)
 	var err sdk.Error
-	if store.Has(roundBytes) {
-		ctMapBytes := store.Get(roundBytes)
+	if store.Has(keyBytes) {
+		ctMapBytes := store.Get(keyBytes)
 		var ctMapJSON map[string]*types.CiphertextPartJSON
 		err1 := k.cdc.UnmarshalJSON(ctMapBytes, &ctMapJSON)
 		if err1 != nil {
@@ -63,19 +82,18 @@ func (k Keeper) SetCiphertext(ctx sdk.Context, round uint64, ctPart *types.Ciphe
 	if err2 != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal map for the store: %v", err2))
 	}
-	store.Set(roundBytes, newCtMapBytes)
+	store.Set(keyBytes, newCtMapBytes)
 	return nil
 }
 
 // GetAllCiphertexts returns all ciphertext parts for the given round as go-slice
 func (k Keeper) GetAllCiphertexts(ctx sdk.Context, round uint64) (map[string]*types.CiphertextPart, sdk.Error) {
 	store := ctx.KVStore(k.storeKey)
-	roundBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(roundBytes, round)
-	if !store.Has(roundBytes) {
+	keyBytes := getKeyBytes(round, keyCiphertextParts)
+	if !store.Has(keyBytes) {
 		return nil, sdk.ErrUnknownRequest("Unknown round")
 	}
-	ctMapBytes := store.Get(roundBytes)
+	ctMapBytes := store.Get(keyBytes)
 	var ctMapJSON map[string]*types.CiphertextPartJSON
 	err1 := k.cdc.UnmarshalJSON(ctMapBytes, &ctMapJSON)
 	if err1 != nil {
@@ -100,4 +118,17 @@ func (k Keeper) GetAggregatedCiphertext(ctx sdk.Context, round uint64) (*elgamal
 	}
 	aggregatedCiphertext := elgamal.AggregateCiphertext(k.group, ctArray)
 	return &aggregatedCiphertext, nil
+}
+
+func (k Keeper) setStage(ctx sdk.Context, round uint64, stage string) {
+	store := ctx.KVStore(k.storeKey)
+	keyBytes := getKeyBytes(round, keyStage)
+	store.Set(keyBytes, []byte(stage))
+}
+
+func getKeyBytes(round uint64, keyPrefix string) []byte {
+	roundStr := strconv.FormatUint(round, 10)
+	keyStr := roundStr + keyPrefix
+	keyBytes := []byte(keyStr)
+	return keyBytes
 }
