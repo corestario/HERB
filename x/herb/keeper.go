@@ -15,14 +15,14 @@ import (
 
 const (
 	// key prefixes for defining item in the store by round
-	keyCiphertextParts = "keyCt" //ciphtetextParts for the round
-	keyDecryptionShares = "keyDS" //descryption shares
-	keyRandomResult = "keyResult" // random point as result of the round
-	keyStage = "keyStage"
+	keyCiphertextParts  = "keyCt"     //ciphtetextParts for the round
+	keyDecryptionShares = "keyDS"     //descryption shares
+	keyRandomResult     = "keyResult" // random point as result of the round
+	keyStage            = "keyStage"
 
 	//round stages: ciphertext parts collecting, descryption shares collecting, fresh random number
-	stageCt = "ctCollecting"
-	stageDS = "dsCollecting"
+	stageCt        = "ctCollecting"
+	stageDS        = "dsCollecting"
 	stageCompleted = "completed"
 )
 
@@ -31,9 +31,9 @@ type Keeper struct {
 	storeKey sdk.StoreKey
 	group    kyber.Group
 
-	currentRound uint64
+	currentRound        uint64
 	thresholdDecryption uint64
-	thresholdParts uint64
+	thresholdParts      uint64
 
 	cdc *codec.Codec
 }
@@ -41,12 +41,12 @@ type Keeper struct {
 // NewKeeper creates new instances of the HERB Keeper
 func NewKeeper(storeKey sdk.StoreKey, cdc *codec.Codec) Keeper {
 	return Keeper{
-		storeKey: storeKey,
-		group:    P256,
-		currentRound: uint64(0),
+		storeKey:            storeKey,
+		group:               P256,
+		currentRound:        uint64(0),
 		thresholdDecryption: 1,
-		thresholdParts: 2,
-		cdc:      cdc,
+		thresholdParts:      2,
+		cdc:                 cdc,
 	}
 }
 
@@ -131,4 +131,57 @@ func getKeyBytes(round uint64, keyPrefix string) []byte {
 	keyStr := roundStr + keyPrefix
 	keyBytes := []byte(keyStr)
 	return keyBytes
+}
+
+func (k Keeper) SetDecryptionShare(ctx sdk.Context, round uint64, ds *types.DecryptionShare) sdk.Error {
+	if ds.KeyHolder.Empty() {
+		return sdk.ErrInvalidAddress("Key Holder can't be empty!")
+	}
+	store := ctx.KVStore(k.storeKey)
+	keyBytes := getKeyBytes(round, keyDecryptionShares)
+	dsMap := make(map[string]*types.DecryptionShare)
+	var err sdk.Error
+	if store.Has(keyBytes) {
+		dsMapBytes := store.Get(keyBytes)
+		var dsMapJSON map[string]*types.DecryptionShareJSON
+		err1 := k.cdc.UnmarshalJSON(dsMapBytes, &dsMapJSON)
+		if err1 != nil {
+			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal map from the store: %v", err1))
+		}
+		dsMap, err = types.DecryptionSharesMapDeserialize(dsMapJSON)
+		if err != nil {
+			return err
+		}
+	}
+
+	dsMap[ds.KeyHolder.String()] = ds
+	newDsMapJSON, err := types.DecryptionSharesMapSerialize(dsMap)
+	if err != nil {
+		return err
+	}
+	newDsMapBytes, err2 := k.cdc.MarshalJSON(newDsMapJSON)
+	if err2 != nil {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal map for the store: %v", err2))
+	}
+	store.Set(keyBytes, newDsMapBytes)
+	return nil
+}
+
+func (k Keeper) GetAllDecryptionShares(ctx sdk.Context, round uint64) (map[string]*types.DecryptionShare, sdk.Error) {
+	store := ctx.KVStore(k.storeKey)
+	keyBytes := getKeyBytes(round, keyDecryptionShares)
+	if !store.Has(keyBytes) {
+		return nil, sdk.ErrUnknownRequest("Unknown round")
+	}
+	dsMapBytes := store.Get(keyBytes)
+	var dsMapJSON map[string]*types.DecryptionShareJSON
+	err1 := k.cdc.UnmarshalJSON(dsMapBytes, &dsMapJSON)
+	if err1 != nil {
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal map from store: %v", err1))
+	}
+	dsMap, err := types.DecryptionSharesMapDeserialize(dsMapJSON)
+	if err != nil {
+		return nil, err
+	}
+	return dsMap, nil
 }

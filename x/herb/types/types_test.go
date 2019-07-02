@@ -74,7 +74,7 @@ func TestDecryptionSharesSerialization(t *testing.T) {
 	userAddr1 := sdk.AccAddress(userPk1.Address())
 	dleProof, _, _, err := elgamal.DLE(suite, g1, g2, x)
 	if err != nil {
-		t.Errorf("Dle proof don't created")
+		t.Errorf("Dle proof doesn't created")
 	}
 	decShare := DecryptionShare{g2, dleProof, userAddr1}
 	decShareJSON, err := NewDecryptionShareJSON(&decShare)
@@ -90,7 +90,7 @@ func TestDecryptionSharesSerialization(t *testing.T) {
 	if err1 != nil {
 		t.Errorf("failed unmarshal: %v", err1)
 	}
-	newdecShare, err2 := DeserializeDecryptionShare(bytes)
+	newdecShare, err2 := bytes.Deserialize()
 	if err2 != nil {
 		t.Errorf("failed from json: %v", err2)
 	}

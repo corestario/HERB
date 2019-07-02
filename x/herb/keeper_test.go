@@ -50,7 +50,7 @@ func TestSetGetCiphertext(t *testing.T) {
 		for i := 0; i < r; i++ {
 			g2 := keeper.group.Point().Mul(keeper.group.Scalar().SetInt64(int64(i)), g1)
 			ct := elgamal.Ciphertext{g1, g2}
-			ctPart := types.CiphertextPart{ct, userAddrs[i]}
+			ctPart := types.CiphertextPart{ct, []byte("example"), []byte("example3"), userAddrs[i]}
 			ciphertextParts = append(ciphertextParts, ctPart)
 			err := keeper.SetCiphertext(ctx, uint64(round), &ctPart)
 			if err != nil {
@@ -83,7 +83,7 @@ func TestAggregatedCiphertext(t *testing.T) {
 			ct := elgamal.Ciphertext{g1, g2}
 			commonCiphertext.PointA = keeper.group.Point().Add(commonCiphertext.PointA, ct.PointA)
 			commonCiphertext.PointB = keeper.group.Point().Add(commonCiphertext.PointB, ct.PointB)
-			ctPart := types.CiphertextPart{ct, userAddrs[i]}
+			ctPart := types.CiphertextPart{ct, []byte("example"), []byte("example3"), userAddrs[i]}
 			err := keeper.SetCiphertext(ctx, uint64(round), &ctPart)
 			if err != nil {
 				t.Errorf("failed set ciphertext: %v", err)
@@ -139,4 +139,47 @@ func testAddr(addr string, bech string) sdk.AccAddress {
 	}
 
 	return res
+}
+
+func TestSetGetDecryptionShare(t *testing.T) {
+	testCases := []int{1, 5, 10}
+	for round, r := range testCases {
+		var decryptionShares []types.DecryptionShare
+		ctx, keeper, _ := Initialize()
+		userAddrs := CreateTestAddrs(r)
+		g := keeper.group.Point().Base()
+		for i := 0; i < r; i++ {
+			x := keeper.group.Scalar().SetInt64(int64(i))
+			g1 := keeper.group.Point().Mul(x, g)
+			g2 := keeper.group.Point().Mul(x, g1)
+			dleProof, _, _, err := elgamal.DLE(P256, g1, g2, x)
+			if err != nil {
+				t.Errorf("Dle proof doesn't created")
+			}
+			decShare := types.DecryptionShare{g2, dleProof, userAddrs[i]}
+			decryptionShares = append(decryptionShares, decShare)
+			err1 := keeper.SetDecryptionShare(ctx, uint64(round), &decShare)
+			if err1 != nil {
+				t.Errorf("failed set decryption share: %v", err1)
+			}
+		}
+		newDecryptionShares, err := keeper.GetAllDecryptionShares(ctx, uint64(round))
+		if err != nil {
+			t.Errorf("failed get all decryption shares: %v", err)
+		}
+		for i := 0; i < r; i++ {
+			if _, ok := newDecryptionShares[decryptionShares[i].KeyHolder.String()]; !ok {
+				t.Errorf("new map doesn't contains original key holder, round: %v", round)
+			}
+			if !newDecryptionShares[decryptionShares[i].KeyHolder.String()].DecShare.Equal(decryptionShares[i].DecShare) {
+				t.Errorf("ciphertexts don't equal, round: %v", round)
+			}
+			if !newDecryptionShares[decryptionShares[i].KeyHolder.String()].DLEproof.C.Equal(decryptionShares[i].DLEproof.C) ||
+				!newDecryptionShares[decryptionShares[i].KeyHolder.String()].DLEproof.R.Equal(decryptionShares[i].DLEproof.R) ||
+				!newDecryptionShares[decryptionShares[i].KeyHolder.String()].DLEproof.VG.Equal(decryptionShares[i].DLEproof.VG) ||
+				!newDecryptionShares[decryptionShares[i].KeyHolder.String()].DLEproof.VH.Equal(decryptionShares[i].DLEproof.VH) {
+				t.Errorf("dle proofs don't equal")
+			}
+		}
+	}
 }
