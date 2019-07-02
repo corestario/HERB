@@ -1,12 +1,14 @@
 package types
 
 import (
+	"fmt"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"go.dedis.ch/kyber/v3/group/nist"
+	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )
 
 //delete in future
@@ -60,4 +62,23 @@ func TestSerialization(t *testing.T) {
 	if !ctPart.Ciphertext.Equal(newctPart.Ciphertext) {
 		t.Errorf("ciphertexts don't equal")
 	}
+}
+
+func TestEncodingDecodingPoint(t *testing.T) {
+	group := P256
+	mult := group.Scalar().SetInt64(3)
+	key := group.Point().Mul(mult, nil)
+	str, err := kyberenc.PointToStringHex(group, key)
+	if err != nil {
+		t.Errorf("failed to encode key as string: %v", err)
+	}
+	fmt.Printf(str)
+	newKey, err := kyberenc.StringHexToPoint(group, str)
+	if err != nil {
+		t.Errorf("failed to decode key: %v", err)
+	}
+	if !newKey.Equal(key) {
+		t.Errorf("keys are not equal")
+	}
+
 }
