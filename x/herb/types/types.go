@@ -60,11 +60,11 @@ func (ctJSON *CiphertextPartJSON) Deserialize() (*CiphertextPart, sdk.Error) {
 	}, nil
 }
 
-func CiphertextMapSerialize(ctMap map[string]*elgamal.Ciphertext) (map[string]*elgamal.CiphertextJSON, sdk.Error) {
-	ctJSONMap := make(map[string]*elgamal.CiphertextJSON)
+func CiphertextMapSerialize(ctMap map[string]*CiphertextPart) (map[string]*CiphertextPartJSON, sdk.Error) {
+	ctJSONMap := make(map[string]*CiphertextPartJSON)
 	var err error
 	for addr, ct := range ctMap {
-		ctJSONMap[addr], err = elgamal.NewCiphertextJSON(ct)
+		ctJSONMap[addr], err = NewCiphertextPartJSON(ct)
 		if err != nil {
 			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize map: %v", err))
 		}
@@ -72,8 +72,8 @@ func CiphertextMapSerialize(ctMap map[string]*elgamal.Ciphertext) (map[string]*e
 	return ctJSONMap, nil
 }
 
-func CiphertextMapDeserialize(ctJSONMap map[string]*elgamal.CiphertextJSON) (map[string]*elgamal.Ciphertext, sdk.Error) {
-	ctMap := make(map[string]*elgamal.Ciphertext)
+func CiphertextMapDeserialize(ctJSONMap map[string]*CiphertextPartJSON) (map[string]*CiphertextPart, sdk.Error) {
+	ctMap := make(map[string]*CiphertextPart)
 	var err error
 	for addr, ct := range ctJSONMap {
 		ctMap[addr], err = ct.Deserialize()

@@ -39,11 +39,11 @@ func (k Keeper) SetCiphertext(ctx sdk.Context, round uint64, ctPart *types.Ciphe
 	store := ctx.KVStore(k.storeKey)
 	roundBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(roundBytes, round)
-	ctMap := make(map[string]*elgamal.Ciphertext)
+	ctMap := make(map[string]*types.CiphertextPart)
 	var err sdk.Error
 	if store.Has(roundBytes) {
 		ctMapBytes := store.Get(roundBytes)
-		var ctMapJSON map[string]*elgamal.CiphertextJSON
+		var ctMapJSON map[string]*types.CiphertextPartJSON
 		err1 := k.cdc.UnmarshalJSON(ctMapBytes, &ctMapJSON)
 		if err1 != nil {
 			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal map from the store: %v", err1))
@@ -54,7 +54,7 @@ func (k Keeper) SetCiphertext(ctx sdk.Context, round uint64, ctPart *types.Ciphe
 		}
 	}
 
-	ctMap[ctPart.EntropyProvider.String()] = &ctPart.Ciphertext
+	ctMap[ctPart.EntropyProvider.String()] = ctPart
 	newCtMapJSON, err := types.CiphertextMapSerialize(ctMap)
 	if err != nil {
 		return err
@@ -68,7 +68,7 @@ func (k Keeper) SetCiphertext(ctx sdk.Context, round uint64, ctPart *types.Ciphe
 }
 
 // GetAllCiphertexts returns all ciphertext parts for the given round as go-slice
-func (k Keeper) GetAllCiphertexts(ctx sdk.Context, round uint64) (map[string]*elgamal.Ciphertext, sdk.Error) {
+func (k Keeper) GetAllCiphertexts(ctx sdk.Context, round uint64) (map[string]*types.CiphertextPart, sdk.Error) {
 	store := ctx.KVStore(k.storeKey)
 	roundBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(roundBytes, round)
@@ -76,7 +76,7 @@ func (k Keeper) GetAllCiphertexts(ctx sdk.Context, round uint64) (map[string]*el
 		return nil, sdk.ErrUnknownRequest("Unknown round")
 	}
 	ctMapBytes := store.Get(roundBytes)
-	var ctMapJSON map[string]*elgamal.CiphertextJSON
+	var ctMapJSON map[string]*types.CiphertextPartJSON
 	err1 := k.cdc.UnmarshalJSON(ctMapBytes, &ctMapJSON)
 	if err1 != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal map from store: %v", err1))
@@ -88,23 +88,6 @@ func (k Keeper) GetAllCiphertexts(ctx sdk.Context, round uint64) (map[string]*el
 	return ctMap, nil
 }
 
-func (k Keeper) GetAllCiphertextParts(ctx sdk.Context, round uint64) ([]*types.CiphertextPart, sdk.Error) {
-	ctMap, err := k.GetAllCiphertexts(ctx, round)
-	if err != nil {
-		return nil, err
-	}
-	ctParts := make([]*types.CiphertextPart, 0, len(ctMap))
-	for addr, ct := range ctMap {
-		entropyProvider, err := sdk.AccAddressFromBech32(addr)
-		if err != nil {
-			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("coudn't get acc address from string: %v", err))
-		}
-		ctParts = append(ctParts, &CiphertextPart{Ciphertext:*ct, EntropyProvider: entropyProvider})
-	}
-
-	return ctParts, nil
-}
-
 // GetAggregatedCiphertext aggregate all sended ciphertext parts in one ciphertext and returns it
 func (k Keeper) GetAggregatedCiphertext(ctx sdk.Context, round uint64) (*elgamal.Ciphertext, sdk.Error) {
 	allCts, err := k.GetAllCiphertexts(ctx, round)
@@ -113,7 +96,7 @@ func (k Keeper) GetAggregatedCiphertext(ctx sdk.Context, round uint64) (*elgamal
 	}
 	ctArray := make([]elgamal.Ciphertext, 0, len(allCts))
 	for _, ct := range allCts {
-		ctArray = append(ctArray, *ct)
+		ctArray = append(ctArray, ct.Ciphertext)
 	}
 	aggregatedCiphertext := elgamal.AggregateCiphertext(k.group, ctArray)
 	return &aggregatedCiphertext, nil

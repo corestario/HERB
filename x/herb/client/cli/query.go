@@ -88,14 +88,14 @@ func GetCmdAllCiphertexts(queryRoute string, cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			outJSON := make(map[string]*elgamal.CiphertextJSON)
+			outJSON := make(map[string]*types.CiphertextPartJSON)
 			cdc.MustUnmarshalJSON(res, &outJSON)
 			out, err := types.CiphertextMapDeserialize(outJSON)
 			if err != nil {
 				return err
 			}
-			for _, ct := range out {
-				fmt.Println(ct.String())
+			for _, ctPart := range out {
+				fmt.Println(ctPart.Ciphertext.String())
 			}
 			return nil
 			//return cliCtx.PrintOutput(outJSON)

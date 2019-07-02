@@ -65,7 +65,7 @@ func TestSetGetCiphertext(t *testing.T) {
 			if _, ok := newCiphertexts[ciphertextParts[i].EntropyProvider.String()]; !ok {
 				t.Errorf("new map doesn't contains original entropy provider, round: %v", round)
 			}
-			if !newCiphertexts[ciphertextParts[i].EntropyProvider.String()].Equal(ciphertextParts[i].Ciphertext) {
+			if !newCiphertexts[ciphertextParts[i].EntropyProvider.String()].Ciphertext.Equal(ciphertextParts[i].Ciphertext) {
 				t.Errorf("ciphertexts don't equal, round: %v", round)
 			}
 		}
