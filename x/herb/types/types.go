@@ -106,7 +106,7 @@ type DecryptionShareJSON struct {
 	KeyHolder sdk.AccAddress `json:"keyholder"`
 }
 
-func SerializeDecryptionShare(decShares *DecryptionShare) (*DecryptionShareJSON, sdk.Error) {
+func NewDecryptionShareJSON(decShares *DecryptionShare) (*DecryptionShareJSON, sdk.Error) {
 	dsBuf := bytes.NewBuffer(nil)
 	dsEnc := gob.NewEncoder(dsBuf)
 	if err := dsEnc.Encode(decShares.DecShare); err != nil {
@@ -123,7 +123,7 @@ func SerializeDecryptionShare(decShares *DecryptionShare) (*DecryptionShareJSON,
 		KeyHolder: decShares.KeyHolder,
 	}, nil
 }
-func DeserializeDecryptionShare(dsJSON *DecryptionShareJSON) (*DecryptionShare, sdk.Error) {
+func (dsJSON DecryptionShareJSON) Deserialize() (*DecryptionShare, sdk.Error) {
 	dsBytes, err := base64.StdEncoding.DecodeString(dsJSON.DecShare)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to base64-decode decryption shares: %v", err))
@@ -153,7 +153,7 @@ func DecryptionSharesMapSerialize(dsMap map[string]*DecryptionShare) (map[string
 	dsJSONMap := make(map[string]*DecryptionShareJSON)
 	var err error
 	for addr, ds := range dsMap {
-		dsJSONMap[addr], err = SerializeDecryptionShare(ds)
+		dsJSONMap[addr], err = NewDecryptionShareJSON(ds)
 		if err != nil {
 			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize map: %v", err))
 		}
@@ -165,7 +165,7 @@ func DecryptionSharesMapDeserialize(dsJSONMap map[string]*DecryptionShareJSON) (
 	dsMap := make(map[string]*DecryptionShare)
 	var err error
 	for addr, ds := range dsJSONMap {
-		dsMap[addr], err = DeserializeDecryptionShare(ds)
+		dsMap[addr], err = ds.Deserialize()
 		if err != nil {
 			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize  map: %v", err))
 		}

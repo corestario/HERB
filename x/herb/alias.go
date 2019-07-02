@@ -19,6 +19,9 @@ var (
 
 type (
 	MsgSetCiphertextPart = types.MsgSetCiphertextPart
+	MsgSetDecryptionShare = types.MsgSetDecryptionShare
 	CiphertextPart = types.CiphertextPart
 	CiphertextPartJSON = types.CiphertextPartJSON
+	DecryptionShare = types.DecryptionShare
+	DecryptionShareJSON = types.DecryptionShareJSON
 )

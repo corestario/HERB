@@ -77,7 +77,7 @@ func TestDecryptionSharesSerialization(t *testing.T) {
 		t.Errorf("Dle proof don't created")
 	}
 	decShare := DecryptionShare{g2, dleProof, userAddr1}
-	decShareJSON, err := SerializeDecryptionShare(&decShare)
+	decShareJSON, err := NewDecryptionShareJSON(&decShare)
 	if err != nil {
 		t.Errorf("failed to json: %v", err)
 	}
