@@ -31,14 +31,14 @@ import (
 	}
 }*/
 
-func TestSerialization(t *testing.T) {
+func TestCiphertextSerialization(t *testing.T) {
 	suite := nist.NewBlakeSHA256P256()
 	g1 := suite.Point().Base()
 	g2 := suite.Point().Mul(suite.Scalar().SetInt64(2), g1)
 	ct := elgamal.Ciphertext{g1, g2}
 	userPk1 := ed25519.GenPrivKey().PubKey()
 	userAddr1 := sdk.AccAddress(userPk1.Address())
-	ctPart := CiphertextPart{ct, userAddr1}
+	ctPart := CiphertextPart{ct, []byte("example"), []byte("example3"), userAddr1}
 	ctPartJSON, err := NewCiphertextPartJSON(&ctPart)
 	if err != nil {
 		t.Errorf("failed to json: %v", err)
@@ -64,6 +64,50 @@ func TestSerialization(t *testing.T) {
 	}
 }
 
+func TestDecryptionSharesSerialization(t *testing.T) {
+	suite := nist.NewBlakeSHA256P256()
+	g := suite.Point().Base()
+	x := suite.Scalar().SetInt64(2)
+	g1 := suite.Point().Mul(x, g)
+	g2 := suite.Point().Mul(x, g1)
+	userPk1 := ed25519.GenPrivKey().PubKey()
+	userAddr1 := sdk.AccAddress(userPk1.Address())
+	dleProof, _, _, err := elgamal.DLE(suite, g1, g2, x)
+	if err != nil {
+		t.Errorf("Dle proof don't created")
+	}
+	decShare := DecryptionShare{g2, dleProof, userAddr1}
+	decShareJSON, err := SerializeDecryptionShare(&decShare)
+	if err != nil {
+		t.Errorf("failed to json: %v", err)
+	}
+	decShareJSONBytes, err := ModuleCdc.MarshalJSON(decShareJSON)
+	if err != nil {
+		t.Errorf("failed marshal: %v", err)
+	}
+	var bytes *DecryptionShareJSON
+	err1 := ModuleCdc.UnmarshalJSON(decShareJSONBytes, &bytes)
+	if err1 != nil {
+		t.Errorf("failed unmarshal: %v", err1)
+	}
+	newdecShare, err2 := DeserializeDecryptionShare(bytes)
+	if err2 != nil {
+		t.Errorf("failed from json: %v", err2)
+	}
+	if !newdecShare.KeyHolder.Equals(decShare.KeyHolder) {
+		t.Errorf("addresses don't equal")
+	}
+	if !newdecShare.DecShare.Equal(decShare.DecShare) {
+		t.Errorf("decryption shares don't equal")
+	}
+	if !newdecShare.DLEproof.C.Equal(decShare.DLEproof.C) ||
+		!newdecShare.DLEproof.R.Equal(decShare.DLEproof.R) ||
+		!newdecShare.DLEproof.VG.Equal(decShare.DLEproof.VG) ||
+		!newdecShare.DLEproof.VH.Equal(decShare.DLEproof.VH) {
+		t.Errorf("dle proofs don't equal")
+	}
+	return
+}
 func TestEncodingDecodingPoint(t *testing.T) {
 	group := P256
 	mult := group.Scalar().SetInt64(3)

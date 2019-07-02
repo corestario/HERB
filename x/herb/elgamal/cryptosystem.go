@@ -3,6 +3,7 @@ package elgamal
 import (
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/proof"
+	"go.dedis.ch/kyber/v3/proof/dleq"
 	"go.dedis.ch/kyber/v3/util/random"
 )
 
@@ -20,5 +21,15 @@ func RandomCiphertext(group proof.Suite, commonKey kyber.Point) (ct Ciphertext, 
 		return
 	}
 	RKproof, err = RK(group, group.Point().Base(), y, commonKey, r, ct.PointB)
+	return
+}
+
+// create decryption shares and proof
+func CreateDecShare(group proof.Suite, C Ciphertext, partKey kyber.Scalar) (decShare kyber.Point, DLEproof *dleq.Proof, err error) {
+	decShare = group.Point().Mul(partKey, C.PointA)
+	DLEproof, _, _, err = DLE(group, group.Point().Base(), C.PointA, partKey)
+	if err != nil {
+		return nil, nil, err
+	}
 	return
 }
