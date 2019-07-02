@@ -6,8 +6,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
-	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/stretchr/testify/require"
+	"github.com/tendermint/tendermint/crypto/ed25519"
 )
 
 func TestHandleSetCiphertext(t *testing.T) {
@@ -19,7 +19,7 @@ func TestHandleSetCiphertext(t *testing.T) {
 	g1 := keeper.group.Point().Base()
 	g2 := keeper.group.Point().Mul(keeper.group.Scalar().SetInt64(5), g1)
 	ct := elgamal.Ciphertext{g1, g2}
-	ctPart := types.CiphertextPart{ct, userAddr1}
+	ctPart := types.CiphertextPart{ct, []byte("example"), []byte("example3"), userAddr1}
 	ctPartJSON, err := types.NewCiphertextPartJSON(&ctPart)
 	if err != nil {
 		t.Errorf("failed: %v", err)
