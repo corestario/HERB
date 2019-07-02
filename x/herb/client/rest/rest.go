@@ -22,11 +22,11 @@ func RegisterRoutes(cliCtx context.CLIContext, r *mux.Router, storeName string) 
 	r.HandleFunc(
 		fmt.Sprintf("%s/ciphertexts/aggregated", storeName),
 		getAggregatedCiphertextHandler(cliCtx, storeName),
-		).Methods("GET")
+	).Methods("GET")
 	r.HandleFunc(
 		fmt.Sprintf("%s/ciphertext_part", storeName),
 		setCiphertextPartHandler(cliCtx),
-		).Methods("POST")
+	).Methods("POST")
 }
 
 // QUERIES
@@ -42,7 +42,7 @@ func getAggregatedCiphertextHandler(cliCtx client.CLIContext, storeName string) 
 			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		params := types.NewQueryAggregatedCtParams(round)
+		params := types.NewQueryCtParams(round)
 		bz, err := cdc.MarshalJSON(params)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -62,11 +62,11 @@ func getAggregatedCiphertextHandler(cliCtx client.CLIContext, storeName string) 
 // TXS
 
 type setCiphertextPartReq struct {
-	BaseReq rest.BaseReq `jcon:"base_req"`
-	Round string `json:"round"`
-	Ciphertext string    `json:"ciphertext"`
-	EntropyProvider string `json:"entropy_provider"`
-	Sender string `json:"entropyProvider"`
+	BaseReq         rest.BaseReq `jcon:"base_req"`
+	Round           string       `json:"round"`
+	Ciphertext      string       `json:"ciphertext"`
+	EntropyProvider string       `json:"entropy_provider"`
+	Sender          string       `json:"entropyProvider"`
 }
 
 func setCiphertextPartHandler(cliCtx context.CLIContext) http.HandlerFunc {
@@ -101,7 +101,6 @@ func setCiphertextPartHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
-
 
 		ctPart := types.CiphertextPartJSON{req.Ciphertext, entropyProvider}
 

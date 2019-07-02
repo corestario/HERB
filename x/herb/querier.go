@@ -16,14 +16,16 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 		switch path[0] {
 		case types.QueryAggregatedCt:
 			return queryAggregatedCt(ctx, path[1:], req, keeper)
+		case types.QueryAllCt:
+			return queryGetAllCt(ctx, path[1:], req, keeper)
 		default:
-			return nil, sdk.ErrUnknownRequest("unknown nameservice query endpoint")
+			return nil, sdk.ErrUnknownRequest("unknown herb query endpoint")
 		}
 	}
 }
 
 func queryAggregatedCt(ctx sdk.Context, path []string, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	var params types.QueryAggregatedCtParams
+	var params types.QueryCtParams
 	err := keeper.cdc.UnmarshalJSON(req.Data, &params)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("incorrectly formatted request data", err.Error()))
@@ -43,6 +45,30 @@ func queryAggregatedCt(ctx sdk.Context, path []string, req abci.RequestQuery, ke
 	if err != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
 	}
-	
+
+	return bz, nil
+}
+func queryGetAllCt(ctx sdk.Context, path []string, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
+	var params types.QueryCtParams
+	err := keeper.cdc.UnmarshalJSON(req.Data, &params)
+	if err != nil {
+		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("incorrectly formatted request data", err.Error()))
+	}
+
+	allCt, err2 := keeper.GetAllCiphertexts(ctx, params.Round)
+	if err2 != nil {
+		return nil, err2
+	}
+
+	allCtJSON, err := types.CiphertextMapSerialize(allCt)
+	if err != nil {
+		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("coudn't get JSON ciphertexts", err.Error()))
+	}
+
+	bz, err := codec.MarshalJSONIndent(keeper.cdc, allCtJSON)
+	if err != nil {
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
+	}
+
 	return bz, nil
 }

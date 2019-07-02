@@ -26,6 +26,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 
 	herbQueryCmd.AddCommand(client.GetCommands(
 		GetCmdAggregatedCiphertext(storeKey, cdc),
+		GetCmdAllCiphertexts(storeKey, cdc),
 	)...)
 
 	return herbQueryCmd
@@ -43,7 +44,7 @@ func GetCmdAggregatedCiphertext(queryRoute string, cdc *codec.Codec) *cobra.Comm
 			if err != nil {
 				return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
 			}
-			params := types.NewQueryAggregatedCtParams(round)
+			params := types.NewQueryCtParams(round)
 			bz, err := cdc.MarshalJSON(params)
 			if err != nil {
 				return err
@@ -60,6 +61,42 @@ func GetCmdAggregatedCiphertext(queryRoute string, cdc *codec.Codec) *cobra.Comm
 				return err
 			}
 			fmt.Println(out.String())
+			return nil
+			//return cliCtx.PrintOutput(outJSON)
+		},
+	}
+}
+
+func GetCmdAllCiphertexts(queryRoute string, cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "allCt [round]",
+		Args:  cobra.ExactArgs(1),
+		Short: "Query all elgamal ciphertexts for the given round",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			round, err := strconv.ParseUint(args[0], 10, 64)
+			if err != nil {
+				return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
+			}
+			params := types.NewQueryCtParams(round)
+			bz, err := cdc.MarshalJSON(params)
+			if err != nil {
+				return err
+			}
+
+			res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryAllCt), bz)
+			if err != nil {
+				return err
+			}
+			outJSON := make(map[string]*elgamal.CiphertextJSON)
+			cdc.MustUnmarshalJSON(res, &outJSON)
+			out, err := types.CiphertextMapDeserialize(outJSON)
+			if err != nil {
+				return err
+			}
+			for _, ct := range out {
+				fmt.Println(ct.String())
+			}
 			return nil
 			//return cliCtx.PrintOutput(outJSON)
 		},
