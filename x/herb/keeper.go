@@ -15,10 +15,11 @@ import (
 
 const (
 	// key prefixes for defining item in the store by round
-	keyCiphertextParts  = "keyCt"     //ciphtetextParts for the round
-	keyDecryptionShares = "keyDS"     //descryption shares
-	keyRandomResult     = "keyResult" // random point as result of the round
-	keyStage            = "keyStage"
+	keyCiphertextParts      = "keyCt"     //ciphtetextParts for the round
+	keyDecryptionShares     = "keyDS"     //descryption shares
+	keyAggregatedCiphertext = "keyACt"    // aggregated ciphertext
+	keyRandomResult         = "keyResult" // random point as result of the round
+	keyStage                = "keyStage"
 
 	//round stages: ciphertext parts collecting, descryption shares collecting, fresh random number
 	stageCt        = "ctCollecting"
@@ -34,8 +35,8 @@ type Keeper struct {
 	currentRound        uint64
 	thresholdDecryption uint64
 	thresholdParts      uint64
-
-	cdc *codec.Codec
+	n                   uint64
+	cdc                 *codec.Codec
 }
 
 // NewKeeper creates new instances of the HERB Keeper
@@ -44,8 +45,9 @@ func NewKeeper(storeKey sdk.StoreKey, cdc *codec.Codec) Keeper {
 		storeKey:            storeKey,
 		group:               P256,
 		currentRound:        uint64(0),
-		thresholdDecryption: 1,
+		thresholdDecryption: 2,
 		thresholdParts:      2,
+		n:                   3,
 		cdc:                 cdc,
 	}
 }
@@ -108,16 +110,41 @@ func (k Keeper) GetAllCiphertexts(ctx sdk.Context, round uint64) (map[string]*ty
 
 // GetAggregatedCiphertext aggregate all sended ciphertext parts in one ciphertext and returns it
 func (k Keeper) GetAggregatedCiphertext(ctx sdk.Context, round uint64) (*elgamal.Ciphertext, sdk.Error) {
-	allCts, err := k.GetAllCiphertexts(ctx, round)
-	if err != nil {
-		return nil, err
+	store := ctx.KVStore(k.storeKey)
+	keyBytes := getKeyBytes(round, keyAggregatedCiphertext)
+	if !store.Has(keyBytes) {
+		allCts, err := k.GetAllCiphertexts(ctx, round)
+		if err != nil {
+			return nil, err
+		}
+		ctArray := make([]elgamal.Ciphertext, 0, len(allCts))
+		for _, ct := range allCts {
+			ctArray = append(ctArray, ct.Ciphertext)
+		}
+		aggregatedCiphertext := elgamal.AggregateCiphertext(k.group, ctArray)
+		aCSer, err1 := elgamal.NewCiphertextJSON(&aggregatedCiphertext)
+		if err1 != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize aggregated ciphertext: %v", err1))
+		}
+		aCSerBytes, err2 := k.cdc.MarshalJSON(aCSer)
+		if err2 != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal aggregated ciphertext: %v", err2))
+		}
+		store.Set(keyBytes, aCSerBytes)
+		return &aggregatedCiphertext, nil
+	} else {
+		result := store.Get(keyBytes)
+		var newaCSer *elgamal.CiphertextJSON
+		err := k.cdc.UnmarshalJSON(result, &newaCSer)
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal aggregated ciphertext: %v", err))
+		}
+		newCt, err := newaCSer.Deserialize()
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize aggregated ciphertext: %v", err))
+		}
+		return newCt, nil
 	}
-	ctArray := make([]elgamal.Ciphertext, 0, len(allCts))
-	for _, ct := range allCts {
-		ctArray = append(ctArray, ct.Ciphertext)
-	}
-	aggregatedCiphertext := elgamal.AggregateCiphertext(k.group, ctArray)
-	return &aggregatedCiphertext, nil
 }
 
 func (k Keeper) setStage(ctx sdk.Context, round uint64, stage string) {
@@ -184,4 +211,31 @@ func (k Keeper) GetAllDecryptionShares(ctx sdk.Context, round uint64) (map[strin
 		return nil, err
 	}
 	return dsMap, nil
+}
+func (k Keeper) GetRandom(ctx sdk.Context, round uint64) ([]byte, sdk.Error) {
+	store := ctx.KVStore(k.storeKey)
+	keyBytes := getKeyBytes(round, keyRandomResult)
+	if !store.Has(keyBytes) {
+		dsMap, err := k.GetAllDecryptionShares(ctx, round)
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't get all decryption shares from store: %v", err))
+		}
+		ds := make([]kyber.Point, 0, len(dsMap))
+		for _, share := range dsMap {
+			ds = append(ds, share.DecShare)
+		}
+		aggCt, err := k.GetAggregatedCiphertext(ctx, round)
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't get aggregated ciphertext from store: %v", err))
+		}
+		resultPoint := elgamal.Decrypt(P256, *aggCt, ds, int(k.n))
+		hash := P256.Hash()
+		resultPoint.MarshalTo(hash)
+		result := hash.Sum(nil)
+		store.Set(keyBytes, result)
+		return result, nil
+	} else {
+		result := store.Get(keyBytes)
+		return result, nil
+	}
 }
