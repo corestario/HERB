@@ -4,12 +4,11 @@ import (
 	"bytes"
 	"fmt"
 
-	"go.dedis.ch/kyber/v3"
-
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 
 	"go.dedis.ch/kyber/v3/group/nist"
 	"go.dedis.ch/kyber/v3/proof/dleq"
+	"go.dedis.ch/kyber/v3/share"
 
 	"encoding/base64"
 	"encoding/gob"
@@ -96,7 +95,7 @@ func CiphertextMapDeserialize(ctJSONMap map[string]*CiphertextPartJSON) (map[str
 }
 
 type DecryptionShare struct {
-	DecShare  kyber.Point
+	DecShare  share.PubShare
 	DLEproof  *dleq.Proof
 	KeyHolder sdk.AccAddress
 }
@@ -129,7 +128,7 @@ func (dsJSON DecryptionShareJSON) Deserialize() (*DecryptionShare, sdk.Error) {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to base64-decode decryption shares: %v", err))
 	}
 	dsDec := gob.NewDecoder(bytes.NewBuffer(dsBytes))
-	decshare := P256.Point().Base()
+	decshare := share.PubShare{I:0, V: P256.Point().Base()}
 	if err := dsDec.Decode(&decshare); err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode decryption share : %v", err))
 	}

@@ -24,12 +24,8 @@ func IdentityCiphertext(group kyber.Group) Ciphertext {
 }
 
 //Decrypt takes decrypt parts (shares) from all participants and decrypt the ciphertext C
-func Decrypt(group kyber.Group, C Ciphertext, parts []kyber.Point, n int) kyber.Point {
-	pubShares := make([]*share.PubShare, len(parts))
-	for i := 0; i < len(parts); i++ {
-		pubShares[i] = &share.PubShare{i, parts[i]}
-	}
-	D, _ := share.RecoverCommit(group, pubShares, len(parts), n)
+func Decrypt(group kyber.Group, C Ciphertext, parts []*share.PubShare, n int) kyber.Point {
+	D, _ := share.RecoverCommit(group, parts, len(parts), n)
 	M := group.Point().Sub(C.PointB, D)
 	return M
 }

@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"testing"
 
+	"go.dedis.ch/kyber/v3/share"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -156,7 +158,7 @@ func TestSetGetDecryptionShare(t *testing.T) {
 			if err != nil {
 				t.Errorf("Dle proof doesn't created")
 			}
-			decShare := types.DecryptionShare{g2, dleProof, userAddrs[i]}
+			decShare := types.DecryptionShare{share.PubShare{i, g2}, dleProof, userAddrs[i]}
 			decryptionShares = append(decryptionShares, decShare)
 			err1 := keeper.SetDecryptionShare(ctx, uint64(round), &decShare)
 			if err1 != nil {
@@ -171,7 +173,7 @@ func TestSetGetDecryptionShare(t *testing.T) {
 			if _, ok := newDecryptionShares[decryptionShares[i].KeyHolder.String()]; !ok {
 				t.Errorf("new map doesn't contains original key holder, round: %v", round)
 			}
-			if !newDecryptionShares[decryptionShares[i].KeyHolder.String()].DecShare.Equal(decryptionShares[i].DecShare) {
+			if !newDecryptionShares[decryptionShares[i].KeyHolder.String()].DecShare.V.Equal(decryptionShares[i].DecShare.V) {
 				t.Errorf("ciphertexts don't equal, round: %v", round)
 			}
 			if !newDecryptionShares[decryptionShares[i].KeyHolder.String()].DLEproof.C.Equal(decryptionShares[i].DLEproof.C) ||

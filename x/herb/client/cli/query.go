@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"encoding/binary"
 	"fmt"
 	"strconv"
 
@@ -138,7 +137,7 @@ func GetCmdAllDecryptionShares(queryRoute string, cdc *codec.Codec) *cobra.Comma
 				return err
 			}
 			for _, share := range out {
-				fmt.Printf("Key holder address: %v \n Descryption Share: %v \n", share.KeyHolder.String(), share.DecShare.String())
+				fmt.Printf("Key holder address: %v \n Descryption Share: %v \n", share.KeyHolder.String(), share.DecShare.V.String())
 			}
 			return nil
 		},
@@ -168,11 +167,7 @@ func GetCmdRandom(queryRoute string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			res8Bytes := res[:3]
-			var out uint32
-			binary.LittleEndian.PutUint32(res8Bytes, out)
-
-			fmt.Println(out)
+			fmt.Printf("random data: %v", res)
 
 			return nil
 		},

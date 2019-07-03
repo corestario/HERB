@@ -9,6 +9,7 @@ import (
 	"github.com/dgamingfoundation/HERB/x/herb/types"
 
 	"go.dedis.ch/kyber/v3"
+	"go.dedis.ch/kyber/v3/share"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -36,6 +37,7 @@ type Keeper struct {
 	thresholdDecryption uint64
 	thresholdParts      uint64
 	n                   uint64
+
 	cdc                 *codec.Codec
 }
 
@@ -48,6 +50,7 @@ func NewKeeper(storeKey sdk.StoreKey, cdc *codec.Codec) Keeper {
 		thresholdDecryption: 2,
 		thresholdParts:      2,
 		n:                   3,
+
 		cdc:                 cdc,
 	}
 }
@@ -220,9 +223,9 @@ func (k Keeper) GetRandom(ctx sdk.Context, round uint64) ([]byte, sdk.Error) {
 		if err != nil {
 			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't get all decryption shares from store: %v", err))
 		}
-		ds := make([]kyber.Point, 0, len(dsMap))
-		for _, share := range dsMap {
-			ds = append(ds, share.DecShare)
+		ds := make([]*share.PubShare, 0, len(dsMap))
+		for _, decShare := range dsMap {
+			ds = append(ds, &decShare.DecShare)
 		}
 		aggCt, err := k.GetAggregatedCiphertext(ctx, round)
 		if err != nil {
@@ -230,7 +233,10 @@ func (k Keeper) GetRandom(ctx sdk.Context, round uint64) ([]byte, sdk.Error) {
 		}
 		resultPoint := elgamal.Decrypt(P256, *aggCt, ds, int(k.n))
 		hash := P256.Hash()
-		resultPoint.MarshalTo(hash)
+		_, err2 := resultPoint.MarshalTo(hash)
+		if err2 != nil {
+			return nil, sdk.ErrInternal(fmt.Sprintf("failed to marshal result point to hash: %v", err))
+		}
 		result := hash.Sum(nil)
 		store.Set(keyBytes, result)
 		return result, nil

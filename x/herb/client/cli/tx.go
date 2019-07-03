@@ -16,6 +16,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"go.dedis.ch/kyber/v3/share"
 	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )
 
@@ -84,9 +85,9 @@ func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 // GetCmdSetDecryptionShare implements send decryption share transaction command.
 func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use: "decrypt [round] [privateKey]",
+		Use: "decrypt [round] [privateKey] [ID]",
 		Short: "Send a decryption share of the aggregated ciphertext for the [round]",
-		Args: cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
@@ -106,23 +107,29 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			var outJSON elgamal.CiphertextJSON
-			cdc.MustUnmarshalJSON(ctPartBytes, &outJSON)
-			aggregatedCt, err := outJSON.Deserialize()
+			var ctJSON elgamal.CiphertextJSON
+			cdc.MustUnmarshalJSON(ctPartBytes, &ctJSON)
+			aggregatedCt, err := ctJSON.Deserialize()
 			if err != nil {
 				return err
 			}
 
+			//decrypting ciphertext
 			group := types.P256
 			privKey, err := kyberenc.StringHexToScalar(group, args[1])
 			if err != nil {
 				return fmt.Errorf("failed to decode common public key: %v", err)
 			}
 
+			id, err := strconv.ParseInt(args[2], 10, 64)
+			if err != nil {
+				return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
+			}
+
 			sharePoint, proof, err := elgamal.CreateDecShare(group, *aggregatedCt, privKey)
 
 			decryptionShare := &types.DecryptionShare{
-				DecShare:  sharePoint,
+				DecShare:  share.PubShare{I: int(id), V: sharePoint},
 				DLEproof:  proof,
 				KeyHolder: cliCtx.GetFromAddress(),
 			}
