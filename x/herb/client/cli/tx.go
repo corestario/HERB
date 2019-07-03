@@ -86,7 +86,7 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use: "decrypt [round] [privateKey]",
 		Short: "Send a decryption share of the aggregated ciphertext for the [round]",
-		Args: cobra.ExactArgs(3),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
