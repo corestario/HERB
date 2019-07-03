@@ -20,6 +20,8 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 			return queryGetAllCt(ctx, req, keeper)
 		case types.QueryAllDescryptionShares:
 			return queryAllDescryptionShares(ctx, req, keeper)
+		case types.QueryRandom:
+			return queryRandom(ctx, req, keeper)
 		default:
 			return nil, sdk.ErrUnknownRequest("unknown herb query endpoint")
 		}
@@ -98,4 +100,19 @@ func queryAllDescryptionShares(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 	}
 
 	return bz, nil
+}
+
+func queryRandom(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
+	var params types.QueryByRound
+	err := keeper.cdc.UnmarshalJSON(req.Data, &params)
+	if err != nil {
+		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("incorrectly formatted request data", err.Error()))
+	}
+
+	randBytes, err2 := keeper.GetRandom(ctx, params.Round)
+	if err2 != nil {
+		return nil, err2
+	}
+
+	return randBytes, nil
 }

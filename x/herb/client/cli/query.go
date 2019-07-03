@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/binary"
 	"fmt"
 	"strconv"
 
@@ -28,6 +29,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 		GetCmdAggregatedCiphertext(storeKey, cdc),
 		GetCmdAllCiphertexts(storeKey, cdc),
 		GetCmdAllDecryptionShares(storeKey, cdc),
+		GetCmdRandom(storeKey, cdc),
 	)...)
 
 	return herbQueryCmd
@@ -68,7 +70,7 @@ func GetCmdAggregatedCiphertext(queryRoute string, cdc *codec.Codec) *cobra.Comm
 	}
 }
 
-// GetCmdAllCiphertexts implements the query all ciphertexts command.
+// GetCmdAllCiphertexts implements the query of all ciphertexts command.
 func GetCmdAllCiphertexts(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "allCt [round]",
@@ -105,7 +107,7 @@ func GetCmdAllCiphertexts(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	}
 }
 
-// GetCmdAllDecryptionShares implements the query all decryption shares command.
+// GetCmdAllDecryptionShares implements the query of all decryption shares command.
 func GetCmdAllDecryptionShares(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return  &cobra.Command {
 		Use: "allShares [round]",
@@ -138,6 +140,40 @@ func GetCmdAllDecryptionShares(queryRoute string, cdc *codec.Codec) *cobra.Comma
 			for _, share := range out {
 				fmt.Printf("Key holder address: %v \n Descryption Share: %v \n", share.KeyHolder.String(), share.DecShare.String())
 			}
+			return nil
+		},
+	}
+}
+
+// GetCmdRandom implements the query of the random number result.
+func GetCmdRandom(queryRoute string, cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command {
+		Use: "get-random [round]",
+		Short: "Queries the random number generation result",
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			round, err := strconv.ParseUint(args[0], 10, 64)
+			if err != nil {
+				return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
+			}
+			params := types.NewQueryByRound(round)
+			bz, err := cdc.MarshalJSON(params)
+			if err != nil {
+				return err
+			}
+
+			res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryRandom), bz)
+			if err != nil {
+				return err
+			}
+
+			res8Bytes := res[:3]
+			var out uint32
+			binary.LittleEndian.PutUint32(res8Bytes, out)
+
+			fmt.Println(out)
+
 			return nil
 		},
 	}

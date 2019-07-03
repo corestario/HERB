@@ -4,6 +4,7 @@ const (
 	QueryAggregatedCt = "aggregatedCiphertext"
 	QueryAllCt        = "allCiphertexts"
 	QueryAllDescryptionShares = "allDecryptionShares"
+	QueryRandom = "random"
 )
 
 type QueryByRound struct {
