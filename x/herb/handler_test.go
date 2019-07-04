@@ -11,7 +11,7 @@ import (
 )
 
 func TestHandleSetCiphertext(t *testing.T) {
-	ctx, keeper, _ := Initialize()
+	ctx, keeper, _ := Initialize(1, 1, 1)
 	userPk1 := ed25519.GenPrivKey().PubKey()
 	userAddr1 := sdk.AccAddress(userPk1.Address())
 	handler := NewHandler(keeper)

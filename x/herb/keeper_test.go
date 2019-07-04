@@ -18,12 +18,12 @@ import (
 	tmtypes "github.com/tendermint/tendermint/types"
 )
 
-func Initialize() (ctx sdk.Context, keeperInstance Keeper, cdc *codec.Codec) {
+func Initialize(thresholdDecryption uint64, thresholdParts uint64, n uint64) (ctx sdk.Context, keeperInstance Keeper, cdc *codec.Codec) {
 	cdc = codec.New()
 	types.RegisterCodec(cdc)
 	codec.RegisterCrypto(cdc)
 	keyHERB := sdk.NewKVStoreKey(types.StoreKey)
-	keeperInstance = NewKeeper(keyHERB, cdc)
+	keeperInstance = NewKeeper(keyHERB, cdc, thresholdDecryption, thresholdParts, n)
 	db := dbm.NewMemDB()
 	ms := store.NewCommitMultiStore(db)
 	ms.MountStoreWithDB(keyHERB, sdk.StoreTypeIAVL, db)
@@ -46,15 +46,17 @@ func TestSetGetCiphertext(t *testing.T) {
 	testCases := []int{1, 5, 10}
 	for round, r := range testCases {
 		var ciphertextParts []types.CiphertextPart
-		ctx, keeper, _ := Initialize()
+		ctx, keeper, _ := Initialize(uint64(r), uint64(r), uint64(r))
 		userAddrs := CreateTestAddrs(r)
+		keeper.forceRoundStage(ctx, uint64(round), stageCtCollecting)
+		keeper.forceCurrentRound(ctx, uint64(round))
 		g1 := keeper.group.Point().Base()
 		for i := 0; i < r; i++ {
 			g2 := keeper.group.Point().Mul(keeper.group.Scalar().SetInt64(int64(i)), g1)
 			ct := elgamal.Ciphertext{g1, g2}
 			ctPart := types.CiphertextPart{ct, []byte("example"), []byte("example3"), userAddrs[i]}
 			ciphertextParts = append(ciphertextParts, ctPart)
-			err := keeper.SetCiphertext(ctx, uint64(round), &ctPart)
+			err := keeper.SetCiphertext(ctx, &ctPart)
 			if err != nil {
 				t.Errorf("failed set ciphertext: %v", err)
 			}
@@ -65,7 +67,7 @@ func TestSetGetCiphertext(t *testing.T) {
 		}
 		for i := 0; i < r; i++ {
 			if _, ok := newCiphertexts[ciphertextParts[i].EntropyProvider.String()]; !ok {
-				t.Errorf("new map doesn't contains original entropy provider, round: %v", round)
+				t.Errorf("new map doesn't contains original entropy provider, round: %v, expected: %v", round, ciphertextParts[i].EntropyProvider.String())
 			}
 			if !newCiphertexts[ciphertextParts[i].EntropyProvider.String()].Ciphertext.Equal(ciphertextParts[i].Ciphertext) {
 				t.Errorf("ciphertexts don't equal, round: %v", round)
@@ -76,7 +78,7 @@ func TestSetGetCiphertext(t *testing.T) {
 func TestAggregatedCiphertext(t *testing.T) {
 	testCases := []int{1, 5, 10}
 	for round, r := range testCases {
-		ctx, keeper, _ := Initialize()
+		ctx, keeper, _ := Initialize(uint64(r), uint64(r), uint64(r))
 		commonCiphertext := elgamal.Ciphertext{keeper.group.Point().Null(), keeper.group.Point().Null()}
 		userAddrs := CreateTestAddrs(r)
 		g1 := keeper.group.Point().Base()
@@ -86,7 +88,7 @@ func TestAggregatedCiphertext(t *testing.T) {
 			commonCiphertext.PointA = keeper.group.Point().Add(commonCiphertext.PointA, ct.PointA)
 			commonCiphertext.PointB = keeper.group.Point().Add(commonCiphertext.PointB, ct.PointB)
 			ctPart := types.CiphertextPart{ct, []byte("example"), []byte("example3"), userAddrs[i]}
-			err := keeper.SetCiphertext(ctx, uint64(round), &ctPart)
+			err := keeper.SetCiphertext(ctx, &ctPart)
 			if err != nil {
 				t.Errorf("failed set ciphertext: %v", err)
 			}
@@ -147,7 +149,7 @@ func TestSetGetDecryptionShare(t *testing.T) {
 	testCases := []int{1, 5, 10}
 	for round, r := range testCases {
 		var decryptionShares []types.DecryptionShare
-		ctx, keeper, _ := Initialize()
+		ctx, keeper, _ := Initialize(uint64(r), uint64(r), uint64(r))
 		userAddrs := CreateTestAddrs(r)
 		g := keeper.group.Point().Base()
 		for i := 0; i < r; i++ {
@@ -160,7 +162,7 @@ func TestSetGetDecryptionShare(t *testing.T) {
 			}
 			decShare := types.DecryptionShare{share.PubShare{i, g2}, dleProof, userAddrs[i]}
 			decryptionShares = append(decryptionShares, decShare)
-			err1 := keeper.SetDecryptionShare(ctx, uint64(round), &decShare)
+			err1 := keeper.SetDecryptionShare(ctx, &decShare)
 			if err1 != nil {
 				t.Errorf("failed set decryption share: %v", err1)
 			}

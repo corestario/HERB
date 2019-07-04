@@ -43,7 +43,7 @@ func DefaultGenesisState() GenesisState {
 func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.ValidatorUpdate {
 	for _, record := range data.CiphertextPartRecords {
 		ct, _ := record.Deserialize()
-		keeper.SetCiphertext(ctx, uint64(0), ct)
+		keeper.SetCiphertext(ctx, ct)
 	}
 	return []abci.ValidatorUpdate{}
 }
