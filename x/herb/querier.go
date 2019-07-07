@@ -22,6 +22,8 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 			return queryAllDescryptionShares(ctx, req, keeper)
 		case types.QueryRandom:
 			return queryRandom(ctx, req, keeper)
+		case types.QueryStage:
+			return queryStage(ctx, req, keeper)
 		default:
 			return nil, sdk.ErrUnknownRequest("unknown herb query endpoint")
 		}
@@ -29,39 +31,37 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 }
 
 func queryAggregatedCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	var params types.QueryByRound
-	err := keeper.cdc.UnmarshalJSON(req.Data, &params)
+	round, err := getRoundFromQuery(req, keeper)
 	if err != nil {
-		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("incorrectly formatted request data", err.Error()))
+		return  nil, err
 	}
 
-	aggregatedCt, err2 := keeper.GetAggregatedCiphertext(ctx, params.Round)
+	aggregatedCt, err := keeper.GetAggregatedCiphertext(ctx, round)
+	if err != nil {
+		return nil, err
+	}
+
+	ctJSON, err2 := elgamal.NewCiphertextJSON(aggregatedCt)
 	if err2 != nil {
-		return nil, err2
-	}
-
-	ctJSON, err := elgamal.NewCiphertextJSON(aggregatedCt)
-	if err != nil {
 		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("coudn't get JSON ciphertext", err.Error()))
 	}
 
-	bz, err := codec.MarshalJSONIndent(keeper.cdc, ctJSON)
-	if err != nil {
+	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, ctJSON)
+	if err2 != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
 	}
 
 	return bz, nil
 }
 func queryGetAllCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	var params types.QueryByRound
-	err := keeper.cdc.UnmarshalJSON(req.Data, &params)
+	round, err := getRoundFromQuery(req, keeper)
 	if err != nil {
-		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("incorrectly formatted request data", err.Error()))
+		return  nil, err
 	}
 
-	allCt, err2 := keeper.GetAllCiphertexts(ctx, params.Round)
-	if err2 != nil {
-		return nil, err2
+	allCt, err := keeper.GetAllCiphertexts(ctx, round)
+	if err != nil {
+		return nil, err
 	}
 
 	allCtJSON, err := types.CiphertextMapSerialize(allCt)
@@ -69,8 +69,8 @@ func queryGetAllCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byt
 		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("coudn't get JSON ciphertexts", err.Error()))
 	}
 
-	bz, err := codec.MarshalJSONIndent(keeper.cdc, allCtJSON)
-	if err != nil {
+	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, allCtJSON)
+	if err2 != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
 	}
 
@@ -78,15 +78,14 @@ func queryGetAllCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byt
 }
 
 func queryAllDescryptionShares(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	var params types.QueryByRound
-	err := keeper.cdc.UnmarshalJSON(req.Data, &params)
+	round, err := getRoundFromQuery(req, keeper)
 	if err != nil {
-		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("incorrectly formatted request data", err.Error()))
+		return  nil, err
 	}
 
-	allShares, err2 := keeper.GetAllDecryptionShares(ctx, params.Round)
-	if err2 != nil {
-		return nil, err2
+	allShares, err := keeper.GetAllDecryptionShares(ctx, round)
+	if err != nil {
+		return nil, err
 	}
 
 	allSharesJSON, err := types.DecryptionSharesMapSerialize(allShares)
@@ -94,8 +93,8 @@ func queryAllDescryptionShares(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("coudn't get JSON decryption shares", err.Error()))
 	}
 
-	bz, err := codec.MarshalJSONIndent(keeper.cdc, allSharesJSON)
-	if err != nil {
+	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, allSharesJSON)
+	if err2 != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
 	}
 
@@ -103,16 +102,42 @@ func queryAllDescryptionShares(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 }
 
 func queryRandom(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	var params types.QueryByRound
-	err := keeper.cdc.UnmarshalJSON(req.Data, &params)
+	round, err := getRoundFromQuery(req, keeper)
 	if err != nil {
-		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("incorrectly formatted request data", err.Error()))
+		return  nil, err
 	}
 
-	randBytes, err2 := keeper.GetRandom(ctx, params.Round)
-	if err2 != nil {
-		return nil, err2
+	randBytes, err := keeper.GetRandom(ctx, round)
+	if err != nil {
+		return nil, err
 	}
 
 	return randBytes, nil
+}
+
+func queryStage(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
+	round, err := getRoundFromQuery(req, keeper)
+	if err != nil {
+		return  nil, err
+	}
+
+	stage := keeper.GetStage(ctx, round)
+	return []byte(stage), nil
+}
+
+func getRoundFromQuery(req abci.RequestQuery, keeper Keeper) (uint64, sdk.Error) {
+	var params types.QueryByRound
+	err := keeper.cdc.UnmarshalJSON(req.Data, &params)
+	if err != nil {
+		return 0, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("incorrectly formatted request data", err.Error()))
+	}
+
+	var round uint64
+	if params.Round >= 0 {
+		round = uint64(params.Round)
+	} else {
+		round = keeper.currentRound
+	}
+
+	return round, nil
 }

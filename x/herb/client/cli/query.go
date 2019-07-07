@@ -38,14 +38,22 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 func GetCmdAggregatedCiphertext(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "aggregatedCt [round]",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Query aggregated elgamal ciphertext for the given round",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
-			round, err := strconv.ParseUint(args[0], 10, 64)
-			if err != nil {
-				return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
+
+			var round int64
+			if len(args) > 0 {
+				parsedRound, err := strconv.ParseUint(args[0], 10, 64)
+				if err != nil {
+					return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
+				}
+				round = int64(parsedRound)
+			} else {
+				round = -1
 			}
+
 			params := types.NewQueryByRound(round)
 			bz, err := cdc.MarshalJSON(params)
 			if err != nil {
@@ -73,14 +81,22 @@ func GetCmdAggregatedCiphertext(queryRoute string, cdc *codec.Codec) *cobra.Comm
 func GetCmdAllCiphertexts(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "allCt [round]",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		Short: "Query all elgamal ciphertexts for the given round",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
-			round, err := strconv.ParseUint(args[0], 10, 64)
-			if err != nil {
-				return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
+
+			var round int64
+			if len(args) > 0 {
+				parsedRound, err := strconv.ParseUint(args[0], 10, 64)
+				if err != nil {
+					return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
+				}
+				round = int64(parsedRound)
+			} else {
+				round = -1
 			}
+
 			params := types.NewQueryByRound(round)
 			bz, err := cdc.MarshalJSON(params)
 			if err != nil {
@@ -111,13 +127,21 @@ func GetCmdAllDecryptionShares(queryRoute string, cdc *codec.Codec) *cobra.Comma
 	return  &cobra.Command {
 		Use: "allShares [round]",
 		Short: "Queries all decryption shares for the given round",
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
-			round, err := strconv.ParseUint(args[0], 10, 64)
-			if err != nil {
-				return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
+
+			var round int64
+			if len(args) > 0 {
+				parsedRound, err := strconv.ParseUint(args[0], 10, 64)
+				if err != nil {
+					return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
+				}
+				round = int64(parsedRound)
+			} else {
+				round = -1
 			}
+
 			params := types.NewQueryByRound(round)
 			bz, err := cdc.MarshalJSON(params)
 			if err != nil {
@@ -149,13 +173,21 @@ func GetCmdRandom(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command {
 		Use: "get-random [round]",
 		Short: "Queries the random number generation result",
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
-			round, err := strconv.ParseUint(args[0], 10, 64)
-			if err != nil {
-				return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
+
+			var round int64
+			if len(args) > 0 {
+				parsedRound, err := strconv.ParseUint(args[0], 10, 64)
+				if err != nil {
+					return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
+				}
+				round = int64(parsedRound)
+			} else {
+				round = -1
 			}
+
 			params := types.NewQueryByRound(round)
 			bz, err := cdc.MarshalJSON(params)
 			if err != nil {

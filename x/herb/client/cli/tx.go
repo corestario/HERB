@@ -41,16 +41,11 @@ func GetTxCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 // GetCmdSetCiphertext implements send ciphertext part transaction command.
 func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use: "ctPart [round] [commonPubKey]",
+		Use: "ctPart [commonPubKey]",
 		Short: "send random ciphertextPart",
-		Args: cobra.ExactArgs(2),
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
-
-			round, err := strconv.ParseUint(args[0], 10, 64)
-			if err != nil {
-				return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
-			}
 
 			group := types.P256
 			pubKey, err := kyberenc.StringHexToPoint(group, args[1])
@@ -71,7 +66,7 @@ func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return  err
 			}
-			msg := types.NewMsgSetCiphertextPart(round, *ctPartJSON, cliCtx.GetFromAddress())
+			msg := types.NewMsgSetCiphertextPart(*ctPartJSON, cliCtx.GetFromAddress())
 			err = msg.ValidateBasic()
 			if err != nil {
 				return  err
@@ -85,18 +80,14 @@ func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 // GetCmdSetDecryptionShare implements send decryption share transaction command.
 func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use: "decrypt [round] [privateKey] [ID]",
+		Use: "decrypt [privateKey] [ID]",
 		Short: "Send a decryption share of the aggregated ciphertext for the [round]",
-		Args: cobra.ExactArgs(3),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
-			round, err := strconv.ParseUint(args[0], 10, 64)
-			if err != nil {
-				return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
-			}
 			//Getting aggregated ciphertext
-			params := types.NewQueryByRound(round)
+			params := types.NewQueryByRound(-1) //-1 for the current round
 			bz, err := cdc.MarshalJSON(params)
 			if err != nil {
 				return err
@@ -137,7 +128,7 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 
 			decryptionShareJSON, err := types.NewDecryptionShareJSON(decryptionShare)
-			msg := types.NewMsgSetDecryptionShare(round, *decryptionShareJSON, cliCtx.GetFromAddress())
+			msg := types.NewMsgSetDecryptionShare(*decryptionShareJSON, cliCtx.GetFromAddress())
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
