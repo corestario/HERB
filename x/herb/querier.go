@@ -1,9 +1,9 @@
 package herb
 
 import (
-	"encoding/binary"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
+	"strconv"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 
@@ -147,7 +147,7 @@ func getRoundFromQuery(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (u
 
 func queryKeyHoldersNumber(ctx sdk.Context, keeper Keeper) ([]byte, sdk.Error) {
 	n := keeper.n
-	var bz []byte
-	binary.LittleEndian.PutUint64(bz, n)
+	str := strconv.FormatUint(n, 10)
+	bz := []byte(str)
 	return bz, nil
 }

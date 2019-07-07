@@ -29,7 +29,7 @@ func SetKeyHoldersNumberCmd(ctx *server.Context, cdc *codec.Codec,
 
 			config := ctx.Config
 			genFile := config.GenesisFile()
-			appState, _, err := genutil.GenesisStateFromGenFile(cdc, genFile)
+			appState, genDoc, err := genutil.GenesisStateFromGenFile(cdc, genFile)
 			if err != nil {
 				return err
 			}
@@ -39,7 +39,15 @@ func SetKeyHoldersNumberCmd(ctx *server.Context, cdc *codec.Codec,
 			genesisState.KeyHoldersNumber = n
 			newGenesisState := types.ModuleCdc.MustMarshalJSON(genesisState)
 			appState[types.ModuleName] = newGenesisState
-			return nil
+			appStateJSON, err := cdc.MarshalJSON(appState)
+			if err != nil {
+				return err
+			}
+
+			// export app state
+			genDoc.AppState = appStateJSON
+
+			return genutil.ExportGenesisFile(genDoc, genFile)
 		},
 	}
 	return cmd
