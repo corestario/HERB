@@ -22,9 +22,9 @@ const (
 	keyAggregatedCiphertext = "keyACt"    // aggregated ciphertext
 	keyRandomResult         = "keyResult" // random point as result of the round
 	keyStage                = "keyStage"
-	keyCommonKey            = "keyCommon" //public key
-	keyVerificationKeys     = "keyVK"     //verification keys with id
-	keyCurrentRound = "keyCurentRound" //current generation round
+	keyCommonKey            = "keyCommon"      //public key
+	keyVerificationKeys     = "keyVK"          //verification keys with id
+	keyCurrentRound         = "keyCurentRound" //current generation round
 
 	//round stages: ciphertext parts collecting, descryption shares collecting, fresh random number
 	stageCtCollecting = "stageCtCollecting"
@@ -50,8 +50,8 @@ type Keeper struct {
 // NewKeeper creates new instances of the HERB Keeper
 func NewKeeper(storeKey sdk.StoreKey, cdc *codec.Codec) Keeper {
 	return Keeper{
-		storeKey:            storeKey,
-		group:               P256,
+		storeKey: storeKey,
+		group:    P256,
 
 		keyHoldersID: map[string]int{},
 
@@ -71,7 +71,7 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	store := ctx.KVStore(k.storeKey)
 	round := k.CurrentRound(ctx)
 	stage := k.GetStage(ctx, round)
-	keyBytes := createKeyBytes(round, keyCommonKey)
+	keyBytes := []byte(keyCommonKey)
 	if !store.Has(keyBytes) {
 		return sdk.ErrUnknownRequest("Public key isn't exist")
 	}
@@ -437,6 +437,6 @@ func (k *Keeper) forceRoundStage(ctx sdk.Context, round uint64, stage string) {
 func (k *Keeper) forceCurrentRound(ctx sdk.Context, round uint64) {
 	store := ctx.KVStore(k.storeKey)
 	roundBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(roundBytes, 0)
+	binary.LittleEndian.PutUint64(roundBytes, round)
 	store.Set([]byte(keyCurrentRound), roundBytes)
 }
