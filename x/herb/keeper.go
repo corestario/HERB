@@ -69,7 +69,7 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	store := ctx.KVStore(k.storeKey)
 
 	round := k.currentRound
-	stage := k.getStage(ctx, round)
+	stage := k.GetStage(ctx, round)
 	if k.currentRound == 0 && stage == stageUnstarted{
 		stage = stageCtCollecting
 		k.setStage(ctx, round, stage)
@@ -119,8 +119,8 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	return nil
 }
 
-// SetKeyHoldersID registers key holders' IDs for threshold encryption scheme
-func (k *Keeper) SetKeyHoldersID(ctx sdk.Context, keyHolderAddr sdk.Address, keyHolderID int) sdk.Error {
+// RegisterKeyHoldersID registers key holders' IDs for threshold encryption scheme
+func (k *Keeper) RegisterKeyHoldersID(ctx sdk.Context, keyHolderAddr sdk.Address, keyHolderID int) sdk.Error {
 	if keyHolderAddr.Empty() {
 		return sdk.ErrInvalidAddress("key holder address is empty")
 	}
@@ -142,7 +142,7 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	store := ctx.KVStore(k.storeKey)
 
 	round := k.currentRound
-	stage := k.getStage(ctx, round)
+	stage := k.GetStage(ctx, round)
 	if stage != stageDSCollecting {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("round is not on the decryption shares collecting stage. Current stage: %v", stage))
 	}
@@ -195,7 +195,7 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 // GetAllCiphertexts returns all ciphertext parts for the given round as go-slice
 func (k *Keeper) GetAllCiphertexts(ctx sdk.Context, round uint64) (map[string]*types.CiphertextPart, sdk.Error) {
 	store := ctx.KVStore(k.storeKey)
-	stage := k.getStage(ctx, round)
+	stage := k.GetStage(ctx, round)
 
 	if stage == stageUnstarted {
 		return nil, sdk.ErrUnknownRequest("round hasn't started yet")
@@ -223,7 +223,7 @@ func (k *Keeper) GetAllCiphertexts(ctx sdk.Context, round uint64) (map[string]*t
 // GetAggregatedCiphertext aggregate all sended ciphertext parts in one ciphertext and returns it
 func (k *Keeper) GetAggregatedCiphertext(ctx sdk.Context, round uint64) (*elgamal.Ciphertext, sdk.Error) {
 
-	stage := k.getStage(ctx, round)
+	stage := k.GetStage(ctx, round)
 	if stage != stageDSCollecting && stage != stageCompleted {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("wrong round stage: %v", stage))
 	}
@@ -249,7 +249,7 @@ func (k *Keeper) GetAggregatedCiphertext(ctx sdk.Context, round uint64) (*elgama
 
 // GetAllDecryptionShares returns all decryption shares for the given round
 func (k *Keeper) GetAllDecryptionShares(ctx sdk.Context, round uint64) (map[string]*types.DecryptionShare, sdk.Error) {
-	stage := k.getStage(ctx, round)
+	stage := k.GetStage(ctx, round)
 	if stage != stageDSCollecting && stage != stageCompleted {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("wrong round stage: %v", stage))
 	}
@@ -274,7 +274,7 @@ func (k *Keeper) GetAllDecryptionShares(ctx sdk.Context, round uint64) (map[stri
 
 // GetRandom returns random bytes array of the given round
 func (k *Keeper) GetRandom(ctx sdk.Context, round uint64) ([]byte, sdk.Error) {
-	stage := k.getStage(ctx, round)
+	stage := k.GetStage(ctx, round)
 	if stage != stageCompleted {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("wrong round stage: %v", stage))
 	}
@@ -288,6 +288,17 @@ func (k *Keeper) GetRandom(ctx sdk.Context, round uint64) ([]byte, sdk.Error) {
 	return result, nil
 }
 
+// GetStage returns stage of the given round
+func (k *Keeper) GetStage(ctx sdk.Context, round uint64) string {
+	store := ctx.KVStore(k.storeKey)
+	keyBytes := createKeyBytes(round, keyStage)
+	if !store.Has(keyBytes) {
+		return  stageUnstarted
+	}
+	stage := string(store.Get(keyBytes))
+	return stage
+}
+
 func (k *Keeper) setStage(ctx sdk.Context, round uint64, stage string) {
 	store := ctx.KVStore(k.storeKey)
 	keyBytes := createKeyBytes(round, keyStage)
@@ -299,16 +310,6 @@ func createKeyBytes(round uint64, keyPrefix string) []byte {
 	keyStr := roundStr + keyPrefix
 	keyBytes := []byte(keyStr)
 	return keyBytes
-}
-
-func (k *Keeper) getStage(ctx sdk.Context, round uint64) string {
-	store := ctx.KVStore(k.storeKey)
-	keyBytes := createKeyBytes(round, keyStage)
-	if !store.Has(keyBytes) {
-		return  stageUnstarted
-	}
-	stage := string(store.Get(keyBytes))
-	return stage
 }
 
 // computeAggregatedCiphertext computes and STORES aggregated ciphertext
