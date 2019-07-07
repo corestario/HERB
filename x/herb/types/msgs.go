@@ -10,15 +10,13 @@ const RouterKey = ModuleName
 
 // MsgSetCiphertextPart defines message for the first HERB phase (collecting ciphertext part)
 type MsgSetCiphertextPart struct {
-	Round  uint64         `json:"round"`
 	CiphertextPart CiphertextPartJSON    `json:"ciphertextPart"`
 	Sender sdk.AccAddress `json:"sender"`
 }
 
 // NewMsgSetCiphertextPart is a constructor for set ciphertext part message (first HERB phase)
-func NewMsgSetCiphertextPart(round uint64, ctPart CiphertextPartJSON, sender sdk.AccAddress) MsgSetCiphertextPart {
+func NewMsgSetCiphertextPart(ctPart CiphertextPartJSON, sender sdk.AccAddress) MsgSetCiphertextPart {
 	return MsgSetCiphertextPart{
-		Round: round,
 		CiphertextPart: ctPart,
 		Sender: sender,
 	}
@@ -61,15 +59,13 @@ func (msg MsgSetCiphertextPart) GetSigners() []sdk.AccAddress {
 
 // MsgSetCiphertextPart defines message for the first HERB phase (collecting ciphertext part)
 type MsgSetDecryptionShare struct {
-	Round  uint64         `json:"round"`
 	DecryptionShare DecryptionShareJSON    `json:"decryptionShare"`
 	Sender sdk.AccAddress `json:"sender"`
 }
 
 // NewMsgSetCiphertextPart is a constructor for set ciphertext part message (first HERB phase)
-func NewMsgSetDecryptionShare(round uint64, decryptionShare DecryptionShareJSON, sender sdk.AccAddress) MsgSetDecryptionShare {
+func NewMsgSetDecryptionShare(decryptionShare DecryptionShareJSON, sender sdk.AccAddress) MsgSetDecryptionShare {
 	return MsgSetDecryptionShare{
-		Round: round,
 		DecryptionShare: decryptionShare,
 		Sender: sender,
 	}
