@@ -8,10 +8,10 @@ import (
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/share"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )
 
 const (
@@ -21,12 +21,14 @@ const (
 	keyAggregatedCiphertext = "keyACt"    // aggregated ciphertext
 	keyRandomResult         = "keyResult" // random point as result of the round
 	keyStage                = "keyStage"
+	keyCommonKey            = "keyCommon" //public key
+	keyVerificationKeys     = "keyVK"     //verification keys with id
 
 	//round stages: ciphertext parts collecting, descryption shares collecting, fresh random number
-	stageCtCollecting        = "stageCtCollecting"
-	stageDSCollecting        = "stageDSCollecting"
-	stageCompleted = "stageCompleted"
-	stageUnstarted = "stageUnstarted"
+	stageCtCollecting = "stageCtCollecting"
+	stageDSCollecting = "stageDSCollecting"
+	stageCompleted    = "stageCompleted"
+	stageUnstarted    = "stageUnstarted"
 )
 
 // Keeper maintains the link to data storage and exposes methods for the HERB protocol actions
@@ -39,9 +41,9 @@ type Keeper struct {
 	thresholdParts      uint64
 	n                   uint64
 
-	keyHoldersID		map[string]int
+	keyHoldersID map[string]int
 
-	cdc                 *codec.Codec
+	cdc *codec.Codec
 }
 
 // NewKeeper creates new instances of the HERB Keeper
@@ -54,9 +56,9 @@ func NewKeeper(storeKey sdk.StoreKey, cdc *codec.Codec, thresholdDecryption uint
 		thresholdParts:      thresholdParts,
 		n:                   n,
 
-		keyHoldersID:		 map[string]int{},
+		keyHoldersID: map[string]int{},
 
-		cdc:                 cdc,
+		cdc: cdc,
 	}
 }
 
@@ -65,12 +67,29 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	if ctPart.EntropyProvider.Empty() {
 		return sdk.ErrInvalidAddress("Entropy provider can't be empty!")
 	}
-
+	err := elgamal.DLKVerify(P256, ctPart.Ciphertext.PointA, k.group.Point().Base(), ctPart.DLKproof)
+	if err != nil {
+		return sdk.ErrUnknownRequest("DLK proof isn't correct")
+	}
 	store := ctx.KVStore(k.storeKey)
-
 	round := k.currentRound
 	stage := k.GetStage(ctx, round)
-	if k.currentRound == 0 && stage == stageUnstarted{
+	keyBytes := createKeyBytes(round, keyCommonKey)
+	if !store.Has(keyBytes) {
+		return sdk.ErrUnknownRequest("Public key isn't exist")
+	}
+	pubKeyBytes := store.Get(keyBytes)
+	pubKeystr := string(pubKeyBytes)
+	pubKey, err1 := kyberenc.StringHexToPoint(k.group, pubKeystr)
+	if err1 != nil {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't decode point from string: %v", err1))
+	}
+	err2 := elgamal.RKVerify(P256, ctPart.Ciphertext.PointB, k.group.Point().Base(), pubKey, ctPart.RKProof)
+	if err2 != nil {
+		return sdk.ErrUnknownRequest("RK proof isn't correct")
+	}
+
+	if k.currentRound == 0 && stage == stageUnstarted {
 		stage = stageCtCollecting
 		k.setStage(ctx, round, stage)
 	}
@@ -79,19 +98,19 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 		return sdk.ErrUnknownRequest(fmt.Sprintf("round is not on the ciphertext collecting stage. Current stage: %v", stage))
 	}
 
-	keyBytes := createKeyBytes(round, keyCiphertextParts)
+	keyBytesCt := createKeyBytes(round, keyCiphertextParts)
 	ctMap := make(map[string]*types.CiphertextPart)
-	var err sdk.Error
-	if store.Has(keyBytes) {
-		ctMapBytes := store.Get(keyBytes)
+	var err3 sdk.Error
+	if store.Has(keyBytesCt) {
+		ctMapBytes := store.Get(keyBytesCt)
 		var ctMapJSON map[string]*types.CiphertextPartJSON
 		err1 := k.cdc.UnmarshalJSON(ctMapBytes, &ctMapJSON)
 		if err1 != nil {
 			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal map from the store: %v", err1))
 		}
-		ctMap, err = types.CiphertextMapDeserialize(ctMapJSON)
-		if err != nil {
-			return err
+		ctMap, err3 = types.CiphertextMapDeserialize(ctMapJSON)
+		if err3 != nil {
+			return err3
 		}
 	}
 	if _, ok := ctMap[ctPart.EntropyProvider.String()]; ok {
@@ -99,20 +118,20 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	}
 
 	ctMap[ctPart.EntropyProvider.String()] = ctPart
-	newCtMapJSON, err := types.CiphertextMapSerialize(ctMap)
-	if err != nil {
-		return err
+	newCtMapJSON, err4 := types.CiphertextMapSerialize(ctMap)
+	if err4 != nil {
+		return err4
 	}
 	newCtMapBytes, err2 := k.cdc.MarshalJSON(newCtMapJSON)
 	if err2 != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal map for the store: %v", err2))
 	}
-	store.Set(keyBytes, newCtMapBytes)
+	store.Set(keyBytesCt, newCtMapBytes)
 
 	if uint64(len(ctMap)) >= k.thresholdParts {
-		err = k.computeAggregatedCiphertext(ctx, round)
-		if err != nil {
-			return err
+		err5 := k.computeAggregatedCiphertext(ctx, round)
+		if err5 != nil {
+			return err5
 		}
 		k.setStage(ctx, round, stageDSCollecting)
 	}
@@ -138,18 +157,37 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	if ds.KeyHolder.Empty() {
 		return sdk.ErrInvalidAddress("Key Holder can't be empty!")
 	}
-
 	store := ctx.KVStore(k.storeKey)
-
 	round := k.currentRound
 	stage := k.GetStage(ctx, round)
 	if stage != stageDSCollecting {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("round is not on the decryption shares collecting stage. Current stage: %v", stage))
 	}
-
+	ACiphertext, err := k.GetAggregatedCiphertext(ctx, round)
+	if err != nil {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't get aggregated ciphertext: %v", err))
+	}
+	keyVKBytes := createKeyBytes(round, keyVerificationKeys)
+	if !store.Has(keyVKBytes) {
+		return sdk.ErrUnknownRequest("Verification keys map isn't exist")
+	}
+	VKBytes := store.Get(keyVKBytes)
+	VKStr := make(map[string]*types.VerificationKeyJSON)
+	err1 := k.cdc.UnmarshalJSON(VKBytes, VKStr)
+	if err1 != nil {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal map from the store: %v", err1))
+	}
+	vkMap, err3 := types.VerificationKeyMapDeserialize(VKStr)
+	if err3 != nil {
+		return err3
+	}
+	err4 := elgamal.DLEVerify(P256, ds.DLEproof, k.group.Point().Base(), ACiphertext.PointA, vkMap[ds.KeyHolder.String()].VK, ds.DecShare.V)
+	if err4 != nil {
+		return sdk.ErrUnknownRequest("DLE proof isn't correct")
+	}
 	keyBytes := createKeyBytes(round, keyDecryptionShares)
 	dsMap := make(map[string]*types.DecryptionShare)
-	var err sdk.Error
+	var err5 sdk.Error
 	if store.Has(keyBytes) {
 		dsMapBytes := store.Get(keyBytes)
 		var dsMapJSON map[string]*types.DecryptionShareJSON
@@ -157,9 +195,9 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 		if err1 != nil {
 			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal map from the store: %v", err1))
 		}
-		dsMap, err = types.DecryptionSharesMapDeserialize(dsMapJSON)
-		if err != nil {
-			return err
+		dsMap, err5 = types.DecryptionSharesMapDeserialize(dsMapJSON)
+		if err5 != nil {
+			return err5
 		}
 	}
 
@@ -190,7 +228,6 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 
 	return nil
 }
-
 
 // GetAllCiphertexts returns all ciphertext parts for the given round as go-slice
 func (k *Keeper) GetAllCiphertexts(ctx sdk.Context, round uint64) (map[string]*types.CiphertextPart, sdk.Error) {
@@ -293,7 +330,7 @@ func (k *Keeper) GetStage(ctx sdk.Context, round uint64) string {
 	store := ctx.KVStore(k.storeKey)
 	keyBytes := createKeyBytes(round, keyStage)
 	if !store.Has(keyBytes) {
-		return  stageUnstarted
+		return stageUnstarted
 	}
 	stage := string(store.Get(keyBytes))
 	return stage

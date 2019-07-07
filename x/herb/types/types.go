@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"fmt"
 
+	"go.dedis.ch/kyber/v3"
+	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
+
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 
 	"go.dedis.ch/kyber/v3/group/nist"
@@ -17,6 +20,60 @@ import (
 )
 
 var P256 = nist.NewBlakeSHA256P256()
+
+type VerificationKey struct {
+	VK        kyber.Point
+	KeyHolder uint
+}
+
+type VerificationKeyJSON struct {
+	VK        string `json:"verification key"`
+	KeyHolder uint   `json:"Key Holder"`
+}
+
+func NewVerificationKeyJSON(vk *VerificationKey) (*VerificationKeyJSON, sdk.Error) {
+	vkJSON, err := kyberenc.PointToStringHex(P256, vk.VK)
+	if err != nil {
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode verification key: %v", err))
+	}
+	return &VerificationKeyJSON{
+		VK:        vkJSON,
+		KeyHolder: vk.KeyHolder,
+	}, nil
+}
+func (vkJSON *VerificationKeyJSON) Deserialize() (*VerificationKey, sdk.Error) {
+	vk, err := kyberenc.StringHexToPoint(P256, vkJSON.VK)
+	if err != nil {
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode verification key: %v", err))
+	}
+	return &VerificationKey{
+		VK:        vk,
+		KeyHolder: vkJSON.KeyHolder,
+	}, nil
+}
+func VerificationKeysMapSerialize(vkMap map[string]*VerificationKey) (map[string]*VerificationKeyJSON, sdk.Error) {
+	vkJSONMap := make(map[string]*VerificationKeyJSON)
+	var err error
+	for addr, vk := range vkMap {
+		vkJSONMap[addr], err = NewVerificationKeyJSON(vk)
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize map: %v", err))
+		}
+	}
+	return vkJSONMap, nil
+}
+
+func VerificationKeyMapDeserialize(vkJSONMap map[string]*VerificationKeyJSON) (map[string]*VerificationKey, sdk.Error) {
+	vkMap := make(map[string]*VerificationKey)
+	var err error
+	for addr, vk := range vkJSONMap {
+		vkMap[addr], err = vk.Deserialize()
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize verification keys map: %v", err))
+		}
+	}
+	return vkMap, nil
+}
 
 // CiphertextPart represents ciphertext part and additional information for the first HERB phase.
 type CiphertextPart struct {
@@ -128,7 +185,7 @@ func (dsJSON DecryptionShareJSON) Deserialize() (*DecryptionShare, sdk.Error) {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to base64-decode decryption shares: %v", err))
 	}
 	dsDec := gob.NewDecoder(bytes.NewBuffer(dsBytes))
-	decshare := share.PubShare{I:0, V: P256.Point().Base()}
+	decshare := share.PubShare{I: 0, V: P256.Point().Base()}
 	if err := dsDec.Decode(&decshare); err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode decryption share : %v", err))
 	}
