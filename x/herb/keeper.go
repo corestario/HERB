@@ -1,6 +1,7 @@
 package herb
 
 import (
+	"encoding/binary"
 	"fmt"
 	"strconv"
 
@@ -23,6 +24,7 @@ const (
 	keyStage                = "keyStage"
 	keyCommonKey            = "keyCommon" //public key
 	keyVerificationKeys     = "keyVK"     //verification keys with id
+	keyCurrentRound = "keyCurentRound" //current generation round
 
 	//round stages: ciphertext parts collecting, descryption shares collecting, fresh random number
 	stageCtCollecting = "stageCtCollecting"
@@ -36,7 +38,6 @@ type Keeper struct {
 	storeKey sdk.StoreKey
 	group    kyber.Group
 
-	currentRound        uint64
 	thresholdDecryption uint64
 	thresholdParts      uint64
 	n                   uint64
@@ -51,7 +52,6 @@ func NewKeeper(storeKey sdk.StoreKey, cdc *codec.Codec, thresholdDecryption uint
 	return Keeper{
 		storeKey:            storeKey,
 		group:               P256,
-		currentRound:        0,
 		thresholdDecryption: thresholdDecryption,
 		thresholdParts:      thresholdParts,
 		n:                   n,
@@ -72,7 +72,7 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 		return sdk.ErrUnknownRequest("DLK proof isn't correct")
 	}
 	store := ctx.KVStore(k.storeKey)
-	round := k.currentRound
+	round := k.CurrentRound(ctx)
 	stage := k.GetStage(ctx, round)
 	keyBytes := createKeyBytes(round, keyCommonKey)
 	if !store.Has(keyBytes) {
@@ -89,7 +89,7 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 		return sdk.ErrUnknownRequest("RK proof isn't correct")
 	}
 
-	if k.currentRound == 0 && stage == stageUnstarted {
+	if k.CurrentRound(ctx) == 0 && stage == stageUnstarted {
 		stage = stageCtCollecting
 		k.setStage(ctx, round, stage)
 	}
@@ -158,7 +158,7 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 		return sdk.ErrInvalidAddress("Key Holder can't be empty!")
 	}
 	store := ctx.KVStore(k.storeKey)
-	round := k.currentRound
+	round := k.CurrentRound(ctx)
 	stage := k.GetStage(ctx, round)
 	if stage != stageDSCollecting {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("round is not on the decryption shares collecting stage. Current stage: %v", stage))
@@ -222,11 +222,39 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 			return err
 		}
 		k.setStage(ctx, round, stageCompleted)
-		k.currentRound = k.currentRound + 1
-		k.setStage(ctx, k.currentRound, stageCtCollecting)
+		k.increaseCurrentRound(ctx)
+		k.setStage(ctx, k.CurrentRound(ctx), stageCtCollecting)
 	}
 
 	return nil
+}
+
+// CurrentRound returns current generation round as uint64
+func (k *Keeper) CurrentRound(ctx sdk.Context) uint64 {
+	store := ctx.KVStore(k.storeKey)
+	keyBytes := []byte(keyCurrentRound)
+	if !store.Has(keyBytes) {
+		var roundBytes []byte
+		binary.LittleEndian.PutUint64(roundBytes, 0)
+		store.Set(keyBytes, roundBytes)
+		return 0
+	} else {
+		roundBytes := store.Get(keyBytes)
+		round := binary.LittleEndian.Uint64(roundBytes)
+		return round
+	}
+}
+
+// increaseCurrentRound increments current round
+func (k *Keeper) increaseCurrentRound(ctx sdk.Context) {
+	currentRound := k.CurrentRound(ctx)
+	currentRound = currentRound + 1
+
+	store := ctx.KVStore(k.storeKey)
+
+	var roundBytes []byte
+	binary.LittleEndian.PutUint64(roundBytes, 0)
+	store.Set([]byte(keyCurrentRound), roundBytes)
 }
 
 // GetAllCiphertexts returns all ciphertext parts for the given round as go-slice
@@ -410,5 +438,8 @@ func (k *Keeper) forceRoundStage(ctx sdk.Context, round uint64, stage string) {
 
 // for tests purposes
 func (k *Keeper) forceCurrentRound(ctx sdk.Context, round uint64) {
-	k.currentRound = round
+	store := ctx.KVStore(k.storeKey)
+	var roundBytes []byte
+	binary.LittleEndian.PutUint64(roundBytes, 0)
+	store.Set([]byte(keyCurrentRound), roundBytes)
 }
