@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/binary"
 	"fmt"
 	"strconv"
 
@@ -29,6 +30,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 		GetCmdAllCiphertexts(storeKey, cdc),
 		GetCmdAllDecryptionShares(storeKey, cdc),
 		GetCmdRandom(storeKey, cdc),
+		GetCmdKeyHoldersNumber(storeKey, cdc),
 	)...)
 
 	return herbQueryCmd
@@ -200,6 +202,28 @@ func GetCmdRandom(queryRoute string, cdc *codec.Codec) *cobra.Command {
 			}
 
 			fmt.Printf("random data: %v", res)
+
+			return nil
+		},
+	}
+}
+
+// GetCmdKeyHoldersNumber is required for the testing purposes
+func GetCmdKeyHoldersNumber(queryRoute string, cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command {
+		Use: "kh-number",
+		Short: "returns key holders number",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryKeyHoldersNumber), nil)
+			if err != nil {
+				return err
+			}
+
+			n := binary.LittleEndian.Uint64(res)
+			fmt.Printf("number of key holders: %v", n)
 
 			return nil
 		},

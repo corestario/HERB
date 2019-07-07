@@ -48,13 +48,10 @@ type Keeper struct {
 }
 
 // NewKeeper creates new instances of the HERB Keeper
-func NewKeeper(storeKey sdk.StoreKey, cdc *codec.Codec, thresholdDecryption uint64, thresholdParts uint64, n uint64) Keeper {
+func NewKeeper(storeKey sdk.StoreKey, cdc *codec.Codec) Keeper {
 	return Keeper{
 		storeKey:            storeKey,
 		group:               P256,
-		thresholdDecryption: thresholdDecryption,
-		thresholdParts:      thresholdParts,
-		n:                   n,
 
 		keyHoldersID: map[string]int{},
 
@@ -234,7 +231,7 @@ func (k *Keeper) CurrentRound(ctx sdk.Context) uint64 {
 	store := ctx.KVStore(k.storeKey)
 	keyBytes := []byte(keyCurrentRound)
 	if !store.Has(keyBytes) {
-		var roundBytes []byte
+		roundBytes := make([]byte, 8)
 		binary.LittleEndian.PutUint64(roundBytes, 0)
 		store.Set(keyBytes, roundBytes)
 		return 0
@@ -252,7 +249,7 @@ func (k *Keeper) increaseCurrentRound(ctx sdk.Context) {
 
 	store := ctx.KVStore(k.storeKey)
 
-	var roundBytes []byte
+	roundBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(roundBytes, 0)
 	store.Set([]byte(keyCurrentRound), roundBytes)
 }
@@ -439,7 +436,7 @@ func (k *Keeper) forceRoundStage(ctx sdk.Context, round uint64, stage string) {
 // for tests purposes
 func (k *Keeper) forceCurrentRound(ctx sdk.Context, round uint64) {
 	store := ctx.KVStore(k.storeKey)
-	var roundBytes []byte
+	roundBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(roundBytes, 0)
 	store.Set([]byte(keyCurrentRound), roundBytes)
 }

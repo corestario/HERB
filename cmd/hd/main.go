@@ -15,10 +15,12 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
-	app "github.com/dgamingfoundation/HERB"
 	abci "github.com/tendermint/tendermint/abci/types"
 	dbm "github.com/tendermint/tendermint/libs/db"
 	tmtypes "github.com/tendermint/tendermint/types"
+
+	app "github.com/dgamingfoundation/HERB"
+	herbcli "github.com/dgamingfoundation/HERB/x/herb/client/cli"
 )
 
 func main() {
@@ -47,6 +49,8 @@ func main() {
 		genutilcli.ValidateGenesisCmd(ctx, cdc, app.ModuleBasics),
 		// AddGenesisAccountCmd allows users to add accounts to the genesis file
 		genaccscli.AddGenesisAccountCmd(ctx, cdc, app.DefaultNodeHome, app.DefaultCLIHome),
+		// SetKeyHoldersNumberCmd is a herb-specific function, it allows to set the number of key holders
+		herbcli.SetKeyHoldersNumberCmd(ctx, cdc, app.DefaultCLIHome, app.DefaultCLIHome),
 	)
 
 	server.AddCommands(ctx, cdc, rootCmd, newApp, exportAppStateAndTMValidators)

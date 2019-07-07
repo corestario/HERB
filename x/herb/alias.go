@@ -24,4 +24,5 @@ type (
 	CiphertextPartJSON = types.CiphertextPartJSON
 	DecryptionShare = types.DecryptionShare
 	DecryptionShareJSON = types.DecryptionShareJSON
+	GenesisState = types.GenesisState
 )

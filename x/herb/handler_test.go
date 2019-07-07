@@ -15,7 +15,6 @@ func TestHandleSetCiphertext(t *testing.T) {
 	userPk1 := ed25519.GenPrivKey().PubKey()
 	userAddr1 := sdk.AccAddress(userPk1.Address())
 	handler := NewHandler(keeper)
-	round := 1
 	g1 := keeper.group.Point().Base()
 	g2 := keeper.group.Point().Mul(keeper.group.Scalar().SetInt64(5), g1)
 	ct := elgamal.Ciphertext{g1, g2}
@@ -24,7 +23,7 @@ func TestHandleSetCiphertext(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed: %v", err)
 	}
-	setCt := types.NewMsgSetCiphertextPart(uint64(round), *ctPartJSON, userAddr1)
+	setCt := types.NewMsgSetCiphertextPart(*ctPartJSON, userAddr1)
 	res := handler(ctx, setCt)
 	require.True(t, res.IsOK(), "%v", res)
 }

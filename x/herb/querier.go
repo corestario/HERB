@@ -1,6 +1,7 @@
 package herb
 
 import (
+	"encoding/binary"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
 
@@ -24,6 +25,8 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 			return queryRandom(ctx, req, keeper)
 		case types.QueryStage:
 			return queryStage(ctx, req, keeper)
+		case types.QueryKeyHoldersNumber:
+			return queryKeyHoldersNumber(ctx, keeper)
 		default:
 			return nil, sdk.ErrUnknownRequest("unknown herb query endpoint")
 		}
@@ -31,7 +34,7 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 }
 
 func queryAggregatedCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	round, err := getRoundFromQuery(req, keeper)
+	round, err := getRoundFromQuery(ctx, req, keeper)
 	if err != nil {
 		return  nil, err
 	}
@@ -54,7 +57,7 @@ func queryAggregatedCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([
 	return bz, nil
 }
 func queryGetAllCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	round, err := getRoundFromQuery(req, keeper)
+	round, err := getRoundFromQuery(ctx, req, keeper)
 	if err != nil {
 		return  nil, err
 	}
@@ -78,7 +81,7 @@ func queryGetAllCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byt
 }
 
 func queryAllDescryptionShares(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	round, err := getRoundFromQuery(req, keeper)
+	round, err := getRoundFromQuery(ctx, req, keeper)
 	if err != nil {
 		return  nil, err
 	}
@@ -102,7 +105,7 @@ func queryAllDescryptionShares(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 }
 
 func queryRandom(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	round, err := getRoundFromQuery(req, keeper)
+	round, err := getRoundFromQuery(ctx, req, keeper)
 	if err != nil {
 		return  nil, err
 	}
@@ -116,7 +119,7 @@ func queryRandom(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte,
 }
 
 func queryStage(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
-	round, err := getRoundFromQuery(req, keeper)
+	round, err := getRoundFromQuery(ctx, req, keeper)
 	if err != nil {
 		return  nil, err
 	}
@@ -125,7 +128,7 @@ func queryStage(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, 
 	return []byte(stage), nil
 }
 
-func getRoundFromQuery(req abci.RequestQuery, keeper Keeper) (uint64, sdk.Error) {
+func getRoundFromQuery(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (uint64, sdk.Error) {
 	var params types.QueryByRound
 	err := keeper.cdc.UnmarshalJSON(req.Data, &params)
 	if err != nil {
@@ -136,8 +139,15 @@ func getRoundFromQuery(req abci.RequestQuery, keeper Keeper) (uint64, sdk.Error)
 	if params.Round >= 0 {
 		round = uint64(params.Round)
 	} else {
-		round = keeper.currentRound
+		round = keeper.CurrentRound(ctx)
 	}
 
 	return round, nil
+}
+
+func queryKeyHoldersNumber(ctx sdk.Context, keeper Keeper) ([]byte, sdk.Error) {
+	n := keeper.n
+	var bz []byte
+	binary.LittleEndian.PutUint64(bz, n)
+	return bz, nil
 }

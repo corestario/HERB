@@ -7,14 +7,9 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
-// GenesisState - herb genesis state
-type GenesisState struct {
-	CiphertextPartRecords []CiphertextPartJSON `json:"ciphertext_records"`
-}
-
 // NewGenesisState creates new instance GenesisState
-func NewGenesisState(ciphertextPartRecords []CiphertextPartJSON) GenesisState {
-	return GenesisState{CiphertextPartRecords: nil}
+func NewGenesisState(ciphertextPartRecords []CiphertextPartJSON, keyHoldersNum uint64) GenesisState {
+	return GenesisState{CiphertextPartRecords: nil, KeyHoldersNumber: keyHoldersNum}
 }
 
 // ValidateGenesis validates the provided herb genesis state to ensure the
@@ -45,6 +40,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.Valid
 		ct, _ := record.Deserialize()
 		keeper.SetCiphertext(ctx, ct)
 	}
+	keeper.n = data.KeyHoldersNumber
 	return []abci.ValidatorUpdate{}
 }
 

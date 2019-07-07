@@ -23,7 +23,10 @@ func Initialize(thresholdDecryption uint64, thresholdParts uint64, n uint64) (ct
 	types.RegisterCodec(cdc)
 	codec.RegisterCrypto(cdc)
 	keyHERB := sdk.NewKVStoreKey(types.StoreKey)
-	keeperInstance = NewKeeper(keyHERB, cdc, thresholdDecryption, thresholdParts, n)
+	keeperInstance = NewKeeper(keyHERB, cdc)
+	keeperInstance.n = n
+	keeperInstance.thresholdParts = thresholdParts
+	keeperInstance.thresholdDecryption = thresholdDecryption
 	db := dbm.NewMemDB()
 	ms := store.NewCommitMultiStore(db)
 	ms.MountStoreWithDB(keyHERB, sdk.StoreTypeIAVL, db)

@@ -42,7 +42,7 @@ func getAggregatedCiphertextHandler(cliCtx client.CLIContext, storeName string) 
 			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		params := types.NewQueryByRound(round)
+		params := types.NewQueryByRound(int64(round))
 		bz, err := cdc.MarshalJSON(params)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -90,11 +90,11 @@ func setCiphertextPartHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		round, err := strconv.ParseUint(req.Round, 10, 64)
+		/*round, err := strconv.ParseUint(req.Round, 10, 64)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
-		}
+		}*/
 
 		entropyProvider, err := sdk.AccAddressFromBech32(req.EntropyProvider)
 		if err != nil {
@@ -104,7 +104,7 @@ func setCiphertextPartHandler(cliCtx context.CLIContext) http.HandlerFunc {
 
 		ctPart := types.CiphertextPartJSON{req.Ciphertext, []byte{}, []byte{}, entropyProvider}
 
-		msg := types.NewMsgSetCiphertextPart(round, ctPart, sender)
+		msg := types.NewMsgSetCiphertextPart(ctPart, sender)
 
 		err = msg.ValidateBasic()
 		if err != nil {

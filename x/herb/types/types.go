@@ -228,3 +228,9 @@ func DecryptionSharesMapDeserialize(dsJSONMap map[string]*DecryptionShareJSON) (
 	}
 	return dsMap, nil
 }
+
+// GenesisState - herb genesis state
+type GenesisState struct {
+	CiphertextPartRecords []CiphertextPartJSON `json:"ciphertext_records"`
+	KeyHoldersNumber uint64 `json:"key_holders_number"`
+}

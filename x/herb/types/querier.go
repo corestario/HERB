@@ -6,6 +6,7 @@ const (
 	QueryAllDescryptionShares = "queryAllDecryptionShares"
 	QueryRandom = "queryRandom"
 	QueryStage = "queryStage"
+	QueryKeyHoldersNumber = "queryKeyHoldersNumber"
 )
 
 type QueryByRound struct {

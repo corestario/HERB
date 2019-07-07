@@ -8,6 +8,7 @@ import (
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"go.dedis.ch/kyber/v3/group/nist"
+	"go.dedis.ch/kyber/v3/share"
 	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )
 
@@ -76,7 +77,7 @@ func TestDecryptionSharesSerialization(t *testing.T) {
 	if err != nil {
 		t.Errorf("Dle proof doesn't created")
 	}
-	decShare := DecryptionShare{g2, dleProof, userAddr1}
+	decShare := DecryptionShare{share.PubShare{0, g2}, dleProof, userAddr1}
 	decShareJSON, err := NewDecryptionShareJSON(&decShare)
 	if err != nil {
 		t.Errorf("failed to json: %v", err)
@@ -97,7 +98,7 @@ func TestDecryptionSharesSerialization(t *testing.T) {
 	if !newdecShare.KeyHolder.Equals(decShare.KeyHolder) {
 		t.Errorf("addresses don't equal")
 	}
-	if !newdecShare.DecShare.Equal(decShare.DecShare) {
+	if !newdecShare.DecShare.V.Equal(decShare.DecShare.V) {
 		t.Errorf("decryption shares don't equal")
 	}
 	if !newdecShare.DLEproof.C.Equal(decShare.DLEproof.C) ||
