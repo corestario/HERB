@@ -23,12 +23,12 @@ var P256 = nist.NewBlakeSHA256P256()
 
 type VerificationKey struct {
 	VK        kyber.Point
-	KeyHolder uint
+	KeyHolder int
 }
 
 type VerificationKeyJSON struct {
 	VK        string `json:"verification key"`
-	KeyHolder uint   `json:"Key Holder"`
+	KeyHolder int    `json:"Key Holder"`
 }
 
 func NewVerificationKeyJSON(vk *VerificationKey) (*VerificationKeyJSON, sdk.Error) {
@@ -51,7 +51,7 @@ func (vkJSON *VerificationKeyJSON) Deserialize() (*VerificationKey, sdk.Error) {
 		KeyHolder: vkJSON.KeyHolder,
 	}, nil
 }
-func VerificationKeysMapSerialize(vkMap map[string]*VerificationKey) (map[string]*VerificationKeyJSON, sdk.Error) {
+func VerificationKeyMapSerialize(vkMap map[string]*VerificationKey) (map[string]*VerificationKeyJSON, sdk.Error) {
 	vkJSONMap := make(map[string]*VerificationKeyJSON)
 	var err error
 	for addr, vk := range vkMap {
@@ -79,14 +79,14 @@ func VerificationKeyMapDeserialize(vkJSONMap map[string]*VerificationKeyJSON) (m
 type CiphertextPart struct {
 	Ciphertext      elgamal.Ciphertext
 	DLKproof        []byte
-	RKProof         []byte
+	RKproof         []byte
 	EntropyProvider sdk.AccAddress
 }
 
 type CiphertextPartJSON struct {
 	Ciphertext      string         `json:"ciphertext"`
 	DLKproof        []byte         `json:"DLK proof"`
-	RKProof         []byte         `json:"RK proof"`
+	RKproof         []byte         `json:"RK proof"`
 	EntropyProvider sdk.AccAddress `json:"entropyprovider"`
 }
 
@@ -100,7 +100,7 @@ func NewCiphertextPartJSON(ciphertextPart *CiphertextPart) (*CiphertextPartJSON,
 	return &CiphertextPartJSON{
 		Ciphertext:      base64.StdEncoding.EncodeToString(ctBuf.Bytes()),
 		DLKproof:        ciphertextPart.DLKproof,
-		RKProof:         ciphertextPart.RKProof,
+		RKproof:         ciphertextPart.RKproof,
 		EntropyProvider: ciphertextPart.EntropyProvider,
 	}, nil
 }
@@ -122,7 +122,7 @@ func (ctJSON *CiphertextPartJSON) Deserialize() (*CiphertextPart, sdk.Error) {
 	return &CiphertextPart{
 		Ciphertext:      *ciphertext,
 		DLKproof:        ctJSON.DLKproof,
-		RKProof:         ctJSON.RKProof,
+		RKproof:         ctJSON.RKproof,
 		EntropyProvider: ctJSON.EntropyProvider,
 	}, nil
 }
@@ -232,5 +232,5 @@ func DecryptionSharesMapDeserialize(dsJSONMap map[string]*DecryptionShareJSON) (
 // GenesisState - herb genesis state
 type GenesisState struct {
 	CiphertextPartRecords []CiphertextPartJSON `json:"ciphertext_records"`
-	KeyHoldersNumber uint64 `json:"key_holders_number"`
+	KeyHoldersNumber      uint64               `json:"key_holders_number"`
 }

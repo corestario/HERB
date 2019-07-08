@@ -3,6 +3,7 @@ package herb
 import (
 	"encoding/binary"
 	"fmt"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
@@ -60,7 +61,7 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	if err1 != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't decode point from string: %v", err1))
 	}
-	err2 := elgamal.RKVerify(P256, ctPart.Ciphertext.PointB, k.group.Point().Base(), pubKey, ctPart.RKProof)
+	err2 := elgamal.RKVerify(P256, ctPart.Ciphertext.PointB, k.group.Point().Base(), pubKey, ctPart.RKproof)
 	if err2 != nil {
 		return sdk.ErrUnknownRequest("RK proof isn't correct")
 	}
@@ -137,19 +138,19 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	round := k.CurrentRound(ctx)
 	stage := k.GetStage(ctx, round)
 	if stage != stageDSCollecting {
-		return sdk.ErrUnknownRequest(fmt.Sprintf("round is not on the decryption shares collecting stage. Current stage: %v", stage))
+		return sdk.ErrUnknownRequest(fmt.Sprintf("wrong round stage: %v. round: %v", stage, round))
 	}
 	ACiphertext, err := k.GetAggregatedCiphertext(ctx, round)
 	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't get aggregated ciphertext: %v", err))
 	}
-	keyVKBytes := createKeyBytesByRound(round, keyVerificationKeys)
+	keyVKBytes := []byte(keyVerificationKeys)
 	if !store.Has(keyVKBytes) {
 		return sdk.ErrUnknownRequest("Verification keys map isn't exist")
 	}
 	VKBytes := store.Get(keyVKBytes)
 	VKStr := make(map[string]*types.VerificationKeyJSON)
-	err1 := k.cdc.UnmarshalJSON(VKBytes, VKStr)
+	err1 := k.cdc.UnmarshalJSON(VKBytes, &VKStr)
 	if err1 != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal map from the store: %v", err1))
 	}
@@ -159,7 +160,7 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	}
 	err4 := elgamal.DLEVerify(P256, ds.DLEproof, k.group.Point().Base(), ACiphertext.PointA, vkMap[ds.KeyHolder.String()].VK, ds.DecShare.V)
 	if err4 != nil {
-		return sdk.ErrUnknownRequest("DLE proof isn't correct")
+		return sdk.ErrUnknownRequest(fmt.Sprintf("DLE proof isn't correct: %v", err4))
 	}
 	keyBytes := createKeyBytesByRound(round, keyDecryptionShares)
 	dsMap := make(map[string]*types.DecryptionShare)
@@ -229,7 +230,7 @@ func (k *Keeper) increaseCurrentRound(ctx sdk.Context) {
 	store := ctx.KVStore(k.storeKey)
 
 	roundBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(roundBytes, 0)
+	binary.LittleEndian.PutUint64(roundBytes, currentRound)
 	store.Set([]byte(keyCurrentRound), roundBytes)
 }
 
@@ -266,7 +267,7 @@ func (k *Keeper) GetAggregatedCiphertext(ctx sdk.Context, round uint64) (*elgama
 
 	stage := k.GetStage(ctx, round)
 	if stage != stageDSCollecting && stage != stageCompleted {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("wrong round stage: %v", stage))
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("wrong round stage: %v. round: %v", stage, round))
 	}
 
 	store := ctx.KVStore(k.storeKey)
@@ -292,7 +293,7 @@ func (k *Keeper) GetAggregatedCiphertext(ctx sdk.Context, round uint64) (*elgama
 func (k *Keeper) GetAllDecryptionShares(ctx sdk.Context, round uint64) (map[string]*types.DecryptionShare, sdk.Error) {
 	stage := k.GetStage(ctx, round)
 	if stage != stageDSCollecting && stage != stageCompleted {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("wrong round stage: %v", stage))
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("wrong round stage: %v. round: %v", stage, round))
 	}
 
 	store := ctx.KVStore(k.storeKey)
@@ -317,7 +318,7 @@ func (k *Keeper) GetAllDecryptionShares(ctx sdk.Context, round uint64) (map[stri
 func (k *Keeper) GetRandom(ctx sdk.Context, round uint64) ([]byte, sdk.Error) {
 	stage := k.GetStage(ctx, round)
 	if stage != stageCompleted {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("wrong round stage: %v", stage))
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("wrong round stage: %v. round: %v", stage, round))
 	}
 
 	store := ctx.KVStore(k.storeKey)
@@ -403,8 +404,6 @@ func (k *Keeper) computeRandomResult(ctx sdk.Context, round uint64) sdk.Error {
 	store.Set(keyBytes, result)
 	return nil
 }
-
-
 
 // for tests purposes
 func (k *Keeper) forceRoundStage(ctx sdk.Context, round uint64, stage string) {
