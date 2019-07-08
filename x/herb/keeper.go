@@ -3,8 +3,6 @@ package herb
 import (
 	"encoding/binary"
 	"fmt"
-	"strconv"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
@@ -15,24 +13,6 @@ import (
 	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )
 
-const (
-	// key prefixes for defining item in the store by round
-	keyCiphertextParts      = "keyCt"     //ciphtetextParts for the round
-	keyDecryptionShares     = "keyDS"     //descryption shares
-	keyAggregatedCiphertext = "keyACt"    // aggregated ciphertext
-	keyRandomResult         = "keyResult" // random point as result of the round
-	keyStage                = "keyStage"
-	keyCommonKey            = "keyCommon"      //public key
-	keyVerificationKeys     = "keyVK"          //verification keys with id
-	keyCurrentRound         = "keyCurentRound" //current generation round
-
-	//round stages: ciphertext parts collecting, descryption shares collecting, fresh random number
-	stageCtCollecting = "stageCtCollecting"
-	stageDSCollecting = "stageDSCollecting"
-	stageCompleted    = "stageCompleted"
-	stageUnstarted    = "stageUnstarted"
-)
-
 // Keeper maintains the link to data storage and exposes methods for the HERB protocol actions
 type Keeper struct {
 	storeKey sdk.StoreKey
@@ -40,7 +20,6 @@ type Keeper struct {
 
 	thresholdDecryption uint64
 	thresholdParts      uint64
-	n                   uint64
 
 	keyHoldersID map[string]int
 
@@ -95,7 +74,7 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 		return sdk.ErrUnknownRequest(fmt.Sprintf("round is not on the ciphertext collecting stage. Current stage: %v", stage))
 	}
 
-	keyBytesCt := createKeyBytes(round, keyCiphertextParts)
+	keyBytesCt := createKeyBytesByRound(round, keyCiphertextParts)
 	ctMap := make(map[string]*types.CiphertextPart)
 	var err3 sdk.Error
 	if store.Has(keyBytesCt) {
@@ -164,7 +143,7 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't get aggregated ciphertext: %v", err))
 	}
-	keyVKBytes := createKeyBytes(round, keyVerificationKeys)
+	keyVKBytes := createKeyBytesByRound(round, keyVerificationKeys)
 	if !store.Has(keyVKBytes) {
 		return sdk.ErrUnknownRequest("Verification keys map isn't exist")
 	}
@@ -182,7 +161,7 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	if err4 != nil {
 		return sdk.ErrUnknownRequest("DLE proof isn't correct")
 	}
-	keyBytes := createKeyBytes(round, keyDecryptionShares)
+	keyBytes := createKeyBytesByRound(round, keyDecryptionShares)
 	dsMap := make(map[string]*types.DecryptionShare)
 	var err5 sdk.Error
 	if store.Has(keyBytes) {
@@ -263,7 +242,7 @@ func (k *Keeper) GetAllCiphertexts(ctx sdk.Context, round uint64) (map[string]*t
 		return nil, sdk.ErrUnknownRequest("round hasn't started yet")
 	}
 
-	keyBytes := createKeyBytes(round, keyCiphertextParts)
+	keyBytes := createKeyBytesByRound(round, keyCiphertextParts)
 
 	//if store doesn't have such key -> no cts was added
 	if !store.Has(keyBytes) {
@@ -291,7 +270,7 @@ func (k *Keeper) GetAggregatedCiphertext(ctx sdk.Context, round uint64) (*elgama
 	}
 
 	store := ctx.KVStore(k.storeKey)
-	keyBytes := createKeyBytes(round, keyAggregatedCiphertext)
+	keyBytes := createKeyBytesByRound(round, keyAggregatedCiphertext)
 	if !store.Has(keyBytes) {
 		return nil, sdk.ErrInternal("There is not aggregated ciphertext in the store")
 	}
@@ -317,7 +296,7 @@ func (k *Keeper) GetAllDecryptionShares(ctx sdk.Context, round uint64) (map[stri
 	}
 
 	store := ctx.KVStore(k.storeKey)
-	keyBytes := createKeyBytes(round, keyDecryptionShares)
+	keyBytes := createKeyBytesByRound(round, keyDecryptionShares)
 	if !store.Has(keyBytes) {
 		return map[string]*types.DecryptionShare{}, nil
 	}
@@ -342,7 +321,7 @@ func (k *Keeper) GetRandom(ctx sdk.Context, round uint64) ([]byte, sdk.Error) {
 	}
 
 	store := ctx.KVStore(k.storeKey)
-	keyBytes := createKeyBytes(round, keyRandomResult)
+	keyBytes := createKeyBytesByRound(round, keyRandomResult)
 	if !store.Has(keyBytes) {
 		return nil, sdk.ErrInternal("There is not round result in the store")
 	}
@@ -353,7 +332,7 @@ func (k *Keeper) GetRandom(ctx sdk.Context, round uint64) ([]byte, sdk.Error) {
 // GetStage returns stage of the given round
 func (k *Keeper) GetStage(ctx sdk.Context, round uint64) string {
 	store := ctx.KVStore(k.storeKey)
-	keyBytes := createKeyBytes(round, keyStage)
+	keyBytes := createKeyBytesByRound(round, keyStage)
 	if !store.Has(keyBytes) {
 		return stageUnstarted
 	}
@@ -363,21 +342,14 @@ func (k *Keeper) GetStage(ctx sdk.Context, round uint64) string {
 
 func (k *Keeper) setStage(ctx sdk.Context, round uint64, stage string) {
 	store := ctx.KVStore(k.storeKey)
-	keyBytes := createKeyBytes(round, keyStage)
+	keyBytes := createKeyBytesByRound(round, keyStage)
 	store.Set(keyBytes, []byte(stage))
-}
-
-func createKeyBytes(round uint64, keyPrefix string) []byte {
-	roundStr := strconv.FormatUint(round, 10)
-	keyStr := roundStr + keyPrefix
-	keyBytes := []byte(keyStr)
-	return keyBytes
 }
 
 // computeAggregatedCiphertext computes and STORES aggregated ciphertext
 func (k *Keeper) computeAggregatedCiphertext(ctx sdk.Context, round uint64) sdk.Error {
 	store := ctx.KVStore(k.storeKey)
-	keyBytes := createKeyBytes(round, keyAggregatedCiphertext)
+	keyBytes := createKeyBytesByRound(round, keyAggregatedCiphertext)
 	allCts, err := k.GetAllCiphertexts(ctx, round)
 	if err != nil {
 		return err
@@ -402,7 +374,7 @@ func (k *Keeper) computeAggregatedCiphertext(ctx sdk.Context, round uint64) sdk.
 
 func (k *Keeper) computeRandomResult(ctx sdk.Context, round uint64) sdk.Error {
 	store := ctx.KVStore(k.storeKey)
-	keyBytes := createKeyBytes(round, keyRandomResult)
+	keyBytes := createKeyBytesByRound(round, keyRandomResult)
 	dsMap, err := k.GetAllDecryptionShares(ctx, round)
 	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't get all decryption shares from store: %v", err))
@@ -415,7 +387,13 @@ func (k *Keeper) computeRandomResult(ctx sdk.Context, round uint64) sdk.Error {
 	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't get aggregated ciphertext from store: %v", err))
 	}
-	resultPoint := elgamal.Decrypt(P256, *aggCt, ds, int(k.n))
+
+	n, err := k.GetKeyHoldersNumber(ctx)
+	if err != nil {
+		return err
+	}
+
+	resultPoint := elgamal.Decrypt(P256, *aggCt, ds, int(n))
 	hash := P256.Hash()
 	_, err2 := resultPoint.MarshalTo(hash)
 	if err2 != nil {
@@ -426,10 +404,12 @@ func (k *Keeper) computeRandomResult(ctx sdk.Context, round uint64) sdk.Error {
 	return nil
 }
 
+
+
 // for tests purposes
 func (k *Keeper) forceRoundStage(ctx sdk.Context, round uint64, stage string) {
 	store := ctx.KVStore(k.storeKey)
-	keyBytes := createKeyBytes(round, keyStage)
+	keyBytes := createKeyBytesByRound(round, keyStage)
 	store.Set(keyBytes, []byte(stage))
 }
 

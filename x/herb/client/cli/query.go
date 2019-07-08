@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/binary"
 	"fmt"
 	"strconv"
 
@@ -221,7 +222,8 @@ func GetCmdKeyHoldersNumber(queryRoute string, cdc *codec.Codec) *cobra.Command 
 				return err
 			}
 
-			n := string(res)
+			n := binary.LittleEndian.Uint64(res)
+
 			fmt.Printf("number of key holders: %v", n)
 
 			return nil

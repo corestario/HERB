@@ -40,7 +40,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.Valid
 		ct, _ := record.Deserialize()
 		keeper.SetCiphertext(ctx, ct)
 	}
-	keeper.n = data.KeyHoldersNumber
+	keeper.SetKeyHoldersNumber(ctx, data.KeyHoldersNumber)
 	return []abci.ValidatorUpdate{}
 }
 
