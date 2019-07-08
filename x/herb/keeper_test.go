@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"testing"
 
-	"go.dedis.ch/kyber/v3/share"
+	"go.dedis.ch/kyber/v3"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store"
@@ -16,6 +16,9 @@ import (
 	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
+	"go.dedis.ch/kyber/v3/proof"
+	"go.dedis.ch/kyber/v3/share"
+	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )
 
 func Initialize(thresholdDecryption uint64, thresholdParts uint64, n uint64) (ctx sdk.Context, keeperInstance Keeper, cdc *codec.Codec) {
@@ -45,30 +48,73 @@ func Initialize(thresholdDecryption uint64, thresholdParts uint64, n uint64) (ct
 	return
 }
 
+func SetKeyHolders(ctx sdk.Context, k Keeper) error {
+	store := ctx.KVStore(k.storeKey)
+	keyCommonBytes := []byte(keyCommonKey)
+	if store.Has(keyCommonBytes) {
+		return sdk.ErrUnknownRequest("Public key already exist")
+	}
+	commonKeyStr := "0452b4a6d7883102258a87539c41898cd1c78bcc27dd905d9111e8b066504ba31b160580530886a2200833c2281e10377dbb2007abc531959a23df365ffc16ee18"
+	commonkey := []byte(commonKeyStr)
+	store.Set(keyCommonBytes, commonkey)
+	return nil
+}
+func CiphertextTest(group proof.Suite, commonKey kyber.Point, y kyber.Scalar, r kyber.Scalar) (ct elgamal.Ciphertext, DLKproof []byte, RKproof []byte, err error) {
+	M := group.Point().Mul(y, nil)
+	S := group.Point().Mul(r, commonKey)
+	A := group.Point().Mul(r, nil)
+	B := S.Add(group.Point().Mul(r, commonKey), M)
+	ct = elgamal.Ciphertext{A, B}
+	DLKproof, err = elgamal.DLK(group, group.Point().Base(), r, ct.PointA)
+	if err != nil {
+		return
+	}
+	RKproof, err = elgamal.RK(group, group.Point().Base(), y, commonKey, r, ct.PointB)
+	return
+}
 func TestSetGetCiphertext(t *testing.T) {
-	testCases := []int{1, 5, 10}
+	testCases := []int{1, 2}
+	l := 3
 	for round, r := range testCases {
 		var ciphertextParts []types.CiphertextPart
-		ctx, keeper, _ := Initialize(uint64(r), uint64(r), uint64(r))
-		userAddrs := CreateTestAddrs(r)
+		ctx, keeper, _ := Initialize(uint64(l), uint64(l), uint64(l))
+		userAddrs := CreateTestAddrs(l)
 		keeper.forceRoundStage(ctx, uint64(round), stageCtCollecting)
 		keeper.forceCurrentRound(ctx, uint64(round))
-		g1 := keeper.group.Point().Base()
-		for i := 0; i < r; i++ {
-			g2 := keeper.group.Point().Mul(keeper.group.Scalar().SetInt64(int64(i)), g1)
-			ct := elgamal.Ciphertext{g1, g2}
-			ctPart := types.CiphertextPart{ct, []byte("example"), []byte("example3"), userAddrs[i]}
-			ciphertextParts = append(ciphertextParts, ctPart)
-			err := keeper.SetCiphertext(ctx, &ctPart)
+		err := SetKeyHolders(ctx, keeper)
+		if err != nil {
+			t.Errorf("can't set public key %v", err)
+		}
+		store := ctx.KVStore(keeper.storeKey)
+		keyCommonBytes := []byte(keyCommonKey)
+		if !store.Has(keyCommonBytes) {
+			t.Errorf("Public key isn't exist")
+		}
+		commonkeyBytes := store.Get(keyCommonBytes)
+		commonkeyStr := string(commonkeyBytes)
+		commonkey, err := kyberenc.StringHexToPoint(keeper.group, commonkeyStr)
+		if err != nil {
+			t.Errorf("can't decode common key to point")
+		}
+		for i := 0; i < l; i++ {
+			y := keeper.group.Scalar().SetInt64(int64(r))
+			rr := keeper.group.Scalar().SetInt64(int64(r + i))
+			ct, DLK, RK, err := CiphertextTest(P256, commonkey, y, rr)
 			if err != nil {
-				t.Errorf("failed set ciphertext: %v", err)
+				t.Errorf("failed create proofs: %v", err)
+			}
+			ctPart := types.CiphertextPart{ct, DLK, RK, userAddrs[i]}
+			ciphertextParts = append(ciphertextParts, ctPart)
+			err1 := keeper.SetCiphertext(ctx, &ctPart)
+			if err1 != nil {
+				t.Errorf("failed set ciphertext: %v", err1)
 			}
 		}
 		newCiphertexts, err := keeper.GetAllCiphertexts(ctx, uint64(round))
 		if err != nil {
 			t.Errorf("failed get all ciphertexts: %v", err)
 		}
-		for i := 0; i < r; i++ {
+		for i := 0; i < l; i++ {
 			if _, ok := newCiphertexts[ciphertextParts[i].EntropyProvider.String()]; !ok {
 				t.Errorf("new map doesn't contains original entropy provider, round: %v, expected: %v", round, ciphertextParts[i].EntropyProvider.String())
 			}
