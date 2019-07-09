@@ -16,6 +16,8 @@ const (
 	keyVerificationKeys     = "keyVK"          //verification keys with id
 	keyCurrentRound         = "keyCurentRound" //current generation round
 	keyKeyHoldersNumber 	= "keyKeyHoldersNumber" //number of key holders
+	keyThresholdParts 		= "keyThresholdParts"
+	keyThresholdDecrypt 	= "keyThresholdDecrypt"
 
 	//round stages: ciphertext parts collecting, descryption shares collecting, fresh random number
 	stageCtCollecting = "stageCtCollecting"

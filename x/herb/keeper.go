@@ -19,11 +19,6 @@ type Keeper struct {
 	storeKey sdk.StoreKey
 	group    kyber.Group
 
-	thresholdDecryption uint64
-	thresholdParts      uint64
-
-	keyHoldersID map[string]int
-
 	cdc *codec.Codec
 }
 
@@ -32,8 +27,6 @@ func NewKeeper(storeKey sdk.StoreKey, cdc *codec.Codec) Keeper {
 	return Keeper{
 		storeKey: storeKey,
 		group:    P256,
-
-		keyHoldersID: map[string]int{},
 
 		cdc: cdc,
 	}
@@ -57,12 +50,12 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	}
 	pubKeyBytes := store.Get(keyBytes)
 	pubKeystr := string(pubKeyBytes)
-	pubKey, err1 := kyberenc.StringHexToPoint(k.group, pubKeystr)
-	if err1 != nil {
-		return sdk.ErrUnknownRequest(fmt.Sprintf("can't decode point from string: %v", err1))
+	pubKey, err := kyberenc.StringHexToPoint(k.group, pubKeystr)
+	if err != nil {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't decode point from string: %v", err))
 	}
-	err2 := elgamal.RKVerify(P256, ctPart.Ciphertext.PointB, k.group.Point().Base(), pubKey, ctPart.RKproof)
-	if err2 != nil {
+	err = elgamal.RKVerify(P256, ctPart.Ciphertext.PointB, k.group.Point().Base(), pubKey, ctPart.RKproof)
+	if err != nil {
 		return sdk.ErrUnknownRequest("RK proof isn't correct")
 	}
 
@@ -77,17 +70,17 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 
 	keyBytesCt := createKeyBytesByRound(round, keyCiphertextParts)
 	ctMap := make(map[string]*types.CiphertextPart)
-	var err3 sdk.Error
+	var err2 sdk.Error
 	if store.Has(keyBytesCt) {
 		ctMapBytes := store.Get(keyBytesCt)
 		var ctMapJSON map[string]*types.CiphertextPartJSON
-		err1 := k.cdc.UnmarshalJSON(ctMapBytes, &ctMapJSON)
-		if err1 != nil {
-			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal map from the store: %v", err1))
+		err = k.cdc.UnmarshalJSON(ctMapBytes, &ctMapJSON)
+		if err != nil {
+			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal map from the store: %v", err))
 		}
-		ctMap, err3 = types.CiphertextMapDeserialize(ctMapJSON)
-		if err3 != nil {
-			return err3
+		ctMap, err2 = types.CiphertextMapDeserialize(ctMapJSON)
+		if err2 != nil {
+			return err2
 		}
 	}
 	if _, ok := ctMap[ctPart.EntropyProvider.String()]; ok {
@@ -99,33 +92,24 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	if err4 != nil {
 		return err4
 	}
-	newCtMapBytes, err2 := k.cdc.MarshalJSON(newCtMapJSON)
-	if err2 != nil {
+	newCtMapBytes, err := k.cdc.MarshalJSON(newCtMapJSON)
+	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal map for the store: %v", err2))
 	}
 	store.Set(keyBytesCt, newCtMapBytes)
 
-	if uint64(len(ctMap)) >= k.thresholdParts {
-		err5 := k.computeAggregatedCiphertext(ctx, round)
-		if err5 != nil {
-			return err5
+	t, err2 := k.GetThresholdParts(ctx)
+	if err2 != nil {
+		return err2
+	}
+
+	if uint64(len(ctMap)) >= t {
+		err2 = k.computeAggregatedCiphertext(ctx, round)
+		if err2 != nil {
+			return err2
 		}
 		k.setStage(ctx, round, stageDSCollecting)
 	}
-	return nil
-}
-
-// RegisterKeyHoldersID registers key holders' IDs for threshold encryption scheme
-func (k *Keeper) RegisterKeyHoldersID(ctx sdk.Context, keyHolderAddr sdk.Address, keyHolderID int) sdk.Error {
-	if keyHolderAddr.Empty() {
-		return sdk.ErrInvalidAddress("key holder address is empty")
-	}
-
-	if keyHolderID < 0 {
-		return sdk.ErrUnknownRequest("key holder ID must be positive!")
-	}
-
-	k.keyHoldersID[keyHolderAddr.String()] = keyHolderID
 	return nil
 }
 
@@ -150,31 +134,30 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	}
 	VKBytes := store.Get(keyVKBytes)
 	VKStr := make(map[string]*types.VerificationKeyJSON)
-	err1 := k.cdc.UnmarshalJSON(VKBytes, &VKStr)
-	if err1 != nil {
-		return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal map from the store: %v", err1))
+	err2 := k.cdc.UnmarshalJSON(VKBytes, &VKStr)
+	if err2 != nil {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal map from the store: %v", err2))
 	}
-	vkMap, err3 := types.VerificationKeyMapDeserialize(VKStr)
-	if err3 != nil {
-		return err3
+	vkMap, err := types.VerificationKeyMapDeserialize(VKStr)
+	if err != nil {
+		return err
 	}
-	err4 := elgamal.DLEVerify(P256, ds.DLEproof, k.group.Point().Base(), ACiphertext.PointA, vkMap[ds.KeyHolder.String()].VK, ds.DecShare.V)
-	if err4 != nil {
-		return sdk.ErrUnknownRequest(fmt.Sprintf("DLE proof isn't correct: %v", err4))
+	err2 = elgamal.DLEVerify(P256, ds.DLEproof, k.group.Point().Base(), ACiphertext.PointA, vkMap[ds.KeyHolder.String()].VK, ds.DecShare.V)
+	if err2 != nil {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("DLE proof isn't correct: %v", err2))
 	}
 	keyBytes := createKeyBytesByRound(round, keyDecryptionShares)
 	dsMap := make(map[string]*types.DecryptionShare)
-	var err5 sdk.Error
 	if store.Has(keyBytes) {
 		dsMapBytes := store.Get(keyBytes)
 		var dsMapJSON map[string]*types.DecryptionShareJSON
-		err1 := k.cdc.UnmarshalJSON(dsMapBytes, &dsMapJSON)
-		if err1 != nil {
-			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal map from the store: %v", err1))
+		err2 = k.cdc.UnmarshalJSON(dsMapBytes, &dsMapJSON)
+		if err2 != nil {
+			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal map from the store: %v", err2))
 		}
-		dsMap, err5 = types.DecryptionSharesMapDeserialize(dsMapJSON)
-		if err5 != nil {
-			return err5
+		dsMap, err = types.DecryptionSharesMapDeserialize(dsMapJSON)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -193,7 +176,13 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	}
 	store.Set(keyBytes, newDsMapBytes)
 
-	if uint64(len(dsMap)) >= k.thresholdDecryption {
+	t, err := k.GetThresholdDecryption(ctx)
+	if err != nil {
+		return err
+	}
+
+
+	if uint64(len(dsMap)) >= t {
 		err = k.computeRandomResult(ctx, round)
 		if err != nil {
 			return err

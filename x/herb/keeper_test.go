@@ -27,8 +27,6 @@ func Initialize(thresholdDecryption uint64, thresholdParts uint64, n uint64) (ct
 	codec.RegisterCrypto(cdc)
 	keyHERB := sdk.NewKVStoreKey(types.StoreKey)
 	keeperInstance = NewKeeper(keyHERB, cdc)
-	keeperInstance.thresholdParts = thresholdParts
-	keeperInstance.thresholdDecryption = thresholdDecryption
 	db := dbm.NewMemDB()
 	ms := store.NewCommitMultiStore(db)
 	ms.MountStoreWithDB(keyHERB, sdk.StoreTypeIAVL, db)
@@ -38,6 +36,7 @@ func Initialize(thresholdDecryption uint64, thresholdParts uint64, n uint64) (ct
 	}
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "test-chain"}, true, log.NewNopLogger())
 	keeperInstance.SetKeyHoldersNumber(ctx, n)
+	keeperInstance.SetThreshold(ctx, thresholdParts, thresholdDecryption)
 	ctx = ctx.WithConsensusParams(
 		&abci.ConsensusParams{
 			Validator: &abci.ValidatorParams{
@@ -187,16 +186,16 @@ func testAddr(addr string, bech string) sdk.AccAddress {
 			t.Errorf("failed get all decryption shares: %v", err)
 		}
 		for i := 0; i < r; i++ {
-			if _, ok := newDecryptionShares[decryptionShares[i].KeyHolder.String()]; !ok {
+			if _, ok := newDecryptionShares[decryptionShares[i].KeyHolderAddr.String()]; !ok {
 				t.Errorf("new map doesn't contains original key holder, round: %v", round)
 			}
-			if !newDecryptionShares[decryptionShares[i].KeyHolder.String()].DecShare.V.Equal(decryptionShares[i].DecShare.V) {
+			if !newDecryptionShares[decryptionShares[i].KeyHolderAddr.String()].DecShare.V.Equal(decryptionShares[i].DecShare.V) {
 				t.Errorf("ciphertexts don't equal, round: %v", round)
 			}
-			if !newDecryptionShares[decryptionShares[i].KeyHolder.String()].DLEproof.C.Equal(decryptionShares[i].DLEproof.C) ||
-				!newDecryptionShares[decryptionShares[i].KeyHolder.String()].DLEproof.R.Equal(decryptionShares[i].DLEproof.R) ||
-				!newDecryptionShares[decryptionShares[i].KeyHolder.String()].DLEproof.VG.Equal(decryptionShares[i].DLEproof.VG) ||
-				!newDecryptionShares[decryptionShares[i].KeyHolder.String()].DLEproof.VH.Equal(decryptionShares[i].DLEproof.VH) {
+			if !newDecryptionShares[decryptionShares[i].KeyHolderAddr.String()].DLEproof.C.Equal(decryptionShares[i].DLEproof.C) ||
+				!newDecryptionShares[decryptionShares[i].KeyHolderAddr.String()].DLEproof.R.Equal(decryptionShares[i].DLEproof.R) ||
+				!newDecryptionShares[decryptionShares[i].KeyHolderAddr.String()].DLEproof.VG.Equal(decryptionShares[i].DLEproof.VG) ||
+				!newDecryptionShares[decryptionShares[i].KeyHolderAddr.String()].DLEproof.VH.Equal(decryptionShares[i].DLEproof.VH) {
 				t.Errorf("dle proofs don't equal")
 			}
 		}

@@ -1,46 +1,48 @@
 package herb
 
 import (
-	"fmt"
+	"github.com/dgamingfoundation/HERB/x/herb/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
 // NewGenesisState creates new instance GenesisState
-func NewGenesisState(ciphertextPartRecords []CiphertextPartJSON, keyHoldersNum uint64) GenesisState {
-	return GenesisState{CiphertextPartRecords: nil, KeyHoldersNumber: keyHoldersNum}
+func NewGenesisState(keyHoldersNum uint64) GenesisState {
+	return GenesisState{
+			KeyHoldersNumber: keyHoldersNum,
+			KeyHolders: map[string]types.VerificationKeyJSON{},
+		}
 }
 
 // ValidateGenesis validates the provided herb genesis state to ensure the
 // expected invariants holds.
+//TO DO
 func ValidateGenesis(data GenesisState) error {
-	for _, record := range data.CiphertextPartRecords {
-		if record.EntropyProvider.Empty() {
-			return fmt.Errorf("Invalid ciphertext part: Ciphertext: %s. Error: Missing Entropy Provider", record.Ciphertext)
-		}
-		_, err := record.Deserialize()
-		if err != nil {
-			return err
-		}
-	}
+
 	return nil
 }
 
 // DefaultGenesisState returns default testing genesis state
 func DefaultGenesisState() GenesisState {
 	return GenesisState{
-		CiphertextPartRecords: []CiphertextPartJSON{},
+		ThresholdParts: 1,
+		ThresholdDecryption: 1,
+		KeyHolders: map[string]types.VerificationKeyJSON{},
 	}
 }
 
 // InitGenesis sets the pool and parameters for the provided keeper.
 func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.ValidatorUpdate {
-	for _, record := range data.CiphertextPartRecords {
-		ct, _ := record.Deserialize()
-		keeper.SetCiphertext(ctx, ct)
+	keyHolders := data.KeyHolders
+
+	err := keeper.SetVerificationKeys(ctx, keyHolders)
+	if err != nil {
+		panic(err)
 	}
-	keeper.SetKeyHoldersNumber(ctx, data.KeyHoldersNumber)
+
+	keeper.SetKeyHoldersNumber(ctx, uint64(len(keyHolders)))
+	keeper.SetThreshold(ctx, data.ThresholdParts, data.ThresholdDecryption)
 	return []abci.ValidatorUpdate{}
 }
 
@@ -49,7 +51,9 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.Valid
 func ExportGenesis(ctx sdk.Context, k Keeper) GenesisState {
 	//var records CiphertextPartJSON
 	return GenesisState{
-		CiphertextPartRecords: []CiphertextPartJSON{},
+		ThresholdParts: 1,
+		ThresholdDecryption: 1,
+		KeyHolders: map[string]types.VerificationKeyJSON{},
 	}
 }
 

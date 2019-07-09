@@ -27,8 +27,8 @@ type VerificationKey struct {
 }
 
 type VerificationKeyJSON struct {
-	VK        string `json:"verification key"`
-	KeyHolder int    `json:"Key Holder"`
+	VK          string `json:"verification_key"`
+	KeyHolderID int    `json:"key_holder_id"`
 }
 
 func NewVerificationKeyJSON(vk *VerificationKey) (*VerificationKeyJSON, sdk.Error) {
@@ -37,8 +37,8 @@ func NewVerificationKeyJSON(vk *VerificationKey) (*VerificationKeyJSON, sdk.Erro
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode verification key: %v", err))
 	}
 	return &VerificationKeyJSON{
-		VK:        vkJSON,
-		KeyHolder: vk.KeyHolder,
+		VK:          vkJSON,
+		KeyHolderID: vk.KeyHolder,
 	}, nil
 }
 func (vkJSON *VerificationKeyJSON) Deserialize() (*VerificationKey, sdk.Error) {
@@ -48,7 +48,7 @@ func (vkJSON *VerificationKeyJSON) Deserialize() (*VerificationKey, sdk.Error) {
 	}
 	return &VerificationKey{
 		VK:        vk,
-		KeyHolder: vkJSON.KeyHolder,
+		KeyHolder: vkJSON.KeyHolderID,
 	}, nil
 }
 func VerificationKeyMapSerialize(vkMap map[string]*VerificationKey) (map[string]*VerificationKeyJSON, sdk.Error) {
@@ -157,9 +157,9 @@ type DecryptionShare struct {
 	KeyHolder sdk.AccAddress
 }
 type DecryptionShareJSON struct {
-	DecShare  string         `json:"decryptionShare"`
-	DLEproof  string         `json:"DLE proof"`
-	KeyHolder sdk.AccAddress `json:"keyholder"`
+	DecShare      string         `json:"decryption_share"`
+	DLEproof      string         `json:"dle_proof"`
+	KeyHolderAddr sdk.AccAddress `json:"key_holder"`
 }
 
 func NewDecryptionShareJSON(decShares *DecryptionShare) (*DecryptionShareJSON, sdk.Error) {
@@ -174,9 +174,9 @@ func NewDecryptionShareJSON(decShares *DecryptionShare) (*DecryptionShareJSON, s
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode dle proof: %v", err))
 	}
 	return &DecryptionShareJSON{
-		DecShare:  base64.StdEncoding.EncodeToString(dsBuf.Bytes()),
-		DLEproof:  base64.StdEncoding.EncodeToString(dleBuf.Bytes()),
-		KeyHolder: decShares.KeyHolder,
+		DecShare:      base64.StdEncoding.EncodeToString(dsBuf.Bytes()),
+		DLEproof:      base64.StdEncoding.EncodeToString(dleBuf.Bytes()),
+		KeyHolderAddr: decShares.KeyHolder,
 	}, nil
 }
 func (dsJSON DecryptionShareJSON) Deserialize() (*DecryptionShare, sdk.Error) {
@@ -202,7 +202,7 @@ func (dsJSON DecryptionShareJSON) Deserialize() (*DecryptionShare, sdk.Error) {
 	return &DecryptionShare{
 		DecShare:  decshare,
 		DLEproof:  &dleproof,
-		KeyHolder: dsJSON.KeyHolder,
+		KeyHolder: dsJSON.KeyHolderAddr,
 	}, nil
 }
 func DecryptionSharesMapSerialize(dsMap map[string]*DecryptionShare) (map[string]*DecryptionShareJSON, sdk.Error) {
@@ -231,6 +231,7 @@ func DecryptionSharesMapDeserialize(dsJSONMap map[string]*DecryptionShareJSON) (
 
 // GenesisState - herb genesis state
 type GenesisState struct {
-	CiphertextPartRecords []CiphertextPartJSON `json:"ciphertext_records"`
-	KeyHoldersNumber      uint64               `json:"key_holders_number"`
+	ThresholdParts 		  uint64 							`json:"threshold_parts"`
+	ThresholdDecryption   uint64 							`json:"threshold_decryption"`
+	KeyHolders			  map[string]VerificationKeyJSON	`json:"key_holders"`
 }

@@ -2,6 +2,7 @@ package herb
 
 import (
 	"encoding/binary"
+	"github.com/dgamingfoundation/HERB/x/herb/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -25,4 +26,65 @@ func (k *Keeper) GetKeyHoldersNumber(ctx sdk.Context) (uint64, sdk.Error) {
 	nBytes := store.Get([]byte(keyKeyHoldersNumber))
 	n := binary.LittleEndian.Uint64(nBytes)
 	return n, nil
+}
+
+// SetVerificationKeys set verification keys corresponding to each address
+func (k *Keeper) SetVerificationKeys(ctx sdk.Context, verificationKeys map[string]types.VerificationKeyJSON) sdk.Error {
+	store := ctx.KVStore(k.storeKey)
+	if store.Has([]byte(keyVerificationKeys)) {
+		return sdk.ErrUnknownRequest("Verification keys already exist")
+	}
+
+	verificationKeysBytes, err := k.cdc.MarshalJSON(verificationKeys)
+	if err != nil {
+		return sdk.ErrUnknownRequest("Can't marshal map")
+	}
+
+	store.Set([]byte(keyVerificationKeys), verificationKeysBytes)
+	return nil
+}
+
+// GetVerificationKeys returns verification keys corresponding to each address
+func (k *Keeper) GetVerificationKeys(ctx sdk.Context) (map[string]types.VerificationKeyJSON, sdk.Error) {
+	store := ctx.KVStore(k.storeKey)
+	if !store.Has([]byte(keyVerificationKeys)) {
+		return nil, sdk.ErrUnknownRequest("Verification keys are not defined")
+	}
+	verificationKeysBytes := store.Get([]byte(keyVerificationKeys))
+	verificationKeys := make(map[string]types.VerificationKeyJSON)
+	k.cdc.MustUnmarshalJSON(verificationKeysBytes, &verificationKeys)
+	return verificationKeys, nil
+}
+
+// SetThreshold set threshold for decryption and ciphertext parts
+func (k *Keeper) SetThreshold(ctx sdk.Context, thresholdParts uint64, thresholdDecrypt uint64) {
+	store := ctx.KVStore(k.storeKey)
+	thresholdPartsBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(thresholdPartsBytes, thresholdParts)
+	store.Set([]byte(keyThresholdParts), thresholdPartsBytes)
+	thresholdDecryptBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(thresholdDecryptBytes, thresholdDecrypt)
+	store.Set([]byte(keyThresholdDecrypt), thresholdDecryptBytes)
+}
+
+func (k *Keeper) GetThresholdParts(ctx sdk.Context) (uint64, sdk.Error) {
+	store := ctx.KVStore(k.storeKey)
+	if !store.Has([]byte(keyThresholdParts)) {
+		return 0, sdk.ErrUnknownRequest("Threshold for ciphertext parts is not defined")
+	}
+
+	tBytes := store.Get([]byte(keyThresholdParts))
+	t := binary.LittleEndian.Uint64(tBytes)
+	return t, nil
+}
+
+func (k *Keeper) GetThresholdDecryption(ctx sdk.Context) (uint64, sdk.Error) {
+	store := ctx.KVStore(k.storeKey)
+	if !store.Has([]byte(keyThresholdDecrypt)) {
+		return 0, sdk.ErrUnknownRequest("Decryption threshold is not defined")
+	}
+
+	tBytes := store.Get([]byte(keyThresholdDecrypt))
+	t := binary.LittleEndian.Uint64(tBytes)
+	return t, nil
 }

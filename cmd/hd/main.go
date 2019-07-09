@@ -49,8 +49,9 @@ func main() {
 		genutilcli.ValidateGenesisCmd(ctx, cdc, app.ModuleBasics),
 		// AddGenesisAccountCmd allows users to add accounts to the genesis file
 		genaccscli.AddGenesisAccountCmd(ctx, cdc, app.DefaultNodeHome, app.DefaultCLIHome),
-		// SetKeyHoldersNumberCmd is a herb-specific function, it allows to set the number of key holders
-		herbcli.SetKeyHoldersNumberCmd(ctx, cdc, app.DefaultCLIHome, app.DefaultCLIHome),
+		// HERB specific functions for setting HERB parameters
+		herbcli.SetThresholdsCmd(ctx, cdc),
+		herbcli.AddKeyHolderCmd(ctx, cdc),
 	)
 
 	server.AddCommands(ctx, cdc, rootCmd, newApp, exportAppStateAndTMValidators)
