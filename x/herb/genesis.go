@@ -8,9 +8,10 @@ import (
 )
 
 // NewGenesisState creates new instance GenesisState
-func NewGenesisState(keyHoldersNum uint64) GenesisState {
+func NewGenesisState(thresholdParts uint64, thresholdDecryption uint64) GenesisState {
 	return GenesisState{
-			KeyHoldersNumber: keyHoldersNum,
+			ThresholdParts: thresholdParts,
+			ThresholdDecryption: thresholdDecryption,
 			KeyHolders: map[string]types.VerificationKeyJSON{},
 		}
 }
