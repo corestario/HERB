@@ -12,6 +12,7 @@ func NewGenesisState(thresholdParts uint64, thresholdDecryption uint64) GenesisS
 	return GenesisState{
 			ThresholdParts: thresholdParts,
 			ThresholdDecryption: thresholdDecryption,
+			CommonPublicKey: P256.Point().String(),
 			KeyHolders: map[string]types.VerificationKeyJSON{},
 		}
 }
@@ -29,6 +30,7 @@ func DefaultGenesisState() GenesisState {
 	return GenesisState{
 		ThresholdParts: 1,
 		ThresholdDecryption: 1,
+		CommonPublicKey: P256.Point().String(),
 		KeyHolders: map[string]types.VerificationKeyJSON{},
 	}
 }
@@ -44,6 +46,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.Valid
 
 	keeper.SetKeyHoldersNumber(ctx, uint64(len(keyHolders)))
 	keeper.SetThreshold(ctx, data.ThresholdParts, data.ThresholdDecryption)
+	keeper.SetCommonPublicKey(ctx, data.CommonPublicKey)
 	return []abci.ValidatorUpdate{}
 }
 

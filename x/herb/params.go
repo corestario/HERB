@@ -3,6 +3,8 @@ package herb
 import (
 	"encoding/binary"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
+	"go.dedis.ch/kyber/v3"
+	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -87,4 +89,20 @@ func (k *Keeper) GetThresholdDecryption(ctx sdk.Context) (uint64, sdk.Error) {
 	tBytes := store.Get([]byte(keyThresholdDecrypt))
 	t := binary.LittleEndian.Uint64(tBytes)
 	return t, nil
+}
+
+func (k *Keeper) SetCommonPublicKey(ctx sdk.Context, pubKeyHex string) {
+	store := ctx.KVStore(k.storeKey)
+	keyBytes := []byte(pubKeyHex)
+	store.Set([]byte(keyCommonKey), keyBytes)
+}
+
+func (k *Keeper) GetCommonPublicKey(ctx sdk.Context) (kyber.Point, sdk.Error) {
+	store := ctx.KVStore(k.storeKey)
+	keyBytes := store.Get([]byte(keyCommonKey))
+	key, err := kyberenc.StringHexToPoint(P256, string(keyBytes))
+	if err != nil {
+		return nil, sdk.ErrUnknownRequest("Common key is not defined")
+	}
+	return key, nil
 }

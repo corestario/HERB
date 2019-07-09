@@ -30,6 +30,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 		GetCmdAllCiphertexts(storeKey, cdc),
 		GetCmdAllDecryptionShares(storeKey, cdc),
 		GetCmdRandom(storeKey, cdc),
+		GetCmdCurrentRound(storeKey, cdc),
 		GetCmdKeyHoldersNumber(storeKey, cdc),
 	)...)
 
@@ -39,7 +40,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 // GetCmdAggregatedCiphertext implements the query aggregated ciphertext command.
 func GetCmdAggregatedCiphertext(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "aggregatedCt [round]",
+		Use:   "aggregated-ct [round]",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Query aggregated elgamal ciphertext for the given round",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -82,7 +83,7 @@ func GetCmdAggregatedCiphertext(queryRoute string, cdc *codec.Codec) *cobra.Comm
 // GetCmdAllCiphertexts implements the query of all ciphertexts command.
 func GetCmdAllCiphertexts(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "allCt [round]",
+		Use:   "all-ct [round]",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Query all elgamal ciphertexts for the given round",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -127,7 +128,7 @@ func GetCmdAllCiphertexts(queryRoute string, cdc *codec.Codec) *cobra.Command {
 // GetCmdAllDecryptionShares implements the query of all decryption shares command.
 func GetCmdAllDecryptionShares(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return  &cobra.Command {
-		Use: "allShares [round]",
+		Use: "all-shares [round]",
 		Short: "Queries all decryption shares for the given round",
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -225,6 +226,36 @@ func GetCmdKeyHoldersNumber(queryRoute string, cdc *codec.Codec) *cobra.Command 
 			n := binary.LittleEndian.Uint64(res)
 
 			fmt.Printf("number of key holders: %v", n)
+
+			return nil
+		},
+	}
+}
+
+func GetCmdCurrentRound(queryRoute string, cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command {
+		Use: "current-round",
+		Short: "returns current generation round and it's stage",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			roundBytes, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryCurrentRound), nil)
+			if err != nil {
+				return err
+			}
+
+			round := binary.LittleEndian.Uint64(roundBytes)
+
+			params := types.NewQueryByRound(int64(round))
+			bz, err := cdc.MarshalJSON(params)
+			if err != nil {
+				return err
+			}
+
+			stageBytes, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryStage), bz)
+
+			fmt.Printf("round: %v \r\n stage: %s", round, string(stageBytes))
 
 			return nil
 		},

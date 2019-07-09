@@ -11,7 +11,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/share"
-	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )
 
 // Keeper maintains the link to data storage and exposes methods for the HERB protocol actions
@@ -44,15 +43,9 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	store := ctx.KVStore(k.storeKey)
 	round := k.CurrentRound(ctx)
 	stage := k.GetStage(ctx, round)
-	keyBytes := []byte(keyCommonKey)
-	if !store.Has(keyBytes) {
-		return sdk.ErrUnknownRequest("Public key isn't exist")
-	}
-	pubKeyBytes := store.Get(keyBytes)
-	pubKeystr := string(pubKeyBytes)
-	pubKey, err := kyberenc.StringHexToPoint(k.group, pubKeystr)
+	pubKey, err2 := k.GetCommonPublicKey(ctx)
 	if err != nil {
-		return sdk.ErrUnknownRequest(fmt.Sprintf("can't decode point from string: %v", err))
+		return err2
 	}
 	err = elgamal.RKVerify(P256, ctPart.Ciphertext.PointB, k.group.Point().Base(), pubKey, ctPart.RKproof)
 	if err != nil {
@@ -70,7 +63,6 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 
 	keyBytesCt := createKeyBytesByRound(round, keyCiphertextParts)
 	ctMap := make(map[string]*types.CiphertextPart)
-	var err2 sdk.Error
 	if store.Has(keyBytesCt) {
 		ctMapBytes := store.Get(keyBytesCt)
 		var ctMapJSON map[string]*types.CiphertextPartJSON

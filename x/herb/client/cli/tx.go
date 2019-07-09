@@ -41,14 +41,14 @@ func GetTxCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 // GetCmdSetCiphertext implements send ciphertext part transaction command.
 func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use: "ctPart [commonPubKey]",
-		Short: "send random ciphertextPart",
+		Use: "ct-part [commonPubKey]",
+		Short: "send random ciphertext part",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
 			group := types.P256
-			pubKey, err := kyberenc.StringHexToPoint(group, args[1])
+			pubKey, err := kyberenc.StringHexToPoint(group, args[0])
 			if err != nil {
 				return fmt.Errorf("failed to decode common public key: %v", err)
 			}
@@ -81,7 +81,7 @@ func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use: "decrypt [privateKey] [ID]",
-		Short: "Send a decryption share of the aggregated ciphertext for the [round]",
+		Short: "Send a decryption share of the aggregated ciphertext",
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -107,14 +107,14 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 
 			//decrypting ciphertext
 			group := types.P256
-			privKey, err := kyberenc.StringHexToScalar(group, args[1])
+			privKey, err := kyberenc.StringHexToScalar(group, args[0])
 			if err != nil {
-				return fmt.Errorf("failed to decode common public key: %v", err)
+				return fmt.Errorf("failed to decode private key: %v", err)
 			}
 
-			id, err := strconv.ParseInt(args[2], 10, 64)
+			id, err := strconv.ParseInt(args[1], 10, 64)
 			if err != nil {
-				return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
+				return fmt.Errorf("id %s not a valid int, please input a valid id", args[1])
 			}
 
 			sharePoint, proof, err := elgamal.CreateDecShare(group, *aggregatedCt, privKey)

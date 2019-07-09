@@ -24,6 +24,8 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 			return queryRandom(ctx, req, keeper)
 		case types.QueryStage:
 			return queryStage(ctx, req, keeper)
+		case types.QueryCurrentRound:
+			return queryCurrentRound(ctx, keeper)
 		case types.QueryKeyHoldersNumber:
 			return queryKeyHoldersNumber(ctx, keeper)
 		default:
@@ -125,6 +127,13 @@ func queryStage(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, 
 
 	stage := keeper.GetStage(ctx, round)
 	return []byte(stage), nil
+}
+
+func queryCurrentRound(ctx sdk.Context, keeper Keeper) ([]byte, sdk.Error) {
+	round := keeper.CurrentRound(ctx)
+	roundBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(roundBytes, round)
+	return roundBytes, nil
 }
 
 func getRoundFromQuery(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (uint64, sdk.Error) {

@@ -13,6 +13,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 
+	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
 	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )
@@ -63,12 +64,16 @@ func SetThresholdsCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 	return cmd
 }
 
-func AddKeyHolderCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
+func AddKeyHolderCmd(ctx *server.Context, cdc *codec.Codec,
+	defaultNodeHome string, defaultCLIHome string) *cobra.Command {
 	return &cobra.Command{
 		Use: "add-key-holder [address_or_key_name] [id] [verification_key]",
 		Short: "add key holder parameters to genesis file",
 		Args: cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args[] string) error {
+			config := ctx.Config
+			config.SetRoot(viper.GetString(cli.HomeFlag))
+
 			addr, err := sdk.AccAddressFromBech32(args[0])
 			if err != nil {
 				kb, err := keys.NewKeyBaseFromDir(viper.GetString(flagClientHome))
@@ -84,7 +89,7 @@ func AddKeyHolderCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 				addr = info.GetAddress()
 			}
 
-			id, err := strconv.ParseUint(args[0], 10, 64)
+			id, err := strconv.ParseUint(args[1], 10, 64)
 			if err != nil {
 				return fmt.Errorf("n %s not a valid uint, please input a valid number", args[1])
 			}
@@ -94,7 +99,6 @@ func AddKeyHolderCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("failed to decode verification key: %v", err)
 			}
 
-			config := ctx.Config
 			genFile := config.GenesisFile()
 			appState, genDoc, err := genutil.GenesisStateFromGenFile(cdc, genFile)
 			if err != nil {
@@ -111,6 +115,42 @@ func AddKeyHolderCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 			keyHolders[addr.String()] = types.VerificationKeyJSON{KeyHolderID:int(id), VK:args[2]}
 			genesisState.KeyHolders = keyHolders
 
+			newGenesisState := types.ModuleCdc.MustMarshalJSON(genesisState)
+			appState[types.ModuleName] = newGenesisState
+			appStateJSON, err := cdc.MarshalJSON(appState)
+			if err != nil {
+				return err
+			}
+
+			// export app state
+			genDoc.AppState = appStateJSON
+
+			return genutil.ExportGenesisFile(genDoc, genFile)
+		},
+	}
+}
+
+func SetCommonPublicKeyCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use: "set-common-key [keyHex]",
+		Short: "Set common public key for ElGamal cryptosystem",
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			if _, err := kyberenc.StringHexToPoint(types.P256, args[0]); err != nil {
+				return fmt.Errorf("common key %s not a valid kyber point, please input a valid point", args[0])
+			}
+
+			config := ctx.Config
+			genFile := config.GenesisFile()
+			appState, genDoc, err := genutil.GenesisStateFromGenFile(cdc, genFile)
+			if err != nil {
+				return err
+			}
+			genesisStateJSON := appState[types.ModuleName]
+			var genesisState types.GenesisState
+			types.ModuleCdc.MustUnmarshalJSON(genesisStateJSON, &genesisState)
+			genesisState.CommonPublicKey = args[0]
 			newGenesisState := types.ModuleCdc.MustMarshalJSON(genesisState)
 			appState[types.ModuleName] = newGenesisState
 			appStateJSON, err := cdc.MarshalJSON(appState)

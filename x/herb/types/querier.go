@@ -7,6 +7,7 @@ const (
 	QueryRandom = "queryRandom"
 	QueryStage = "queryStage"
 	QueryKeyHoldersNumber = "queryKeyHoldersNumber"
+	QueryCurrentRound = "queryCurrentRound"
 )
 
 type QueryByRound struct {
