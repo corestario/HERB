@@ -32,6 +32,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 		GetCmdRandom(storeKey, cdc),
 		GetCmdCurrentRound(storeKey, cdc),
 		GetCmdKeyHoldersNumber(storeKey, cdc),
+		GetCmdRoundStage(storeKey, cdc),
 	)...)
 
 	return herbQueryCmd
@@ -235,7 +236,7 @@ func GetCmdKeyHoldersNumber(queryRoute string, cdc *codec.Codec) *cobra.Command 
 func GetCmdCurrentRound(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command {
 		Use: "current-round",
-		Short: "returns current generation round and it's stage",
+		Short: "returns current generation round",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -247,7 +248,33 @@ func GetCmdCurrentRound(queryRoute string, cdc *codec.Codec) *cobra.Command {
 
 			round := binary.LittleEndian.Uint64(roundBytes)
 
-			params := types.NewQueryByRound(int64(round))
+			fmt.Print(round)
+
+			return nil
+		},
+	}
+}
+
+func GetCmdRoundStage(queryRoute string, cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command {
+		Use: "stage [round]",
+		Short: "returns current generation round and it's stage",
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			var round int64
+			if len(args) > 0 {
+				parsedRound, err := strconv.ParseUint(args[0], 10, 64)
+				if err != nil {
+					return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
+				}
+				round = int64(parsedRound)
+			} else {
+				round = -1
+			}
+
+			params := types.NewQueryByRound(round)
 			bz, err := cdc.MarshalJSON(params)
 			if err != nil {
 				return err
@@ -255,7 +282,7 @@ func GetCmdCurrentRound(queryRoute string, cdc *codec.Codec) *cobra.Command {
 
 			stageBytes, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryStage), bz)
 
-			fmt.Printf("round: %v \r\n stage: %s", round, string(stageBytes))
+			fmt.Print(string(stageBytes))
 
 			return nil
 		},
