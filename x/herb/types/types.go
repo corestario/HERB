@@ -231,8 +231,8 @@ func DecryptionSharesMapDeserialize(dsJSONMap map[string]*DecryptionShareJSON) (
 
 // GenesisState - herb genesis state
 type GenesisState struct {
-	ThresholdParts 		  uint64 							`json:"threshold_parts"`
-	ThresholdDecryption   uint64 							`json:"threshold_decryption"`
-	CommonPublicKey 	  string							`json:"commonPublicKey"`
-	KeyHolders			  map[string]VerificationKeyJSON	`json:"key_holders"`
+	ThresholdParts      uint64                         `json:"threshold_parts"`
+	ThresholdDecryption uint64                         `json:"threshold_decryption"`
+	CommonPublicKey     string                         `json:"commonPublicKey"`
+	KeyHolders          map[string]VerificationKeyJSON `json:"key_holders"`
 }

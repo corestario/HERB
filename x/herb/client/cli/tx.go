@@ -2,13 +2,14 @@ package cli
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
-	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -41,9 +42,9 @@ func GetTxCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 // GetCmdSetCiphertext implements send ciphertext part transaction command.
 func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use: "ct-part [commonPubKey]",
+		Use:   "ct-part [commonPubKey]",
 		Short: "send random ciphertext part",
-		Args: cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
@@ -64,12 +65,12 @@ func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 			ctPart := types.CiphertextPart{ct, dlkProof, rkProof, sender}
 			ctPartJSON, err := types.NewCiphertextPartJSON(&ctPart)
 			if err != nil {
-				return  err
+				return err
 			}
 			msg := types.NewMsgSetCiphertextPart(*ctPartJSON, cliCtx.GetFromAddress())
 			err = msg.ValidateBasic()
 			if err != nil {
-				return  err
+				return err
 			}
 
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
@@ -80,9 +81,9 @@ func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 // GetCmdSetDecryptionShare implements send decryption share transaction command.
 func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use: "decrypt [privateKey] [ID]",
+		Use:   "decrypt [privateKey] [ID]",
 		Short: "Send a decryption share of the aggregated ciphertext",
-		Args: cobra.ExactArgs(2),
+		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
