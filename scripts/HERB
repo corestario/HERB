@@ -1,0 +1,47 @@
+#!/bin/bash
+user=$1
+commonkey=0452b4a6d7883102258a87539c41898cd1c78bcc27dd905d9111e8b066504ba31b160580530886a2200833c2281e10377dbb2007abc531959a23df365ffc16ee18
+stage="stageUnstarted"
+round=0
+while true
+do
+START=$(date +%s)
+currentround=$(hcli query herb current-round)
+echo "ct-part sending..."
+while !  hcli tx herb ct-part $commonkey -y --from $user  
+do
+sleep 0.05
+done 
+stage=$(hcli query herb stage)
+echo "next stage waiting..."
+while [ "$stage" != "stageDSCollecting" ]
+do
+sleep 0.05
+stage=$(hcli query herb stage)
+done
+echo "decryption share sending..."
+while !  hcli tx herb decrypt $2 $3 -y --from $user 
+do
+sleep 0.05
+if [ $(hcli query herb stage) = "stageCtCollecting" ] && [ $(hcli query herb current-round) -eq $(( $currentround + 1 )) ]
+then
+break
+fi
+done
+echo "end round waiting..."
+while [ $round -ne $(( $currentround + 1 )) ]
+do
+sleep 0.05
+round=$(hcli query herb current-round)
+done
+echo "The next round is:"
+hcli query herb current-round
+END=$(date +%s)
+DIFF=$(( $END - $START ))
+echo ""
+echo "The result is:"
+hcli query herb get-random $(($round-1))
+echo ""
+echo "It took $DIFF seconds"
+done
+
