@@ -101,7 +101,7 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 
 			var ctJSON elgamal.CiphertextJSON
 			cdc.MustUnmarshalJSON(ctPartBytes, &ctJSON)
-			aggregatedCt, err := ctJSON.Deserialize()
+			aggregatedCt, err := ctJSON.Deserialize(types.P256)
 			if err != nil {
 				return err
 			}

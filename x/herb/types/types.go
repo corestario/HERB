@@ -93,7 +93,7 @@ type CiphertextPartJSON struct {
 func NewCiphertextPartJSON(ciphertextPart *CiphertextPart) (*CiphertextPartJSON, sdk.Error) {
 	ctBuf := bytes.NewBuffer(nil)
 	ctEnc := gob.NewEncoder(ctBuf)
-	ctJSON, _ := elgamal.NewCiphertextJSON(&ciphertextPart.Ciphertext)
+	ctJSON, _ := elgamal.NewCiphertextJSON(&ciphertextPart.Ciphertext, P256)
 	if err := ctEnc.Encode(ctJSON); err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode ciphertext: %v", err))
 	}
@@ -115,7 +115,7 @@ func (ctJSON *CiphertextPartJSON) Deserialize() (*CiphertextPart, sdk.Error) {
 	if err := ciphertextJSONDec.Decode(&ciphertextjson); err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode ciphertext json : %v", err))
 	}
-	ciphertext, err := ciphertextjson.Deserialize()
+	ciphertext, err := ciphertextjson.Deserialize(P256)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode ciphertext: %v", err))
 	}

@@ -2,6 +2,7 @@ package herb
 
 import (
 	"encoding/binary"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
@@ -37,7 +38,7 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 func queryAggregatedCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
 	round, err := getRoundFromQuery(ctx, req, keeper)
 	if err != nil {
-		return  nil, err
+		return nil, err
 	}
 
 	aggregatedCt, err := keeper.GetAggregatedCiphertext(ctx, round)
@@ -45,7 +46,7 @@ func queryAggregatedCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([
 		return nil, err
 	}
 
-	ctJSON, err2 := elgamal.NewCiphertextJSON(aggregatedCt)
+	ctJSON, err2 := elgamal.NewCiphertextJSON(aggregatedCt, P256)
 	if err2 != nil {
 		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("coudn't get JSON ciphertext", err.Error()))
 	}
@@ -60,7 +61,7 @@ func queryAggregatedCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([
 func queryGetAllCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
 	round, err := getRoundFromQuery(ctx, req, keeper)
 	if err != nil {
-		return  nil, err
+		return nil, err
 	}
 
 	allCt, err := keeper.GetAllCiphertexts(ctx, round)
@@ -84,7 +85,7 @@ func queryGetAllCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byt
 func queryAllDescryptionShares(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
 	round, err := getRoundFromQuery(ctx, req, keeper)
 	if err != nil {
-		return  nil, err
+		return nil, err
 	}
 
 	allShares, err := keeper.GetAllDecryptionShares(ctx, round)
@@ -108,7 +109,7 @@ func queryAllDescryptionShares(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 func queryRandom(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
 	round, err := getRoundFromQuery(ctx, req, keeper)
 	if err != nil {
-		return  nil, err
+		return nil, err
 	}
 
 	randBytes, err := keeper.GetRandom(ctx, round)
@@ -122,7 +123,7 @@ func queryRandom(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte,
 func queryStage(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
 	round, err := getRoundFromQuery(ctx, req, keeper)
 	if err != nil {
-		return  nil, err
+		return nil, err
 	}
 
 	stage := keeper.GetStage(ctx, round)

@@ -1,14 +1,11 @@
 package elgamal
 
 import (
-	"bytes"
-	"encoding/base64"
-	"encoding/gob"
 	"fmt"
 
 	"go.dedis.ch/kyber/v3"
-	"go.dedis.ch/kyber/v3/group/nist"
 	"go.dedis.ch/kyber/v3/share"
+	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )
 
 //Ciphertext is usual ElGamal ciphertext C = (a, b)
@@ -62,42 +59,29 @@ type CiphertextJSON struct {
 	PointB string `json:"pointB"`
 }
 
-func NewCiphertextJSON(ciphertext *Ciphertext) (*CiphertextJSON, error) {
-	aBuf := bytes.NewBuffer(nil)
-	aEnc := gob.NewEncoder(aBuf)
-	if err := aEnc.Encode(ciphertext.PointA); err != nil {
+func NewCiphertextJSON(ciphertext *Ciphertext, group kyber.Group) (*CiphertextJSON, error) {
+	aJSON, err := kyberenc.PointToStringHex(group, ciphertext.PointA)
+	if err != nil {
 		return nil, fmt.Errorf("failed to encode Point A: %v", err)
 	}
-
-	bBuf := bytes.NewBuffer(nil)
-	bEnc := gob.NewEncoder(bBuf)
-	if err := bEnc.Encode(ciphertext.PointB); err != nil {
+	bJSON, err := kyberenc.PointToStringHex(group, ciphertext.PointB)
+	if err != nil {
 		return nil, fmt.Errorf("failed to encode Point B: %v", err)
 	}
 	return &CiphertextJSON{
-		PointA: base64.StdEncoding.EncodeToString(aBuf.Bytes()),
-		PointB: base64.StdEncoding.EncodeToString(bBuf.Bytes()),
+		PointA: aJSON,
+		PointB: bJSON,
 	}, nil
 }
 
-func (ctJSON *CiphertextJSON) Deserialize() (*Ciphertext, error) {
-	ABytes, err := base64.StdEncoding.DecodeString(ctJSON.PointA)
+func (ctJSON *CiphertextJSON) Deserialize(group kyber.Group) (*Ciphertext, error) {
+	pointA, err := kyberenc.StringHexToPoint(group, ctJSON.PointA)
 	if err != nil {
-		return nil, fmt.Errorf("failed to base64-decode point A: %v", err)
-	}
-	ADec := gob.NewDecoder(bytes.NewBuffer(ABytes))
-	pointA := nist.NewBlakeSHA256P256().Point().Base()
-	if err := ADec.Decode(&pointA); err != nil {
 		return nil, fmt.Errorf("failed to decode point A : %v", err)
 	}
-	BBytes, err := base64.StdEncoding.DecodeString(ctJSON.PointB)
+	pointB, err := kyberenc.StringHexToPoint(group, ctJSON.PointB)
 	if err != nil {
-		return nil, fmt.Errorf("failed to base64-decode point B: %v", err)
-	}
-	BDec := gob.NewDecoder(bytes.NewBuffer(BBytes))
-	pointB := nist.NewBlakeSHA256P256().Point().Base()
-	if err := BDec.Decode(&pointB); err != nil {
-		return nil, fmt.Errorf("failed to decode point B : %v", err)
+		return nil, fmt.Errorf("failed to decode point A : %v", err)
 	}
 	return &Ciphertext{
 		PointA: pointA,

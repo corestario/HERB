@@ -267,7 +267,7 @@ func (k *Keeper) GetAggregatedCiphertext(ctx sdk.Context, round uint64) (*elgama
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal aggregated ciphertext: %v", err))
 	}
-	newCt, err := newaCSer.Deserialize()
+	newCt, err := newaCSer.Deserialize(P256)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize aggregated ciphertext: %v", err))
 	}
@@ -346,7 +346,7 @@ func (k *Keeper) computeAggregatedCiphertext(ctx sdk.Context, round uint64) sdk.
 		ctArray = append(ctArray, ct.Ciphertext)
 	}
 	aggregatedCiphertext := elgamal.AggregateCiphertext(k.group, ctArray)
-	aCSer, err1 := elgamal.NewCiphertextJSON(&aggregatedCiphertext)
+	aCSer, err1 := elgamal.NewCiphertextJSON(&aggregatedCiphertext, P256)
 	if err1 != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize aggregated ciphertext: %v", err1))
 	}
