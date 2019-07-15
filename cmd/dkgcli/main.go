@@ -6,6 +6,9 @@ import (
 	"io/ioutil"
 	"strconv"
 
+	"github.com/tendermint/tendermint/libs/cli"
+
+	app "github.com/dgamingfoundation/HERB"
 	"github.com/dgamingfoundation/HERB/x/herb"
 	"github.com/dgamingfoundation/HERB/dkg"
 	"github.com/spf13/cobra"
@@ -23,6 +26,13 @@ func main() {
 	}
 
 	rootCmd.AddCommand(generateKeyFile())
+
+	// prepare and add flags
+	executor := cli.PrepareBaseCmd(rootCmd, "HERB", app.DefaultNodeHome)
+	err := executor.Execute()
+	if err != nil {
+		panic(err)
+	}
 }
 
 func generateKeyFile() *cobra.Command {
@@ -97,7 +107,7 @@ type keyHolder struct {
 }
 
 type keyHolderJSON struct {
-	ID string `json:"id"`
+	ID string `json:id`
 	PrivateKeyHex string `json:"private_key"`
 	VerificationKeyHex string `json:"verification_key"`
 }
