@@ -6,23 +6,25 @@ import (
 
 const (
 	ModuleName = types.ModuleName
-	RouterKey = types.RouterKey
-	StoreKey = types.StoreKey
+	RouterKey  = types.RouterKey
+	StoreKey   = types.StoreKey
+	CtStoreKey = types.CtStoreKey
+	DsStoreKey = types.DsStoreKey
 )
 
 var (
 	NewMsgSetCiphertextPart = types.NewMsgSetCiphertextPart
-	ModuleCdc = types.ModuleCdc
-	RegisterCodec = types.RegisterCodec
-	P256 = types.P256
+	ModuleCdc               = types.ModuleCdc
+	RegisterCodec           = types.RegisterCodec
+	P256                    = types.P256
 )
 
 type (
-	MsgSetCiphertextPart = types.MsgSetCiphertextPart
+	MsgSetCiphertextPart  = types.MsgSetCiphertextPart
 	MsgSetDecryptionShare = types.MsgSetDecryptionShare
-	CiphertextPart = types.CiphertextPart
-	CiphertextPartJSON = types.CiphertextPartJSON
-	DecryptionShare = types.DecryptionShare
-	DecryptionShareJSON = types.DecryptionShareJSON
-	GenesisState = types.GenesisState
+	CiphertextPart        = types.CiphertextPart
+	CiphertextPartJSON    = types.CiphertextPartJSON
+	DecryptionShare       = types.DecryptionShare
+	DecryptionShareJSON   = types.DecryptionShareJSON
+	GenesisState          = types.GenesisState
 )

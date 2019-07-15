@@ -15,19 +15,21 @@ import (
 
 // Keeper maintains the link to data storage and exposes methods for the HERB protocol actions
 type Keeper struct {
-	storeKey sdk.StoreKey
-	group    kyber.Group
-
-	cdc *codec.Codec
+	storeKey              sdk.StoreKey
+	group                 kyber.Group
+	storeCiphertextParts  *sdk.KVStoreKey
+	storeDecryptionShares *sdk.KVStoreKey
+	cdc                   *codec.Codec
 }
 
 // NewKeeper creates new instances of the HERB Keeper
-func NewKeeper(storeKey sdk.StoreKey, cdc *codec.Codec) Keeper {
+func NewKeeper(storeKey sdk.StoreKey, storeCiphertextParts *sdk.KVStoreKey, storeDecryptionShares *sdk.KVStoreKey, cdc *codec.Codec) Keeper {
 	return Keeper{
-		storeKey: storeKey,
-		group:    P256,
-
-		cdc: cdc,
+		storeKey:              storeKey,
+		group:                 P256,
+		storeCiphertextParts:  storeCiphertextParts,
+		storeDecryptionShares: storeDecryptionShares,
+		cdc:                   cdc,
 	}
 }
 
@@ -40,7 +42,6 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	if err != nil {
 		return sdk.ErrUnknownRequest("DLK proof isn't correct")
 	}
-	store := ctx.KVStore(k.storeKey)
 	round := k.CurrentRound(ctx)
 	stage := k.GetStage(ctx, round)
 	pubKey, err2 := k.GetCommonPublicKey(ctx)
@@ -60,11 +61,12 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	if stage != stageCtCollecting {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("round is not on the ciphertext collecting stage. Current stage: %v", stage))
 	}
-
-	keyBytesCt := createKeyBytesByRound(round, keyCiphertextParts)
+	ctStore := ctx.KVStore(k.storeCiphertextParts)
+	keyBytesCt := make([]byte, 8)
+	binary.LittleEndian.PutUint64(keyBytesCt, round)
 	ctMap := make(map[string]*types.CiphertextPart)
-	if store.Has(keyBytesCt) {
-		ctMapBytes := store.Get(keyBytesCt)
+	if ctStore.Has(keyBytesCt) {
+		ctMapBytes := ctStore.Get(keyBytesCt)
 		var ctMapJSON map[string]*types.CiphertextPartJSON
 		err = k.cdc.UnmarshalJSON(ctMapBytes, &ctMapJSON)
 		if err != nil {
@@ -88,7 +90,7 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal map for the store: %v", err2))
 	}
-	store.Set(keyBytesCt, newCtMapBytes)
+	ctStore.Set(keyBytesCt, newCtMapBytes)
 
 	t, err2 := k.GetThresholdParts(ctx)
 	if err2 != nil {
@@ -138,10 +140,12 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	if err2 != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("DLE proof isn't correct: %v", err2))
 	}
-	keyBytes := createKeyBytesByRound(round, keyDecryptionShares)
+	dsStore := ctx.KVStore(k.storeDecryptionShares)
+	keyBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(keyBytes, round)
 	dsMap := make(map[string]*types.DecryptionShare)
-	if store.Has(keyBytes) {
-		dsMapBytes := store.Get(keyBytes)
+	if dsStore.Has(keyBytes) {
+		dsMapBytes := dsStore.Get(keyBytes)
 		var dsMapJSON map[string]*types.DecryptionShareJSON
 		err2 = k.cdc.UnmarshalJSON(dsMapBytes, &dsMapJSON)
 		if err2 != nil {
@@ -166,13 +170,12 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	if err2 != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal map for the store: %v", err2))
 	}
-	store.Set(keyBytes, newDsMapBytes)
+	dsStore.Set(keyBytes, newDsMapBytes)
 
 	t, err := k.GetThresholdDecryption(ctx)
 	if err != nil {
 		return err
 	}
-
 
 	if uint64(len(dsMap)) >= t {
 		err = k.computeRandomResult(ctx, round)
@@ -217,20 +220,21 @@ func (k *Keeper) increaseCurrentRound(ctx sdk.Context) {
 
 // GetAllCiphertexts returns all ciphertext parts for the given round as go-slice
 func (k *Keeper) GetAllCiphertexts(ctx sdk.Context, round uint64) (map[string]*types.CiphertextPart, sdk.Error) {
-	store := ctx.KVStore(k.storeKey)
+	ctStore := ctx.KVStore(k.storeCiphertextParts)
 	stage := k.GetStage(ctx, round)
 
 	if stage == stageUnstarted {
 		return nil, sdk.ErrUnknownRequest("round hasn't started yet")
 	}
 
-	keyBytes := createKeyBytesByRound(round, keyCiphertextParts)
+	keyBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(keyBytes, round)
 
 	//if store doesn't have such key -> no cts was added
-	if !store.Has(keyBytes) {
+	if !ctStore.Has(keyBytes) {
 		return map[string]*types.CiphertextPart{}, nil
 	}
-	ctMapBytes := store.Get(keyBytes)
+	ctMapBytes := ctStore.Get(keyBytes)
 	var ctMapJSON map[string]*types.CiphertextPartJSON
 	err1 := k.cdc.UnmarshalJSON(ctMapBytes, &ctMapJSON)
 	if err1 != nil {
@@ -263,7 +267,7 @@ func (k *Keeper) GetAggregatedCiphertext(ctx sdk.Context, round uint64) (*elgama
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal aggregated ciphertext: %v", err))
 	}
-	newCt, err := newaCSer.Deserialize()
+	newCt, err := newaCSer.Deserialize(P256)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize aggregated ciphertext: %v", err))
 	}
@@ -277,12 +281,13 @@ func (k *Keeper) GetAllDecryptionShares(ctx sdk.Context, round uint64) (map[stri
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("wrong round stage: %v. round: %v", stage, round))
 	}
 
-	store := ctx.KVStore(k.storeKey)
-	keyBytes := createKeyBytesByRound(round, keyDecryptionShares)
-	if !store.Has(keyBytes) {
+	dsStore := ctx.KVStore(k.storeDecryptionShares)
+	keyBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(keyBytes, round)
+	if !dsStore.Has(keyBytes) {
 		return map[string]*types.DecryptionShare{}, nil
 	}
-	dsMapBytes := store.Get(keyBytes)
+	dsMapBytes := dsStore.Get(keyBytes)
 	var dsMapJSON map[string]*types.DecryptionShareJSON
 	err1 := k.cdc.UnmarshalJSON(dsMapBytes, &dsMapJSON)
 	if err1 != nil {
@@ -341,7 +346,7 @@ func (k *Keeper) computeAggregatedCiphertext(ctx sdk.Context, round uint64) sdk.
 		ctArray = append(ctArray, ct.Ciphertext)
 	}
 	aggregatedCiphertext := elgamal.AggregateCiphertext(k.group, ctArray)
-	aCSer, err1 := elgamal.NewCiphertextJSON(&aggregatedCiphertext)
+	aCSer, err1 := elgamal.NewCiphertextJSON(&aggregatedCiphertext, P256)
 	if err1 != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize aggregated ciphertext: %v", err1))
 	}

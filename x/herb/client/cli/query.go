@@ -70,7 +70,7 @@ func GetCmdAggregatedCiphertext(queryRoute string, cdc *codec.Codec) *cobra.Comm
 			}
 			var outJSON elgamal.CiphertextJSON
 			cdc.MustUnmarshalJSON(res, &outJSON)
-			out, err := outJSON.Deserialize()
+			out, err := outJSON.Deserialize(types.P256)
 			if err != nil {
 				return err
 			}
@@ -128,10 +128,10 @@ func GetCmdAllCiphertexts(queryRoute string, cdc *codec.Codec) *cobra.Command {
 
 // GetCmdAllDecryptionShares implements the query of all decryption shares command.
 func GetCmdAllDecryptionShares(queryRoute string, cdc *codec.Codec) *cobra.Command {
-	return  &cobra.Command {
-		Use: "all-shares [round]",
+	return &cobra.Command{
+		Use:   "all-shares [round]",
 		Short: "Queries all decryption shares for the given round",
-		Args: cobra.MaximumNArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
@@ -174,10 +174,10 @@ func GetCmdAllDecryptionShares(queryRoute string, cdc *codec.Codec) *cobra.Comma
 
 // GetCmdRandom implements the query of the random number result.
 func GetCmdRandom(queryRoute string, cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command {
-		Use: "get-random [round]",
+	return &cobra.Command{
+		Use:   "get-random [round]",
 		Short: "Queries the random number generation result",
-		Args: cobra.MaximumNArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
@@ -212,10 +212,10 @@ func GetCmdRandom(queryRoute string, cdc *codec.Codec) *cobra.Command {
 
 // GetCmdKeyHoldersNumber is required for the testing purposes
 func GetCmdKeyHoldersNumber(queryRoute string, cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command {
-		Use: "kh-number",
+	return &cobra.Command{
+		Use:   "kh-number",
 		Short: "returns key holders number",
-		Args: cobra.NoArgs,
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
@@ -234,10 +234,10 @@ func GetCmdKeyHoldersNumber(queryRoute string, cdc *codec.Codec) *cobra.Command 
 }
 
 func GetCmdCurrentRound(queryRoute string, cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command {
-		Use: "current-round",
+	return &cobra.Command{
+		Use:   "current-round",
 		Short: "returns current generation round",
-		Args: cobra.NoArgs,
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
@@ -256,10 +256,10 @@ func GetCmdCurrentRound(queryRoute string, cdc *codec.Codec) *cobra.Command {
 }
 
 func GetCmdRoundStage(queryRoute string, cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command {
-		Use: "stage [round]",
+	return &cobra.Command{
+		Use:   "stage [round]",
 		Short: "returns current generation round and it's stage",
-		Args: cobra.MaximumNArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
