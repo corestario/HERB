@@ -25,17 +25,17 @@ func main() {
 		Short: "Distributed Key Generation simulator for HERB",
 	}
 
-	rootCmd.AddCommand(generateKeyFile())
+	rootCmd.AddCommand(generateKeyFile(app.DefaultDKGHome))
 
 	// prepare and add flags
-	executor := cli.PrepareBaseCmd(rootCmd, "HERB", app.DefaultNodeHome)
+	executor := cli.PrepareBaseCmd(rootCmd, "HERB", app.DefaultDKGHome)
 	err := executor.Execute()
 	if err != nil {
 		panic(err)
 	}
 }
 
-func generateKeyFile() *cobra.Command {
+func generateKeyFile(defaultDKGHome string) *cobra.Command {
 	return &cobra.Command{
 		Use: "gen-key-file [t] [n]",
 		Short: "generates JSON key file which contains keys for (t, n)-threshold cryptosystem",
@@ -88,7 +88,6 @@ func generateKeyFile() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("can't write json-file: %v", err)
 			}
-
 
 			return nil
 		},
