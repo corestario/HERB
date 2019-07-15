@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strconv"
 
 	"github.com/tendermint/tendermint/libs/cli"
@@ -78,15 +78,31 @@ func generateKeyFile(defaultDKGHome string) *cobra.Command {
 				PartialKeys: khJSON,
 			}
 
-			file, err := json.Marshal(res)
+			resJSON, err := json.Marshal(res)
 			if err != nil {
 				return fmt.Errorf("results marshalling failed: %v", err)
 			}
 
-			err = ioutil.WriteFile("keys.json", file, 0644)
-
+			os.Mkdir(defaultDKGHome, 0777)
+			path := defaultDKGHome + "/keys.json"
+			file, err := os.Create(path)
 			if err != nil {
-				return fmt.Errorf("can't write json-file: %v", err)
+				return fmt.Errorf("creating file failed: %v", err)
+			}
+			defer file.Close()
+			file, err = os.OpenFile(path, os.O_RDWR, 0644)
+			if err != nil {
+				return fmt.Errorf("opening file failed: %v", err)
+			}
+
+			_, err = file.Write(resJSON)
+			if err != nil {
+				return fmt.Errorf("writing to the file failed: %v", err)
+			}
+
+			err = file.Sync()
+			if err != nil {
+				return fmt.Errorf("writing to the file failed: %v", err)
 			}
 
 			return nil
