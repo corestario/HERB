@@ -3,6 +3,7 @@ all: install
 install:
 		go install $(BUILD_FLAGS) ./cmd/hd
 		go install $(BUILD_FLAGS) ./cmd/hcli
+		go install $(BUILD_FLAGS) ./cmd/dkgcli
 
 go.sum: go.mod
 		@echo "--> Ensure dependencies have not been modified"
