@@ -222,15 +222,16 @@ func (k *Keeper) increaseCurrentRound(ctx sdk.Context) {
 
 // GetAllCiphertexts returns all ciphertext parts for the given round as go-slice
 func (k *Keeper) GetAllCiphertexts(ctx sdk.Context, round uint64) (map[string]*types.CiphertextPart, sdk.Error) {
-	ctStore := ctx.KVStore(k.storeCiphertextParts)
+	ctStore := ctx.KVStore(k.storeKey)
 	stage := k.GetStage(ctx, round)
 
 	if stage == stageUnstarted {
 		return nil, sdk.ErrUnknownRequest("round hasn't started yet")
 	}
 
-	keyBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(keyBytes, round)
+	//keyBytes := make([]byte, 8)
+	//binary.LittleEndian.PutUint64(keyBytes, round)
+	keyBytes := createKeyBytesByRound(round, keyCiphertextParts)
 
 	//if store doesn't have such key -> no cts was added
 	if !ctStore.Has(keyBytes) {
@@ -264,12 +265,12 @@ func (k *Keeper) GetAggregatedCiphertext(ctx sdk.Context, round uint64) (*elgama
 	}
 
 	result := store.Get(keyBytes)
-	var newaCSer *elgamal.CiphertextJSON
-	err := k.cdc.UnmarshalJSON(result, &newaCSer)
+	var newaCtSer *elgamal.CiphertextJSON
+	err := k.cdc.UnmarshalJSON(result, &newaCtSer)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal aggregated ciphertext: %v", err))
 	}
-	newCt, err := newaCSer.Deserialize(P256)
+	newCt, err := newaCtSer.Deserialize(P256)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize aggregated ciphertext: %v", err))
 	}
@@ -283,9 +284,11 @@ func (k *Keeper) GetAllDecryptionShares(ctx sdk.Context, round uint64) (map[stri
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("wrong round stage: %v. round: %v", stage, round))
 	}
 
-	dsStore := ctx.KVStore(k.storeDecryptionShares)
-	keyBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(keyBytes, round)
+	//dsStore := ctx.KVStore(k.storeDecryptionShares)
+	//keyBytes := make([]byte, 8)
+	//binary.LittleEndian.PutUint64(keyBytes, round)
+	dsStore := ctx.KVStore(k.storeKey)
+	keyBytes := createKeyBytesByRound(round, keyDecryptionShares)
 	if !dsStore.Has(keyBytes) {
 		return map[string]*types.DecryptionShare{}, nil
 	}
