@@ -3,6 +3,7 @@ package herb
 import (
 	"encoding/binary"
 	"fmt"
+	"os"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
@@ -101,6 +102,7 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	if uint64(len(ctMap)) >= t {
 		err2 = k.computeAggregatedCiphertext(ctx, round)
 		if err2 != nil {
+			k.logError(err2)
 			return err2
 		}
 		k.setStage(ctx, round, stageDSCollecting)
@@ -121,24 +123,29 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	}
 	ACiphertext, err := k.GetAggregatedCiphertext(ctx, round)
 	if err != nil {
+		k.logError(sdk.ErrUnknownRequest(fmt.Sprintf("can't get aggregated ciphertext: %v", err)))
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't get aggregated ciphertext: %v", err))
 	}
 	keyVKBytes := []byte(keyVerificationKeys)
 	if !store.Has(keyVKBytes) {
+		k.logError(sdk.ErrUnknownRequest("Verification keys map isn't exist"))
 		return sdk.ErrUnknownRequest("Verification keys map isn't exist")
 	}
 	VKBytes := store.Get(keyVKBytes)
 	VKStr := make(map[string]*types.VerificationKeyJSON)
 	err2 := k.cdc.UnmarshalJSON(VKBytes, &VKStr)
 	if err2 != nil {
+		k.logError(sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal map from the store: %v", err2)))
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal map from the store: %v", err2))
 	}
 	vkMap, err := types.VerificationKeyMapDeserialize(VKStr)
 	if err != nil {
+		k.logError(err)
 		return err
 	}
 	err2 = elgamal.DLEVerify(P256, ds.DLEproof, k.group.Point().Base(), ACiphertext.PointA, vkMap[ds.KeyHolder.String()].VK, ds.DecShare.V)
 	if err2 != nil {
+		k.logError(sdk.ErrUnknownRequest(fmt.Sprintf("DLE proof isn't correct: %v", err2)))
 		return sdk.ErrUnknownRequest(fmt.Sprintf("DLE proof isn't correct: %v", err2))
 	}
 	//dsStore := ctx.KVStore(k.storeDecryptionShares)
@@ -151,37 +158,44 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 		var dsMapJSON map[string]*types.DecryptionShareJSON
 		err2 = k.cdc.UnmarshalJSON(dsMapBytes, &dsMapJSON)
 		if err2 != nil {
+			k.logError(sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal map from the store: %v", err2)))
 			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal map from the store: %v", err2))
 		}
 		dsMap, err = types.DecryptionSharesMapDeserialize(dsMapJSON)
 		if err != nil {
+			k.logError(err)
 			return err
 		}
 	}
 
 	if _, ok := dsMap[ds.KeyHolder.String()]; ok {
+		k.logError(sdk.ErrInvalidAddress("key holder has already send a decryption share"))
 		return sdk.ErrInvalidAddress("key holder has already send a decryption share")
 	}
 
 	dsMap[ds.KeyHolder.String()] = ds
 	newDsMapJSON, err := types.DecryptionSharesMapSerialize(dsMap)
 	if err != nil {
+		k.logError(err)
 		return err
 	}
 	newDsMapBytes, err2 := k.cdc.MarshalJSON(newDsMapJSON)
 	if err2 != nil {
+		k.logError(sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal map for the store: %v", err2)))
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal map for the store: %v", err2))
 	}
 	store.Set(keyBytes, newDsMapBytes)
 
 	t, err := k.GetThresholdDecryption(ctx)
 	if err != nil {
+		k.logError(err)
 		return err
 	}
 
 	if uint64(len(dsMap)) >= t {
 		err = k.computeRandomResult(ctx, round)
 		if err != nil {
+			k.logError(err)
 			return err
 		}
 		k.setStage(ctx, round, stageCompleted)
@@ -409,4 +423,20 @@ func (k *Keeper) forceCurrentRound(ctx sdk.Context, round uint64) {
 	roundBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(roundBytes, round)
 	store.Set([]byte(keyCurrentRound), roundBytes)
+}
+
+func (k *Keeper) logError(logErr sdk.Error) {
+	// detect if file exists
+	path := "log.txt"
+	var _, err = os.Stat(path)
+
+	// create file if not exists
+	if os.IsNotExist(err) {
+		var file, _ = os.Create(path)
+		defer file.Close()
+	}
+
+	file, err := os.OpenFile(path, os.O_RDWR, 0644)
+	file.Write([]byte(logErr.Error()))
+	err = file.Sync()
 }
