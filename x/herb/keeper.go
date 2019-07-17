@@ -61,10 +61,11 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	if stage != stageCtCollecting {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("round is not on the ciphertext collecting stage. Current stage: %v", stage))
 	}
-	ctStore := ctx.KVStore(k.storeCiphertextParts)
-	keyBytesCt := make([]byte, 8)
-	binary.LittleEndian.PutUint64(keyBytesCt, round)
+	ctStore := ctx.KVStore(k.storeKey)
+	//keyBytesCt := make([]byte, 8)
+	//binary.LittleEndian.PutUint64(keyBytesCt, round)
 	ctMap := make(map[string]*types.CiphertextPart)
+	keyBytesCt := createKeyBytesByRound(round, keyCiphertextParts)
 	if ctStore.Has(keyBytesCt) {
 		ctMapBytes := ctStore.Get(keyBytesCt)
 		var ctMapJSON map[string]*types.CiphertextPartJSON
@@ -140,12 +141,13 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	if err2 != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("DLE proof isn't correct: %v", err2))
 	}
-	dsStore := ctx.KVStore(k.storeDecryptionShares)
-	keyBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(keyBytes, round)
+	//dsStore := ctx.KVStore(k.storeDecryptionShares)
+	//keyBytes := make([]byte, 8)
+	//binary.LittleEndian.PutUint64(keyBytes, round)
+	keyBytes := createKeyBytesByRound(round, keyDecryptionShares)
 	dsMap := make(map[string]*types.DecryptionShare)
-	if dsStore.Has(keyBytes) {
-		dsMapBytes := dsStore.Get(keyBytes)
+	if store.Has(keyBytes) {
+		dsMapBytes := store.Get(keyBytes)
 		var dsMapJSON map[string]*types.DecryptionShareJSON
 		err2 = k.cdc.UnmarshalJSON(dsMapBytes, &dsMapJSON)
 		if err2 != nil {
@@ -170,7 +172,7 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	if err2 != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal map for the store: %v", err2))
 	}
-	dsStore.Set(keyBytes, newDsMapBytes)
+	store.Set(keyBytes, newDsMapBytes)
 
 	t, err := k.GetThresholdDecryption(ctx)
 	if err != nil {
