@@ -115,7 +115,7 @@ func AddKeyHolderCmd(ctx *server.Context, cdc *codec.Codec,
 				}
 			}
 
-			keyHolders = append(keyHolders, types.VerificationKeyJSON{KeyHolderID: int(id), VK: args[2]})
+			keyHolders = append(keyHolders, types.VerificationKeyJSON{KeyHolderID: int(id), VK: args[2], Sender: addr})
 			genesisState.KeyHolders = keyHolders
 
 			newGenesisState := types.ModuleCdc.MustMarshalJSON(genesisState)
