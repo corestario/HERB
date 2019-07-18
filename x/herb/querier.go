@@ -48,12 +48,12 @@ func queryAggregatedCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([
 
 	ctJSON, err2 := elgamal.NewCiphertextJSON(aggregatedCt, P256)
 	if err2 != nil {
-		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("coudn't get JSON ciphertext", err.Error()))
+		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("coudn't get JSON ciphertext", err2.Error()))
 	}
 
 	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, ctJSON)
 	if err2 != nil {
-		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err2.Error()))
 	}
 
 	return bz, nil
@@ -76,7 +76,7 @@ func queryGetAllCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byt
 
 	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, allCtJSON)
 	if err2 != nil {
-		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err2.Error()))
 	}
 
 	return bz, nil
@@ -100,7 +100,7 @@ func queryAllDescryptionShares(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 
 	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, allSharesJSON)
 	if err2 != nil {
-		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err.Error()))
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err2.Error()))
 	}
 
 	return bz, nil
