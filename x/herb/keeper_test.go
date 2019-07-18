@@ -108,10 +108,10 @@ func TestSetGetCiphertext(t *testing.T) {
 			t.Errorf("failed get all ciphertexts: %v", err)
 		}
 		for i := 0; i < l; i++ {
-			if _, ok := newCiphertexts[ciphertextParts[i].EntropyProvider.String()]; !ok {
+			if newCiphertexts[i].EntropyProvider.String() != ciphertextParts[i].EntropyProvider.String() {
 				t.Errorf("new map doesn't contains original entropy provider, round: %v, expected: %v", round, ciphertextParts[i].EntropyProvider.String())
 			}
-			if !newCiphertexts[ciphertextParts[i].EntropyProvider.String()].Ciphertext.Equal(ciphertextParts[i].Ciphertext) {
+			if !newCiphertexts[i].Ciphertext.Equal(ciphertextParts[i].Ciphertext) {
 				t.Errorf("ciphertexts don't equal, round: %v", round)
 			}
 		}
@@ -221,28 +221,23 @@ func SetKeyHolders(ctx sdk.Context, k Keeper, adds []sdk.AccAddress) error {
 	id := []int{0, 1, 2}
 	VK := make([]kyber.Point, len(id))
 	var err error
-	MapVerKeys := make(map[string]*types.VerificationKey)
+	ListVerKeys := make([]*types.VerificationKey, len(id))
 	for i := 0; i < len(id); i++ {
 		VK[i], err = kyberenc.StringHexToPoint(k.group, VKstr[i])
 		if err != nil {
 			return sdk.ErrUnknownRequest("Can't decode point from string")
 		}
-		MapVerKeys[adds[i].String()] = &types.VerificationKey{VK[i], id[i]}
+		ListVerKeys[i] = &types.VerificationKey{VK[i], id[i], adds[i]}
 	}
 
-	MapVerKeysJSON, err := types.VerificationKeyMapSerialize(MapVerKeys)
+	ListVerKeysJSON, err := types.VerificationKeyArraySerialize(ListVerKeys)
 	if err != nil {
 		return sdk.ErrUnknownRequest("Can't serialize map")
 	}
-	MapVerKeysBytes, err4 := k.cdc.MarshalJSON(MapVerKeysJSON)
-	if err4 != nil {
-		return sdk.ErrUnknownRequest("Can't marschal map")
+	err2 := k.SetVerificationKeys(ctx, ListVerKeysJSON)
+	if err2 != nil {
+		return err2
 	}
-	keyVerKeysBytes := []byte(keyVerificationKeys)
-	if store.Has(keyVerKeysBytes) {
-		return sdk.ErrUnknownRequest("Verification keys already exist")
-	}
-	store.Set(keyVerKeysBytes, MapVerKeysBytes)
 	return nil
 }
 
@@ -270,22 +265,20 @@ func TestHERB(t *testing.T) {
 	if !store.Has(keyVerKeysBytes) {
 		t.Errorf("Verification keys don't exist")
 	}
-	VerKeysBytes := store.Get(keyVerKeysBytes)
-	VerKeysJSON := make(map[string]*types.VerificationKeyJSON)
-	err1 := keeper.cdc.UnmarshalJSON(VerKeysBytes, &VerKeysJSON)
-	if err1 != nil {
-		t.Errorf("can't unmarshal verification keys: %v", err1)
+	VerKeysJSON, err := keeper.GetVerificationKeys(ctx)
+	if err != nil {
+		t.Errorf("can't get verification keys: %v", err)
 	}
-	Verkeys, err := types.VerificationKeyMapDeserialize(VerKeysJSON)
+	Verkeys, err := types.VerificationKeyArrayDeserialize(VerKeysJSON)
 	if err != nil {
 		t.Errorf("can't decode verification keys")
 	}
-	partkeys := make([]kyber.Scalar, l)
+	partKeys := make([]kyber.Scalar, l)
 	pk := []string{"96dd785ef52a85b516f3358fb317572b67f743a97d0c2a164660d134f7af6466",
 		"ec0d090634508f2633381696dcd628567d51cee08b73a360e461e49b4c773130",
 		"413c99ae737698964f7cf79e0694f981d5c55f69f2c37e268ea92d3ea4dbd8a9"}
 	for i := 0; i < l; i++ {
-		partkeys[i], err = kyberenc.StringHexToScalar(keeper.group, pk[i])
+		partKeys[i], err = kyberenc.StringHexToScalar(keeper.group, pk[i])
 		if err != nil {
 			t.Errorf("can't decode scalar from string ")
 		}
@@ -319,16 +312,23 @@ func TestHERB(t *testing.T) {
 			t.Errorf("failed get all ciphertexts: %v", err)
 		}
 		for i := 0; i < l; i++ {
-			if _, ok := newCiphertexts[ciphertextParts[i].EntropyProvider.String()]; !ok {
-				t.Errorf("new map doesn't contains original entropy provider, round: %v, expected: %v", round, ciphertextParts[i].EntropyProvider.String())
+			providerFound := false
+			originalProvider := ciphertextParts[i].EntropyProvider
+			for _, nCt := range newCiphertexts {
+				if nCt.EntropyProvider.Equals(originalProvider) {
+					providerFound = true
+				}
 			}
-			if !newCiphertexts[ciphertextParts[i].EntropyProvider.String()].Ciphertext.Equal(ciphertextParts[i].Ciphertext) {
+			if !providerFound {
+				t.Errorf("new slice doesn't contains original entropy provider, round: %v, expected: %v", round, ciphertextParts[i].EntropyProvider.String())
+			}
+			if !newCiphertexts[i].Ciphertext.Equal(ciphertextParts[i].Ciphertext) {
 				t.Errorf("ciphertexts don't equal, round: %v", round)
 			}
-			if !bytes.Equal(newCiphertexts[ciphertextParts[i].EntropyProvider.String()].DLKproof, ciphertextParts[i].DLKproof) {
+			if !bytes.Equal(newCiphertexts[i].DLKproof, ciphertextParts[i].DLKproof) {
 				t.Errorf("DLKproofs don't equal , round  %v", round)
 			}
-			if !bytes.Equal(newCiphertexts[ciphertextParts[i].EntropyProvider.String()].RKproof, ciphertextParts[i].RKproof) {
+			if !bytes.Equal(newCiphertexts[i].RKproof, ciphertextParts[i].RKproof) {
 				t.Errorf("DLKproofs don't equal , round  %v", round)
 			}
 		}
@@ -342,10 +342,10 @@ func TestHERB(t *testing.T) {
 		}
 		keeper.forceRoundStage(ctx, uint64(round), stageDSCollecting)
 		for i := 0; i < l; i++ {
-			ds, dle, err := elgamal.CreateDecShare(P256, ACiphertext, partkeys[i])
-			decShare := types.DecryptionShare{share.PubShare{I: Verkeys[userAddrs[i].String()].KeyHolder, V: ds}, dle, userAddrs[i]}
+			ds, dle, err := elgamal.CreateDecShare(P256, ACiphertext, partKeys[i])
+			decShare := types.DecryptionShare{share.PubShare{I: Verkeys[i].KeyHolder, V: ds}, dle, userAddrs[i]}
 			decryptionShares = append(decryptionShares, decShare)
-			dshares = append(dshares, &share.PubShare{I: Verkeys[userAddrs[i].String()].KeyHolder, V: ds})
+			dshares = append(dshares, &share.PubShare{I: Verkeys[i].KeyHolder, V: ds})
 			err = keeper.SetDecryptionShare(ctx, &decShare)
 			if err != nil {
 				t.Errorf("Can't set decryption shares %v", err)
@@ -356,16 +356,23 @@ func TestHERB(t *testing.T) {
 			t.Errorf("Can't get all decryption shares %v", err)
 		}
 		for i := 0; i < l; i++ {
-			if _, ok := newDecryptionShares[decryptionShares[i].KeyHolder.String()]; !ok {
+			holderFound := false
+			originalHolder := decryptionShares[i].KeyHolder
+			for _, ds := range newDecryptionShares {
+				if ds.KeyHolder.Equals(originalHolder) {
+					holderFound = true
+				}
+			}
+			if !holderFound {
 				t.Errorf("new map doesn't contains original key holder, round: %v", round)
 			}
-			if !newDecryptionShares[decryptionShares[i].KeyHolder.String()].DecShare.V.Equal(decryptionShares[i].DecShare.V) {
+			if !newDecryptionShares[i].DecShare.V.Equal(decryptionShares[i].DecShare.V) {
 				t.Errorf("ciphertexts don't equal, round: %v", round)
 			}
-			if !newDecryptionShares[decryptionShares[i].KeyHolder.String()].DLEproof.C.Equal(decryptionShares[i].DLEproof.C) ||
-				!newDecryptionShares[decryptionShares[i].KeyHolder.String()].DLEproof.R.Equal(decryptionShares[i].DLEproof.R) ||
-				!newDecryptionShares[decryptionShares[i].KeyHolder.String()].DLEproof.VG.Equal(decryptionShares[i].DLEproof.VG) ||
-				!newDecryptionShares[decryptionShares[i].KeyHolder.String()].DLEproof.VH.Equal(decryptionShares[i].DLEproof.VH) {
+			if !newDecryptionShares[i].DLEproof.C.Equal(decryptionShares[i].DLEproof.C) ||
+				!newDecryptionShares[i].DLEproof.R.Equal(decryptionShares[i].DLEproof.R) ||
+				!newDecryptionShares[i].DLEproof.VG.Equal(decryptionShares[i].DLEproof.VG) ||
+				!newDecryptionShares[i].DLEproof.VH.Equal(decryptionShares[i].DLEproof.VH) {
 				t.Errorf("dle proofs don't equal")
 			}
 		}

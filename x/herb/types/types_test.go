@@ -12,26 +12,6 @@ import (
 	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )
 
-//delete in future
-/*func TestPlay(t *testing.T) {
-	suite := nist.NewBlakeSHA256P256()
-	g1 := suite.Point().Base()
-	g2 := suite.Point().Mul(suite.Scalar().SetInt64(2), g1)
-	ct := elgamal.Ciphertext{g1, g2}
-	ctBytes, err := ModuleCdc.MarshalJSON(ct)
-	if err != nil {
-		t.Errorf("failed to json: %v", err)
-	}
-	var newct elgamal.Ciphertext
-	err2 := ModuleCdc.UnmarshalJSON(ctBytes, newct)
-	if err2 != nil {
-		t.Errorf("failed from json: %v", err2)
-	}
-	if ct.Equal(newct) {
-		t.Errorf("ciphertexts don't equal")
-	}
-}*/
-
 func TestCiphertextSerialization(t *testing.T) {
 	suite := nist.NewBlakeSHA256P256()
 	g1 := suite.Point().Base()

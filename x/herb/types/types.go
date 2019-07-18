@@ -24,24 +24,27 @@ var P256 = nist.NewBlakeSHA256P256()
 type VerificationKey struct {
 	VK        kyber.Point
 	KeyHolder int
+	Sender    sdk.AccAddress
 }
 
 type VerificationKeyJSON struct {
-	VK          string `json:"verification_key"`
-	KeyHolderID int    `json:"key_holder_id"`
+	VK          string         `json:"verification_key"`
+	KeyHolderID int            `json:"key_holder_id"`
+	Sender      sdk.AccAddress `json:"sender_address"`
 }
 
-func NewVerificationKeyJSON(vk *VerificationKey) (*VerificationKeyJSON, sdk.Error) {
+func NewVerificationKeyJSON(vk *VerificationKey) (VerificationKeyJSON, sdk.Error) {
 	vkJSON, err := kyberenc.PointToStringHex(P256, vk.VK)
 	if err != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode verification key: %v", err))
+		return VerificationKeyJSON{}, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode verification key: %v", err))
 	}
-	return &VerificationKeyJSON{
+	return VerificationKeyJSON{
 		VK:          vkJSON,
 		KeyHolderID: vk.KeyHolder,
+		Sender:      vk.Sender,
 	}, nil
 }
-func (vkJSON *VerificationKeyJSON) Deserialize() (*VerificationKey, sdk.Error) {
+func (vkJSON VerificationKeyJSON) Deserialize() (*VerificationKey, sdk.Error) {
 	vk, err := kyberenc.StringHexToPoint(P256, vkJSON.VK)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode verification key: %v", err))
@@ -49,9 +52,34 @@ func (vkJSON *VerificationKeyJSON) Deserialize() (*VerificationKey, sdk.Error) {
 	return &VerificationKey{
 		VK:        vk,
 		KeyHolder: vkJSON.KeyHolderID,
+		Sender:    vkJSON.Sender,
 	}, nil
 }
-func VerificationKeyMapSerialize(vkMap map[string]*VerificationKey) (map[string]*VerificationKeyJSON, sdk.Error) {
+func VerificationKeyArraySerialize(vkList []*VerificationKey) ([]VerificationKeyJSON, sdk.Error) {
+	vkJSONList := make([]VerificationKeyJSON, len(vkList))
+	var err error
+	for i, vk := range vkList {
+		vkJSONList[i], err = NewVerificationKeyJSON(vk)
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize array: %v", err))
+		}
+	}
+	return vkJSONList, nil
+}
+
+func VerificationKeyArrayDeserialize(vkJSONList []VerificationKeyJSON) ([]*VerificationKey, sdk.Error) {
+	vkList := make([]*VerificationKey, len(vkJSONList))
+	var err error
+	for i, vk := range vkJSONList {
+		vkList[i], err = vk.Deserialize()
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize verification keys array: %v", err))
+		}
+	}
+	return vkList, nil
+}
+
+/*func VerificationKeyMapSerialize(vkMap map[string]*VerificationKey) (map[string]*VerificationKeyJSON, sdk.Error) {
 	vkJSONMap := make(map[string]*VerificationKeyJSON)
 	var err error
 	for addr, vk := range vkMap {
@@ -73,7 +101,7 @@ func VerificationKeyMapDeserialize(vkJSONMap map[string]*VerificationKeyJSON) (m
 		}
 	}
 	return vkMap, nil
-}
+}*/
 
 // CiphertextPart represents ciphertext part and additional information for the first HERB phase.
 type CiphertextPart struct {
@@ -126,8 +154,30 @@ func (ctJSON *CiphertextPartJSON) Deserialize() (*CiphertextPart, sdk.Error) {
 		EntropyProvider: ctJSON.EntropyProvider,
 	}, nil
 }
+func CiphertextArraySerialize(ctArray []*CiphertextPart) ([]*CiphertextPartJSON, sdk.Error) {
+	ctJSONArray := make([]*CiphertextPartJSON, len(ctArray))
+	var err sdk.Error
+	for i, ct := range ctArray {
+		ctJSONArray[i], err = NewCiphertextPartJSON(ct)
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize array: %v", err))
+		}
+	}
+	return ctJSONArray, nil
+}
+func CiphertextArrayDeserialize(ctJSONArray []*CiphertextPartJSON) ([]*CiphertextPart, sdk.Error) {
+	ctArray := make([]*CiphertextPart, len(ctJSONArray))
+	var err sdk.Error
+	for i, ct := range ctJSONArray {
+		ctArray[i], err = ct.Deserialize()
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize array: %v", err))
+		}
+	}
+	return ctArray, nil
+}
 
-func CiphertextMapSerialize(ctMap map[string]*CiphertextPart) (map[string]*CiphertextPartJSON, sdk.Error) {
+/*func CiphertextMapSerialize(ctMap map[string]*CiphertextPart) (map[string]*CiphertextPartJSON, sdk.Error) {
 	ctJSONMap := make(map[string]*CiphertextPartJSON)
 	var err error
 	for addr, ct := range ctMap {
@@ -149,7 +199,7 @@ func CiphertextMapDeserialize(ctJSONMap map[string]*CiphertextPartJSON) (map[str
 		}
 	}
 	return ctMap, nil
-}
+}*/
 
 type DecryptionShare struct {
 	DecShare  share.PubShare
@@ -162,18 +212,18 @@ type DecryptionShareJSON struct {
 	KeyHolderAddr sdk.AccAddress `json:"key_holder"`
 }
 
-func NewDecryptionShareJSON(decShares *DecryptionShare) (*DecryptionShareJSON, sdk.Error) {
+func NewDecryptionShareJSON(decShares *DecryptionShare) (DecryptionShareJSON, sdk.Error) {
 	dsBuf := bytes.NewBuffer(nil)
 	dsEnc := gob.NewEncoder(dsBuf)
 	if err := dsEnc.Encode(decShares.DecShare); err != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode decryption shares: %v", err))
+		return DecryptionShareJSON{}, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode decryption shares: %v", err))
 	}
 	dleBuf := bytes.NewBuffer(nil)
 	dleEnc := gob.NewEncoder(dleBuf)
 	if err := dleEnc.Encode(decShares.DLEproof); err != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode dle proof: %v", err))
+		return DecryptionShareJSON{}, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode dle proof: %v", err))
 	}
-	return &DecryptionShareJSON{
+	return DecryptionShareJSON{
 		DecShare:      base64.StdEncoding.EncodeToString(dsBuf.Bytes()),
 		DLEproof:      base64.StdEncoding.EncodeToString(dleBuf.Bytes()),
 		KeyHolderAddr: decShares.KeyHolder,
@@ -205,7 +255,30 @@ func (dsJSON DecryptionShareJSON) Deserialize() (*DecryptionShare, sdk.Error) {
 		KeyHolder: dsJSON.KeyHolderAddr,
 	}, nil
 }
-func DecryptionSharesMapSerialize(dsMap map[string]*DecryptionShare) (map[string]*DecryptionShareJSON, sdk.Error) {
+func DecryptionSharesArraySerialize(dsArray []*DecryptionShare) ([]DecryptionShareJSON, sdk.Error) {
+	dsJSONArray := make([]DecryptionShareJSON, len(dsArray))
+	var err sdk.Error
+	for i, ds := range dsArray {
+		dsJSONArray[i], err = NewDecryptionShareJSON(ds)
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize array: %v", err))
+		}
+	}
+	return dsJSONArray, nil
+}
+func DecryptionSharesArrayDeserialize(dsJSONArray []*DecryptionShareJSON) ([]*DecryptionShare, sdk.Error) {
+	dsArray := make([]*DecryptionShare, len(dsJSONArray))
+	var err sdk.Error
+	for i, ds := range dsJSONArray {
+		dsArray[i], err = ds.Deserialize()
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize array: %v", err))
+		}
+	}
+	return dsArray, nil
+}
+
+/*func DecryptionSharesMapSerialize(dsMap map[string]*DecryptionShare) (map[string]*DecryptionShareJSON, sdk.Error) {
 	dsJSONMap := make(map[string]*DecryptionShareJSON)
 	var err error
 	for addr, ds := range dsMap {
@@ -227,12 +300,12 @@ func DecryptionSharesMapDeserialize(dsJSONMap map[string]*DecryptionShareJSON) (
 		}
 	}
 	return dsMap, nil
-}
+}*/
 
 // GenesisState - herb genesis state
 type GenesisState struct {
-	ThresholdParts      uint64                         `json:"threshold_parts"`
-	ThresholdDecryption uint64                         `json:"threshold_decryption"`
-	CommonPublicKey     string                         `json:"commonPublicKey"`
-	KeyHolders          map[string]VerificationKeyJSON `json:"key_holders"`
+	ThresholdParts      uint64                `json:"threshold_parts"`
+	ThresholdDecryption uint64                `json:"threshold_decryption"`
+	CommonPublicKey     string                `json:"commonPublicKey"`
+	KeyHolders          []VerificationKeyJSON `json:"key_holders"`
 }

@@ -111,9 +111,9 @@ func GetCmdAllCiphertexts(queryRoute string, cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			outJSON := make(map[string]*types.CiphertextPartJSON)
+			var outJSON []*types.CiphertextPartJSON
 			cdc.MustUnmarshalJSON(res, &outJSON)
-			out, err := types.CiphertextMapDeserialize(outJSON)
+			out, err := types.CiphertextArrayDeserialize(outJSON)
 			if err != nil {
 				return err
 			}
@@ -157,9 +157,9 @@ func GetCmdAllDecryptionShares(queryRoute string, cdc *codec.Codec) *cobra.Comma
 				return err
 			}
 
-			outJSON := make(map[string]*types.DecryptionShareJSON)
+			var outJSON []*types.DecryptionShareJSON
 			cdc.MustUnmarshalJSON(res, &outJSON)
-			out, err := types.DecryptionSharesMapDeserialize(outJSON)
+			out, err := types.DecryptionSharesArrayDeserialize(outJSON)
 
 			if err != nil {
 				return err

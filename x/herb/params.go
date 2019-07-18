@@ -2,6 +2,7 @@ package herb
 
 import (
 	"encoding/binary"
+
 	"github.com/dgamingfoundation/HERB/x/herb/types"
 	"go.dedis.ch/kyber/v3"
 	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
@@ -31,7 +32,7 @@ func (k *Keeper) GetKeyHoldersNumber(ctx sdk.Context) (uint64, sdk.Error) {
 }
 
 // SetVerificationKeys set verification keys corresponding to each address
-func (k *Keeper) SetVerificationKeys(ctx sdk.Context, verificationKeys map[string]types.VerificationKeyJSON) sdk.Error {
+func (k *Keeper) SetVerificationKeys(ctx sdk.Context, verificationKeys []types.VerificationKeyJSON) sdk.Error {
 	store := ctx.KVStore(k.storeKey)
 	if store.Has([]byte(keyVerificationKeys)) {
 		return sdk.ErrUnknownRequest("Verification keys already exist")
@@ -39,7 +40,7 @@ func (k *Keeper) SetVerificationKeys(ctx sdk.Context, verificationKeys map[strin
 
 	verificationKeysBytes, err := k.cdc.MarshalJSON(verificationKeys)
 	if err != nil {
-		return sdk.ErrUnknownRequest("Can't marshal map")
+		return sdk.ErrUnknownRequest("Can't marshal list")
 	}
 
 	store.Set([]byte(keyVerificationKeys), verificationKeysBytes)
@@ -47,13 +48,13 @@ func (k *Keeper) SetVerificationKeys(ctx sdk.Context, verificationKeys map[strin
 }
 
 // GetVerificationKeys returns verification keys corresponding to each address
-func (k *Keeper) GetVerificationKeys(ctx sdk.Context) (map[string]types.VerificationKeyJSON, sdk.Error) {
+func (k *Keeper) GetVerificationKeys(ctx sdk.Context) ([]types.VerificationKeyJSON, sdk.Error) {
 	store := ctx.KVStore(k.storeKey)
 	if !store.Has([]byte(keyVerificationKeys)) {
 		return nil, sdk.ErrUnknownRequest("Verification keys are not defined")
 	}
 	verificationKeysBytes := store.Get([]byte(keyVerificationKeys))
-	verificationKeys := make(map[string]types.VerificationKeyJSON)
+	var verificationKeys []types.VerificationKeyJSON
 	k.cdc.MustUnmarshalJSON(verificationKeysBytes, &verificationKeys)
 	return verificationKeys, nil
 }

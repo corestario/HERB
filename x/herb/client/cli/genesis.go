@@ -13,12 +13,12 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 
-	"github.com/tendermint/tendermint/libs/cli"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
+	"github.com/tendermint/tendermint/libs/cli"
 	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )
 
-const flagClientHome   = "home-client"
+const flagClientHome = "home-client"
 
 // SetThresholdsCmd  implements command for setting decryption threhold and ciphertext parts threshold
 func SetThresholdsCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
@@ -67,10 +67,10 @@ func SetThresholdsCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 func AddKeyHolderCmd(ctx *server.Context, cdc *codec.Codec,
 	defaultNodeHome string, defaultCLIHome string) *cobra.Command {
 	return &cobra.Command{
-		Use: "add-key-holder [address_or_key_name] [id] [verification_key]",
+		Use:   "add-key-holder [address_or_key_name] [id] [verification_key]",
 		Short: "add key holder parameters to genesis file",
-		Args: cobra.ExactArgs(3),
-		RunE: func(cmd *cobra.Command, args[] string) error {
+		Args:  cobra.ExactArgs(3),
+		RunE: func(cmd *cobra.Command, args []string) error {
 			config := ctx.Config
 			config.SetRoot(viper.GetString(cli.HomeFlag))
 
@@ -109,10 +109,13 @@ func AddKeyHolderCmd(ctx *server.Context, cdc *codec.Codec,
 			types.ModuleCdc.MustUnmarshalJSON(genesisStateJSON, &genesisState)
 
 			keyHolders := genesisState.KeyHolders
-			if _, ok := keyHolders[addr.String()]; ok {
-				return fmt.Errorf("cannot add key holder at existing address %v", addr)
+			for _, kh := range keyHolders {
+				if kh.Sender.Equals(addr) {
+					return fmt.Errorf("cannot add key holder at existing address %v", addr)
+				}
 			}
-			keyHolders[addr.String()] = types.VerificationKeyJSON{KeyHolderID:int(id), VK:args[2]}
+
+			keyHolders = append(keyHolders, types.VerificationKeyJSON{KeyHolderID: int(id), VK: args[2]})
 			genesisState.KeyHolders = keyHolders
 
 			newGenesisState := types.ModuleCdc.MustMarshalJSON(genesisState)
@@ -132,9 +135,9 @@ func AddKeyHolderCmd(ctx *server.Context, cdc *codec.Codec,
 
 func SetCommonPublicKeyCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use: "set-common-key [keyHex]",
+		Use:   "set-common-key [keyHex]",
 		Short: "Set common public key for ElGamal cryptosystem",
-		Args: cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if _, err := kyberenc.StringHexToPoint(types.P256, args[0]); err != nil {

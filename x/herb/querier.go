@@ -69,7 +69,7 @@ func queryGetAllCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byt
 		return nil, err
 	}
 
-	allCtJSON, err := types.CiphertextMapSerialize(allCt)
+	allCtJSON, err := types.CiphertextArraySerialize(allCt)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("coudn't get JSON ciphertexts", err.Error()))
 	}
@@ -93,7 +93,7 @@ func queryAllDescryptionShares(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 		return nil, err
 	}
 
-	allSharesJSON, err := types.DecryptionSharesMapSerialize(allShares)
+	allSharesJSON, err := types.DecryptionSharesArraySerialize(allShares)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("coudn't get JSON decryption shares", err.Error()))
 	}

@@ -10,11 +10,11 @@ import (
 // NewGenesisState creates new instance GenesisState
 func NewGenesisState(thresholdParts uint64, thresholdDecryption uint64) GenesisState {
 	return GenesisState{
-			ThresholdParts: thresholdParts,
-			ThresholdDecryption: thresholdDecryption,
-			CommonPublicKey: P256.Point().String(),
-			KeyHolders: map[string]types.VerificationKeyJSON{},
-		}
+		ThresholdParts:      thresholdParts,
+		ThresholdDecryption: thresholdDecryption,
+		CommonPublicKey:     P256.Point().String(),
+		KeyHolders:          []types.VerificationKeyJSON{},
+	}
 }
 
 // ValidateGenesis validates the provided herb genesis state to ensure the
@@ -28,10 +28,10 @@ func ValidateGenesis(data GenesisState) error {
 // DefaultGenesisState returns default testing genesis state
 func DefaultGenesisState() GenesisState {
 	return GenesisState{
-		ThresholdParts: 1,
+		ThresholdParts:      1,
 		ThresholdDecryption: 1,
-		CommonPublicKey: P256.Point().String(),
-		KeyHolders: map[string]types.VerificationKeyJSON{},
+		CommonPublicKey:     P256.Point().String(),
+		KeyHolders:          []types.VerificationKeyJSON{},
 	}
 }
 
@@ -55,9 +55,8 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.Valid
 func ExportGenesis(ctx sdk.Context, k Keeper) GenesisState {
 	//var records CiphertextPartJSON
 	return GenesisState{
-		ThresholdParts: 1,
+		ThresholdParts:      1,
 		ThresholdDecryption: 1,
-		KeyHolders: map[string]types.VerificationKeyJSON{},
+		KeyHolders:          []types.VerificationKeyJSON{},
 	}
 }
-

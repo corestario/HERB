@@ -132,7 +132,7 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			msg := types.NewMsgSetDecryptionShare(*decryptionShareJSON, cliCtx.GetFromAddress())
+			msg := types.NewMsgSetDecryptionShare(decryptionShareJSON, cliCtx.GetFromAddress())
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
