@@ -46,7 +46,7 @@ func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 		Short: "send random ciphertext part",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			cliCtx := context.NewCLIContext().WithCodec(cdc).WithAccountDecoder(cdc)
 
 			group := types.P256
 			pubKey, err := kyberenc.StringHexToPoint(group, args[0])
@@ -85,7 +85,7 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 		Short: "Send a decryption share of the aggregated ciphertext",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
+			cliCtx := context.NewCLIContext().WithCodec(cdc).WithAccountDecoder(cdc)
 
 			//Getting aggregated ciphertext
 			params := types.NewQueryByRound(-1) //-1 for the current round
@@ -129,6 +129,9 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 
 			decryptionShareJSON, err := types.NewDecryptionShareJSON(decryptionShare)
+			if err != nil {
+				return err
+			}
 			msg := types.NewMsgSetDecryptionShare(*decryptionShareJSON, cliCtx.GetFromAddress())
 			err = msg.ValidateBasic()
 			if err != nil {
