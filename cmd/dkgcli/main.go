@@ -50,7 +50,7 @@ func generateKeyFile(defaultDKGHome string) *cobra.Command {
 				return fmt.Errorf("t (%s) must be positive", args[0])
 			}
 
-			n, err := strconv.ParseInt(args[0], 10, 64)
+			n, err := strconv.ParseInt(args[1], 10, 64)
 			if err != nil {
 				return fmt.Errorf("n (%s) not a valid int, please input a valid number", args[1])
 			}
