@@ -7,13 +7,10 @@ import (
 
 const (
 	// key prefixes for defining item in the store by round
-	keyCiphertextParts      = "keyCt"     //ciphtetextParts for the round
-	keyDecryptionShares     = "keyDS"     //descryption shares
-	keyAggregatedCiphertext = "keyACt"    // aggregated ciphertext
-	keyRandomResult         = "keyResult" // random point as result of the round
+	keyAggregatedCiphertext = "keyAggregatedCiphertext"    // aggregated ciphertext
 	keyStage                = "keyStage"
-	keyCommonKey            = "keyCommon"      //public key
-	keyVerificationKeys     = "keyVK"          //verification keys with id
+	keyCommonKey            = "keyCommonKey"      //public key
+	keyVerificationKeys     = "keyVerificationKeys"          //verification keys with id
 	keyCurrentRound         = "keyCurentRound" //current generation round
 	keyKeyHoldersNumber 	= "keyKeyHoldersNumber" //number of key holders
 	keyThresholdParts 		= "keyThresholdParts"

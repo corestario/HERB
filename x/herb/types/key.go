@@ -7,6 +7,7 @@ const (
 	QuerierRouter = ModuleName
 	// StoreKey is the default store key for HERB
 	StoreKey   = ModuleName
-	CtStoreKey = "Ctherb"
-	DsStoreKey = "Dsherb"
+	CtStoreKey = "herbCtStoreKey"
+	DsStoreKey = "herbDecSharesKey"
+	RandResultKey = "herbRandResultKey"
 )

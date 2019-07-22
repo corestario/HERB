@@ -15,21 +15,23 @@ import (
 
 // Keeper maintains the link to data storage and exposes methods for the HERB protocol actions
 type Keeper struct {
-	storeKey              sdk.StoreKey
-	group                 kyber.Group
-	storeCiphertextParts  *sdk.KVStoreKey
-	storeDecryptionShares *sdk.KVStoreKey
-	cdc                   *codec.Codec
+	storeKey                 sdk.StoreKey
+	group                    kyber.Group
+	storeCiphertextPartsKey  *sdk.KVStoreKey
+	storeDecryptionSharesKey *sdk.KVStoreKey
+	storeRandomResultsKey    *sdk.KVStoreKey
+	cdc                      *codec.Codec
 }
 
 // NewKeeper creates new instances of the HERB Keeper
-func NewKeeper(storeKey sdk.StoreKey, storeCiphertextParts *sdk.KVStoreKey, storeDecryptionShares *sdk.KVStoreKey, cdc *codec.Codec) Keeper {
+func NewKeeper(storeKey sdk.StoreKey, storeCiphertextParts *sdk.KVStoreKey, storeDecryptionShares *sdk.KVStoreKey, storeRandomResults *sdk.KVStoreKey, cdc *codec.Codec) Keeper {
 	return Keeper{
-		storeKey:              storeKey,
-		group:                 P256,
-		storeCiphertextParts:  storeCiphertextParts,
-		storeDecryptionShares: storeDecryptionShares,
-		cdc:                   cdc,
+		storeKey:                 storeKey,
+		group:                    P256,
+		storeCiphertextPartsKey:  storeCiphertextParts,
+		storeDecryptionSharesKey: storeDecryptionShares,
+		storeRandomResultsKey:    storeRandomResults,
+		cdc:                      cdc,
 	}
 }
 
@@ -61,11 +63,10 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	if stage != stageCtCollecting {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("round is not on the ciphertext collecting stage. Current stage: %v", stage))
 	}
-	ctStore := ctx.KVStore(k.storeKey)
-	//keyBytesCt := make([]byte, 8)
-	//binary.LittleEndian.PutUint64(keyBytesCt, round)
+	ctStore := ctx.KVStore(k.storeCiphertextPartsKey)
+	keyBytesCt := make([]byte, 8)
+	binary.LittleEndian.PutUint64(keyBytesCt, round)
 	var ctList []*types.CiphertextPart
-	keyBytesCt := createKeyBytesByRound(round, keyCiphertextParts)
 	if ctStore.Has(keyBytesCt) {
 		ctListBytes := ctStore.Get(keyBytesCt)
 		var ctListJSON []*types.CiphertextPartJSON
@@ -150,13 +151,12 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	if err2 != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("DLE proof isn't correct: %v", err2))
 	}
-	//dsStore := ctx.KVStore(k.storeDecryptionShares)
-	//keyBytes := make([]byte, 8)
-	//binary.LittleEndian.PutUint64(keyBytes, round)
-	keyBytes := createKeyBytesByRound(round, keyDecryptionShares)
+	dsStore := ctx.KVStore(k.storeDecryptionSharesKey)
+	keyBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(keyBytes, round)
 	var dsList []*types.DecryptionShare
-	if store.Has(keyBytes) {
-		dsListBytes := store.Get(keyBytes)
+	if dsStore.Has(keyBytes) {
+		dsListBytes := dsStore.Get(keyBytes)
 		var dsListJSON []*types.DecryptionShareJSON
 		err2 = k.cdc.UnmarshalJSON(dsListBytes, &dsListJSON)
 		if err2 != nil {
@@ -182,7 +182,7 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	if err2 != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal list for the store: %v", err2))
 	}
-	store.Set(keyBytes, newDsListBytes)
+	dsStore.Set(keyBytes, newDsListBytes)
 
 	t, err := k.GetThresholdDecryption(ctx)
 	if err != nil {
@@ -232,16 +232,15 @@ func (k *Keeper) increaseCurrentRound(ctx sdk.Context) {
 
 // GetAllCiphertexts returns all ciphertext parts for the given round as go-slice
 func (k *Keeper) GetAllCiphertexts(ctx sdk.Context, round uint64) ([]*types.CiphertextPart, sdk.Error) {
-	ctStore := ctx.KVStore(k.storeKey)
+	ctStore := ctx.KVStore(k.storeCiphertextPartsKey)
 	stage := k.GetStage(ctx, round)
 
 	if stage == stageUnstarted {
 		return nil, sdk.ErrUnknownRequest("round hasn't started yet")
 	}
 
-	//keyBytes := make([]byte, 8)
-	//binary.LittleEndian.PutUint64(keyBytes, round)
-	keyBytes := createKeyBytesByRound(round, keyCiphertextParts)
+	keyBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(keyBytes, round)
 
 	//if store doesn't have such key -> no cts was added
 	if !ctStore.Has(keyBytes) {
@@ -294,11 +293,9 @@ func (k *Keeper) GetAllDecryptionShares(ctx sdk.Context, round uint64) ([]*types
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("wrong round stage: %v. round: %v", stage, round))
 	}
 
-	//dsStore := ctx.KVStore(k.storeDecryptionShares)
-	//keyBytes := make([]byte, 8)
-	//binary.LittleEndian.PutUint64(keyBytes, round)
-	dsStore := ctx.KVStore(k.storeKey)
-	keyBytes := createKeyBytesByRound(round, keyDecryptionShares)
+	dsStore := ctx.KVStore(k.storeDecryptionSharesKey)
+	keyBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(keyBytes, round)
 	if !dsStore.Has(keyBytes) {
 		return []*types.DecryptionShare{}, nil
 	}
@@ -321,9 +318,9 @@ func (k *Keeper) GetRandom(ctx sdk.Context, round uint64) ([]byte, sdk.Error) {
 	if stage != stageCompleted {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("wrong round stage: %v. round: %v", stage, round))
 	}
-
-	store := ctx.KVStore(k.storeKey)
-	keyBytes := createKeyBytesByRound(round, keyRandomResult)
+	store := ctx.KVStore(k.storeRandomResultsKey)
+	keyBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(keyBytes, round)
 	if !store.Has(keyBytes) {
 		return nil, sdk.ErrInternal("There is not round result in the store")
 	}
@@ -375,8 +372,9 @@ func (k *Keeper) computeAggregatedCiphertext(ctx sdk.Context, round uint64) sdk.
 }
 
 func (k *Keeper) computeRandomResult(ctx sdk.Context, round uint64) sdk.Error {
-	store := ctx.KVStore(k.storeKey)
-	keyBytes := createKeyBytesByRound(round, keyRandomResult)
+	store := ctx.KVStore(k.storeRandomResultsKey)
+	keyBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(keyBytes, round)
 	dsList, err := k.GetAllDecryptionShares(ctx, round)
 	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't get all decryption shares from store: %v", err))

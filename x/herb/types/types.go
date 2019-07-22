@@ -79,30 +79,6 @@ func VerificationKeyArrayDeserialize(vkJSONList []VerificationKeyJSON) ([]*Verif
 	return vkList, nil
 }
 
-/*func VerificationKeyMapSerialize(vkMap map[string]*VerificationKey) (map[string]*VerificationKeyJSON, sdk.Error) {
-	vkJSONMap := make(map[string]*VerificationKeyJSON)
-	var err error
-	for addr, vk := range vkMap {
-		vkJSONMap[addr], err = NewVerificationKeyJSON(vk)
-		if err != nil {
-			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize map: %v", err))
-		}
-	}
-	return vkJSONMap, nil
-}
-
-func VerificationKeyMapDeserialize(vkJSONMap map[string]*VerificationKeyJSON) (map[string]*VerificationKey, sdk.Error) {
-	vkMap := make(map[string]*VerificationKey)
-	var err error
-	for addr, vk := range vkJSONMap {
-		vkMap[addr], err = vk.Deserialize()
-		if err != nil {
-			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize verification keys map: %v", err))
-		}
-	}
-	return vkMap, nil
-}*/
-
 // CiphertextPart represents ciphertext part and additional information for the first HERB phase.
 type CiphertextPart struct {
 	Ciphertext      elgamal.Ciphertext
@@ -176,30 +152,6 @@ func CiphertextArrayDeserialize(ctJSONArray []*CiphertextPartJSON) ([]*Ciphertex
 	}
 	return ctArray, nil
 }
-
-/*func CiphertextMapSerialize(ctMap map[string]*CiphertextPart) (map[string]*CiphertextPartJSON, sdk.Error) {
-	ctJSONMap := make(map[string]*CiphertextPartJSON)
-	var err error
-	for addr, ct := range ctMap {
-		ctJSONMap[addr], err = NewCiphertextPartJSON(ct)
-		if err != nil {
-			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize map: %v", err))
-		}
-	}
-	return ctJSONMap, nil
-}
-
-func CiphertextMapDeserialize(ctJSONMap map[string]*CiphertextPartJSON) (map[string]*CiphertextPart, sdk.Error) {
-	ctMap := make(map[string]*CiphertextPart)
-	var err error
-	for addr, ct := range ctJSONMap {
-		ctMap[addr], err = ct.Deserialize()
-		if err != nil {
-			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize ciphertext map: %v", err))
-		}
-	}
-	return ctMap, nil
-}*/
 
 type DecryptionShare struct {
 	DecShare  share.PubShare
@@ -277,30 +229,6 @@ func DecryptionSharesArrayDeserialize(dsJSONArray []*DecryptionShareJSON) ([]*De
 	}
 	return dsArray, nil
 }
-
-/*func DecryptionSharesMapSerialize(dsMap map[string]*DecryptionShare) (map[string]*DecryptionShareJSON, sdk.Error) {
-	dsJSONMap := make(map[string]*DecryptionShareJSON)
-	var err error
-	for addr, ds := range dsMap {
-		dsJSONMap[addr], err = NewDecryptionShareJSON(ds)
-		if err != nil {
-			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize map: %v", err))
-		}
-	}
-	return dsJSONMap, nil
-}
-
-func DecryptionSharesMapDeserialize(dsJSONMap map[string]*DecryptionShareJSON) (map[string]*DecryptionShare, sdk.Error) {
-	dsMap := make(map[string]*DecryptionShare)
-	var err error
-	for addr, ds := range dsJSONMap {
-		dsMap[addr], err = ds.Deserialize()
-		if err != nil {
-			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize  map: %v", err))
-		}
-	}
-	return dsMap, nil
-}*/
 
 // GenesisState - herb genesis state
 type GenesisState struct {
