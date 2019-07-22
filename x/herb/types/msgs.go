@@ -10,7 +10,7 @@ const RouterKey = ModuleName
 
 // MsgSetCiphertextPart defines message for the first HERB phase (collecting ciphertext part)
 type MsgSetCiphertextPart struct {
-	CiphertextPart CiphertextPartJSON    `json:"ciphertextPart"`
+	CiphertextPart CiphertextPartJSON    `json:"ciphertext_part"`
 	Sender sdk.AccAddress `json:"sender"`
 }
 
@@ -59,7 +59,7 @@ func (msg MsgSetCiphertextPart) GetSigners() []sdk.AccAddress {
 
 // MsgSetCiphertextPart defines message for the first HERB phase (collecting ciphertext part)
 type MsgSetDecryptionShare struct {
-	DecryptionShare DecryptionShareJSON    `json:"decryptionShare"`
+	DecryptionShare DecryptionShareJSON    `json:"decryption_share"`
 	Sender sdk.AccAddress `json:"sender"`
 }
 

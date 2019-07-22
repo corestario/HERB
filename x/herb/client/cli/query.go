@@ -121,7 +121,6 @@ func GetCmdAllCiphertexts(queryRoute string, cdc *codec.Codec) *cobra.Command {
 				fmt.Printf("Entropy provider address: %v \n Ciphertext: %v \n", ctPart.EntropyProvider.String(), ctPart.Ciphertext.String())
 			}
 			return nil
-			//return cliCtx.PrintOutput(outJSON)
 		},
 	}
 }

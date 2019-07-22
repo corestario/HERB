@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
-	"go.dedis.ch/kyber/v3"
-	"go.dedis.ch/kyber/v3/proof"
-	"go.dedis.ch/kyber/v3/proof/dleq"
+	"go.dedis.ch/kyber"
+	"go.dedis.ch/kyber/proof"
+	"go.dedis.ch/kyber/proof/dleq"
 )
 
 func BenchmarkElGamal(b *testing.B) {
@@ -66,11 +66,11 @@ func elGamalBench(parties []elgamal.Participant, curve proof.Suite, tr int) (kyb
 	errRK := make([]error, n)
 	publishChan := publishMessages(parties, curve)
 	for publishedMessage := range publishChan {
-		i := publishedMessage.id
-		DLKproofs[i] = publishedMessage.DLKproof
-		RKproofs[i] = publishedMessage.RKproof
-		newMessages[i] = publishedMessage.msg
-		publishedCiphertextes[i] = publishedMessage.published
+		i := id
+		DLKproofs[i] = DLKproof
+		RKproofs[i] = RKproof
+		newMessages[i] = msg
+		publishedCiphertextes[i] = published
 	}
 
 	//verify all ciphertexts by parties[1]
@@ -86,9 +86,9 @@ func elGamalBench(parties []elgamal.Participant, curve proof.Suite, tr int) (kyb
 	decrypted := decryptMessages(parties, curve, commonCiphertext, tr)
 	errDLE := make([]error, tr)
 	for msg := range decrypted {
-		i := msg.id
-		decryptParts[i] = msg.msg
-		DLEproofs[i] = msg.DLEproof
+		i := id
+		decryptParts[i] = msg
+		DLEproofs[i] = DLEproof
 	}
 	//verify decrypted parts
 	for i := 0; i < tr; i++ {

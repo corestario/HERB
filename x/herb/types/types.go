@@ -22,35 +22,35 @@ import (
 var P256 = nist.NewBlakeSHA256P256()
 
 type VerificationKey struct {
-	VK        kyber.Point
+	Key       kyber.Point
 	KeyHolder int
 	Sender    sdk.AccAddress
 }
 
 type VerificationKeyJSON struct {
-	VK          string         `json:"verification_key"`
+	Key         string         `json:"verification_key"`
 	KeyHolderID int            `json:"key_holder_id"`
 	Sender      sdk.AccAddress `json:"sender_address"`
 }
 
 func NewVerificationKeyJSON(vk *VerificationKey) (VerificationKeyJSON, sdk.Error) {
-	vkJSON, err := kyberenc.PointToStringHex(P256, vk.VK)
+	vkJSON, err := kyberenc.PointToStringHex(P256, vk.Key)
 	if err != nil {
 		return VerificationKeyJSON{}, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode verification key: %v", err))
 	}
 	return VerificationKeyJSON{
-		VK:          vkJSON,
+		Key:         vkJSON,
 		KeyHolderID: vk.KeyHolder,
 		Sender:      vk.Sender,
 	}, nil
 }
 func (vkJSON VerificationKeyJSON) Deserialize() (*VerificationKey, sdk.Error) {
-	vk, err := kyberenc.StringHexToPoint(P256, vkJSON.VK)
+	vk, err := kyberenc.StringHexToPoint(P256, vkJSON.Key)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode verification key: %v", err))
 	}
 	return &VerificationKey{
-		VK:        vk,
+		Key:       vk,
 		KeyHolder: vkJSON.KeyHolderID,
 		Sender:    vkJSON.Sender,
 	}, nil
@@ -89,9 +89,9 @@ type CiphertextPart struct {
 
 type CiphertextPartJSON struct {
 	Ciphertext      string         `json:"ciphertext"`
-	DLKproof        []byte         `json:"DLK proof"`
-	RKproof         []byte         `json:"RK proof"`
-	EntropyProvider sdk.AccAddress `json:"entropyprovider"`
+	DLKproof        []byte         `json:"dlk_proof"`
+	RKproof         []byte         `json:"rk_proof"`
+	EntropyProvider sdk.AccAddress `json:"entropy_provider"`
 }
 
 func NewCiphertextPartJSON(ciphertextPart *CiphertextPart) (*CiphertextPartJSON, sdk.Error) {
@@ -234,6 +234,6 @@ func DecryptionSharesArrayDeserialize(dsJSONArray []*DecryptionShareJSON) ([]*De
 type GenesisState struct {
 	ThresholdParts      uint64                `json:"threshold_parts"`
 	ThresholdDecryption uint64                `json:"threshold_decryption"`
-	CommonPublicKey     string                `json:"commonPublicKey"`
+	CommonPublicKey     string                `json:"common_public_key"`
 	KeyHolders          []VerificationKeyJSON `json:"key_holders"`
 }

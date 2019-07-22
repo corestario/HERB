@@ -1,16 +1,14 @@
 package dkg
 
 import (
-"errors"
-"fmt"
-"sync"
+	"errors"
+	"fmt"
+	"go.dedis.ch/kyber/v3"
+	"go.dedis.ch/kyber/v3/suites"
+	"go.dedis.ch/kyber/v3/util/key"
 
-"go.dedis.ch/kyber/v3"
-"go.dedis.ch/kyber/v3/suites"
-"go.dedis.ch/kyber/v3/util/key"
-
-"go.dedis.ch/kyber/v3/share"
-dkg "go.dedis.ch/kyber/v3/share/dkg/rabin"
+	"go.dedis.ch/kyber/v3/share"
+	dkg "go.dedis.ch/kyber/v3/share/dkg/rabin"
 )
 
 //RabinDKGSimulator generates n DistKeyGenerator objects which can generate DistKeyShare
@@ -72,7 +70,7 @@ func RabinDKGSimulator(suiteName string, n int, t int) ([]*dkg.DistKeyShare, []*
 
 	for _, idx := range qual {
 		if !dkgs[idx].Finished() {
-			return nil, nil, errors.New("Participant isn't finished")
+			return nil, nil, errors.New("participant isn't finished")
 		}
 	}
 
@@ -91,16 +89,11 @@ func RabinDKGSimulator(suiteName string, n int, t int) ([]*dkg.DistKeyShare, []*
 	for i, keyShare := range distShares {
 		verificationKey := pubPoly.Eval(keyShare.PriShare().I)
 		if verificationKey == nil {
-			return nil, nil, errors.New("Verification key equal nil")
+			return nil, nil, errors.New("verification key equals nil")
 		}
 		verificationKeys[i] = &verificationKey.V
 	}
 	return distShares, verificationKeys, nil
-}
-
-type generatedKeyPair struct {
-	id      int
-	keyPair *key.Pair
 }
 
 //personalKeyGen generates n key pairs for n parcticipant.
@@ -109,31 +102,11 @@ type generatedKeyPair struct {
 func personalKeyGen(suite suites.Suite, n int) ([]kyber.Scalar, []kyber.Point) {
 	secretKeys := make([]kyber.Scalar, n)
 	publicKeys := make([]kyber.Point, n)
-	generatedPairs := make(chan generatedKeyPair, n)
-	wg := sync.WaitGroup{}
-
-	go func() {
-		wg.Add(n)
-
-		for i := 0; i < n; i++ {
-			go func(id int) {
-				///////////// MAIN PART ///////////
-				keyPair := key.NewKeyPair(suite)
-				///////////// \MAIN PART //////////
-				generatedPairs <- generatedKeyPair{id, keyPair}
-				wg.Done()
-			}(i)
-		}
-
-		wg.Wait()
-		close(generatedPairs)
-	}()
-
-	for pair := range generatedPairs {
-		secretKeys[pair.id] = pair.keyPair.Private
-		publicKeys[pair.id] = pair.keyPair.Public
+	for i := 0; i < n; i++ {
+		keyPair := key.NewKeyPair(suite)
+		secretKeys[i] = keyPair.Private
+		publicKeys[i] = keyPair.Public
 	}
-
 	return secretKeys, publicKeys
 }
 

@@ -23,7 +23,7 @@ import (
 
 // GetTxCmd returns the transaction commands for this module
 func GetTxCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
-	nameserviceTxCmd := &cobra.Command{
+	herbTxCmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "HERB transaction subcommands",
 		DisableFlagParsing:         true,
@@ -31,12 +31,12 @@ func GetTxCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 		RunE:                       client.ValidateCmd,
 	}
 
-	nameserviceTxCmd.AddCommand(client.PostCommands(
+	herbTxCmd.AddCommand(client.PostCommands(
 		GetCmdSetCiphertextPart(cdc),
 		GetCmdSetDecryptionShare(cdc),
 	)...)
 
-	return nameserviceTxCmd
+	return herbTxCmd
 }
 
 // GetCmdSetCiphertext implements send ciphertext part transaction command.

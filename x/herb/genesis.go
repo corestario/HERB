@@ -1,10 +1,13 @@
 package herb
 
 import (
+	"errors"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
+
+	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )
 
 // NewGenesisState creates new instance GenesisState
@@ -19,9 +22,24 @@ func NewGenesisState(thresholdParts uint64, thresholdDecryption uint64) GenesisS
 
 // ValidateGenesis validates the provided herb genesis state to ensure the
 // expected invariants holds.
-//TO DO
 func ValidateGenesis(data GenesisState) error {
+	partsThreshold := data.ThresholdParts
+	sharesThreshold := data.ThresholdDecryption
+	if partsThreshold < 1 {
+		return errors.New("theshold for ciphertext parts must be positive")
+	}
+	if sharesThreshold < 1 {
+		return errors.New("theshold for descryption shares must be positive")
+	}
 
+	if _, err := kyberenc.StringHexToPoint(types.P256, data.CommonPublicKey); err != nil {
+		return err
+	}
+	for _, keyHolderJSON := range data.KeyHolders {
+		if _, err2 := keyHolderJSON.Deserialize(); err2 != nil {
+			return errors.New(err2.Error())
+		}
+	}
 	return nil
 }
 
@@ -53,7 +71,6 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.Valid
 // ExportGenesis returns a GenesisState for a given context and keeper.
 //TO DO: export genesis (need to complete keeper)
 func ExportGenesis(ctx sdk.Context, k Keeper) GenesisState {
-	//var records CiphertextPartJSON
 	return GenesisState{
 		ThresholdParts:      1,
 		ThresholdDecryption: 1,

@@ -83,7 +83,10 @@ func generateKeyFile(defaultDKGHome string) *cobra.Command {
 				return fmt.Errorf("results marshalling failed: %v", err)
 			}
 
-			os.Mkdir(defaultDKGHome, 0777)
+			err = os.Mkdir(defaultDKGHome, 0777)
+			if err != nil {
+				return fmt.Errorf("failed to create or open folder: %v", err)
+			}
 			path := defaultDKGHome + "/keys.json"
 			file, err := os.Create(path)
 			if err != nil {
@@ -122,7 +125,7 @@ type keyHolder struct {
 }
 
 type keyHolderJSON struct {
-	ID string `json:id`
+	ID string `json:"id"`
 	PrivateKeyHex string `json:"private_key"`
 	VerificationKeyHex string `json:"verification_key"`
 }

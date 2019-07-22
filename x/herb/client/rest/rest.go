@@ -90,12 +90,6 @@ func setCiphertextPartHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		/*round, err := strconv.ParseUint(req.Round, 10, 64)
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
-			return
-		}*/
-
 		entropyProvider, err := sdk.AccAddressFromBech32(req.EntropyProvider)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())

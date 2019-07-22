@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
-	"go.dedis.ch/kyber/v3/group/nist"
+	"go.dedis.ch/kyber/group/nist"
 )
 
 func Test_DLKproof_Positive(t *testing.T) {

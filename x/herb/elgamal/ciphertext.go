@@ -11,8 +11,8 @@ import (
 //Ciphertext is usual ElGamal ciphertext C = (a, b)
 //Here a, b - the elliptic curve's points
 type Ciphertext struct {
-	PointA kyber.Point `json:"pointA"`
-	PointB kyber.Point `json:"pointB"`
+	PointA kyber.Point `json:"point_a"`
+	PointB kyber.Point `json:"point_b"`
 }
 
 //IdentityCiphertext creates ciphertext which is neutral with respect to plaintext group operation (after ciphertext aggregation operation)
@@ -55,8 +55,8 @@ func AggregateCiphertext(group kyber.Group, parts []Ciphertext) Ciphertext {
 }
 
 type CiphertextJSON struct {
-	PointA string `json:"pointA"`
-	PointB string `json:"pointB"`
+	PointA string `json:"point_a"`
+	PointB string `json:"point_b"`
 }
 
 func NewCiphertextJSON(ciphertext *Ciphertext, group kyber.Group) (*CiphertextJSON, error) {
