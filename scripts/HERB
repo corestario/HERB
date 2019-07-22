@@ -1,7 +1,6 @@
 #!/bin/bash
 user=$1
-commonkey=0452b4a6d7883102258a87539c41898cd1c78bcc27dd905d9111e8b066504ba31b160580530886a2200833c2281e10377dbb2007abc531959a23df365ffc16ee18
-stage="stageUnstarted"
+commonkey=$4
 round=0
 while true
 do

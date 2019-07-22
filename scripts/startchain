@@ -1,22 +1,46 @@
 #!/bin/bash
+t=$1
+n=$2
+dkgcli gen-key-file $t $n
+cd $HOME/.dkgcli
+ck=$(cat keys.json | jq .common_key)
+Ck=${ck:1:${#ck}-2}
 rm -rf ~/.hcli
 rm -rf ~/.hd
+rm -rf ~/HERB/bots
+mkdir ~/HERB/bots
 hd init moniker --chain-id HERBchain
-hcli keys add alice
-hcli keys add bob
-hcli keys add carol
-hd add-genesis-account $(hcli keys show alice -a) 1000herbtoken,100000000stake
-hd add-genesis-account $(hcli keys show bob -a) 1000herbtoken,100000000stake
-hd add-genesis-account $(hcli keys show carol -a) 1000herbtoken,100000000stake
-hd set-threshold 3 2
-hd set-common-key 0452b4a6d7883102258a87539c41898cd1c78bcc27dd905d9111e8b066504ba31b160580530886a2200833c2281e10377dbb2007abc531959a23df365ffc16ee18
-hd add-key-holder $(hcli keys show alice -a) 0 041ea050368a68a13a12f1026870b997d6d15d74a59f243ef9c38aea5089387f13dd754344b73ab5d59a716a13abcf4cc3767b723a60d1c367dde5b52d3b04781f
-hd add-key-holder $(hcli keys show bob -a) 1 04711451d30356c470e156941119d44cd4e8b44f04497c1875be584c93d423405e96f8fe4efb8c7d181bdea18b2ba1673f0d639eba187e491ae00d25320711f9f5
-hd add-key-holder $(hcli keys show carol -a) 2 04e90f797b084978e896f398dd408249d72218803f155044c994c4f4ac7da57db44e00771ecec98e3a213a9e141e678700011d923ab768d5d329916c611dea85cf
+for (( i=0; i<$n; i++ ))
+do
+cd $HOME/.dkgcli
+hcli keys add "node$i"
+hd add-genesis-account $(hcli keys show "node$i" -a) 1000herbtoken,100000000stake
+id=$(cat keys.json | jq .partial_keys[$i].ID)
+ID=${id:1:${#id}-2}
+vk=$(cat keys.json | jq .partial_keys[$i].verification_key)
+Vk=${vk:1:${#vk}-2}
+hd add-key-holder $(hcli keys show "node$i" -a) $ID $Vk
+pk=$(cat keys.json | jq .partial_keys[$i].private_key)
+Pk=${pk:1:${#pk}-2}
+cd $HOME/HERB/bots
+echo "#!/usr/bin/expect -f
+set timeout -1
+cd $HOME/HERB/scripts 
+spawn ./HERB node$i $Pk $ID $Ck
+match_max 100000
+while { true } {
+expect \"Password to sign with 'node$i':\"
+send -- \"alicealice\r\"
+}
+expect eof" > "node$i".exp
+chmod +x ./"node$i".exp
+done
+hd set-threshold $n $t
+hd set-common-key $Ck
 hcli config chain-id HERBchain
 hcli config output json
 hcli config indent true
 hcli config trust-node true
-hd gentx --name alice
+hd gentx --name node0
 hd collect-gentxs
 hd validate-genesis
