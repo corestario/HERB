@@ -2,7 +2,13 @@ package herb
 
 import (
 	"errors"
+	"flag"
+	"log"
+	"net/http"
+
 	"github.com/dgamingfoundation/HERB/x/herb/types"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -61,7 +67,21 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.Valid
 	if err != nil {
 		panic(err)
 	}
-
+	var addr = flag.String("listen-address", ":8080", "The address to listen on for HTTP requests.")
+	srv := &http.Server{
+		Addr: *addr,
+		Handler: promhttp.InstrumentMetricHandler(
+			prometheus.DefaultRegisterer, promhttp.HandlerFor(
+				prometheus.DefaultGatherer,
+				promhttp.HandlerOpts{MaxRequestsInFlight: 3},
+			),
+		),
+	}
+	go func() {
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			log.Fatal(http.ListenAndServe(*addr, nil))
+		}
+	}()
 	keeper.SetKeyHoldersNumber(ctx, uint64(len(keyHolders)))
 	keeper.SetThreshold(ctx, data.ThresholdParts, data.ThresholdDecryption)
 	keeper.SetCommonPublicKey(ctx, data.CommonPublicKey)

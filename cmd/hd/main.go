@@ -51,7 +51,7 @@ func main() {
 		genaccscli.AddGenesisAccountCmd(ctx, cdc, app.DefaultNodeHome, app.DefaultCLIHome),
 		// HERB specific functions for setting HERB parameters
 		herbcli.SetThresholdsCmd(ctx, cdc),
-		herbcli.AddKeyHolderCmd(ctx, cdc, app.DefaultNodeHome, app.DefaultCLIHome),
+		herbcli.AddKeyHolderCmd(ctx, cdc),
 		herbcli.SetCommonPublicKeyCmd(ctx, cdc),
 	)
 

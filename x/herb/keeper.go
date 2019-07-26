@@ -3,6 +3,7 @@ package herb
 import (
 	"encoding/binary"
 	"fmt"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
@@ -21,10 +22,14 @@ type Keeper struct {
 	storeDecryptionSharesKey *sdk.KVStoreKey
 	storeRandomResultsKey    *sdk.KVStoreKey
 	cdc                      *codec.Codec
+	randmetric               *Metrics
+	resTime                  *time.Time
 }
 
 // NewKeeper creates new instances of the HERB Keeper
 func NewKeeper(storeKey sdk.StoreKey, storeCiphertextParts *sdk.KVStoreKey, storeDecryptionShares *sdk.KVStoreKey, storeRandomResults *sdk.KVStoreKey, cdc *codec.Codec) Keeper {
+	randmetric := PrometheusMetrics()
+	t := time.Now()
 	return Keeper{
 		storeKey:                 storeKey,
 		group:                    P256,
@@ -32,6 +37,8 @@ func NewKeeper(storeKey sdk.StoreKey, storeCiphertextParts *sdk.KVStoreKey, stor
 		storeDecryptionSharesKey: storeDecryptionShares,
 		storeRandomResultsKey:    storeRandomResults,
 		cdc:                      cdc,
+		randmetric:               randmetric,
+		resTime:                  &t,
 	}
 }
 
@@ -400,6 +407,16 @@ func (k *Keeper) computeRandomResult(ctx sdk.Context, round uint64) sdk.Error {
 		return sdk.ErrInternal(fmt.Sprintf("failed to marshal result point to hash: %v", err))
 	}
 	result := hash.Sum(nil)
+	if round == 0 {
+		t := time.Now()
+		k.resTime = &t
+	} else {
+		t1 := time.Now()
+		secRound := t1.Sub(*k.resTime)
+		k.randmetric.Random.Set(secRound.Seconds())
+		k.resTime = &t1
+	}
+	k.randmetric.CountRandom.Inc()
 	store.Set(keyBytes, result)
 	return nil
 }

@@ -244,7 +244,7 @@ func SetKeyHolders(ctx sdk.Context, k Keeper, adds []sdk.AccAddress) error {
 }
 
 func TestHERB(t *testing.T) {
-	testCases := []int{1}
+	testCases := []int{1, 5, 6, 7, 16, 48, 35, 32, 34}
 	l := 3
 	ctx, keeper, _ := Initialize(uint64(l), uint64(l), uint64(l))
 	userAddrs := CreateTestAddrs(l)
