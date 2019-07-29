@@ -7,7 +7,6 @@ import (
 type Metrics struct {
 	Random      prometheus.Gauge
 	CountRandom prometheus.Counter
-	TimeRandom  prometheus.Gauge
 }
 
 func PrometheusMetrics() *Metrics {

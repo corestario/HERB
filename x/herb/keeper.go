@@ -23,13 +23,13 @@ type Keeper struct {
 	storeRandomResultsKey    *sdk.KVStoreKey
 	cdc                      *codec.Codec
 	randmetric               *Metrics
-	resTime                  *time.Time
+	resTime                  time.Time
 }
 
 // NewKeeper creates new instances of the HERB Keeper
 func NewKeeper(storeKey sdk.StoreKey, storeCiphertextParts *sdk.KVStoreKey, storeDecryptionShares *sdk.KVStoreKey, storeRandomResults *sdk.KVStoreKey, cdc *codec.Codec) Keeper {
 	randmetric := PrometheusMetrics()
-	t := time.Now()
+	t := time.Now().UTC()
 	return Keeper{
 		storeKey:                 storeKey,
 		group:                    P256,
@@ -38,7 +38,7 @@ func NewKeeper(storeKey sdk.StoreKey, storeCiphertextParts *sdk.KVStoreKey, stor
 		storeRandomResultsKey:    storeRandomResults,
 		cdc:                      cdc,
 		randmetric:               randmetric,
-		resTime:                  &t,
+		resTime:                  t,
 	}
 }
 
@@ -408,13 +408,13 @@ func (k *Keeper) computeRandomResult(ctx sdk.Context, round uint64) sdk.Error {
 	}
 	result := hash.Sum(nil)
 	if round == 0 {
-		t := time.Now()
-		k.resTime = &t
+		t := time.Now().UTC()
+		k.resTime = t
 	} else {
-		t1 := time.Now()
-		secRound := t1.Sub(*k.resTime)
+		t1 := time.Now().UTC()
+		secRound := t1.Sub(k.resTime)
 		k.randmetric.Random.Set(secRound.Seconds())
-		k.resTime = &t1
+		k.resTime = t1
 	}
 	k.randmetric.CountRandom.Inc()
 	store.Set(keyBytes, result)

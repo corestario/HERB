@@ -13,9 +13,9 @@ func NewHandler(keeper Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
 		case MsgSetCiphertextPart:
-			return handleMsgSetCiphertextPart(ctx, keeper, msg)
+			return handleMsgSetCiphertextPart(ctx, &keeper, msg)
 		case MsgSetDecryptionShare:
-			return handleMsgSetDecryptionShare(ctx, keeper, msg)
+			return handleMsgSetDecryptionShare(ctx, &keeper, msg)
 		default:
 			errMsg := fmt.Sprintf("Unrecognized herb Msg type: %v", msg.Type())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -23,7 +23,7 @@ func NewHandler(keeper Keeper) sdk.Handler {
 	}
 }
 
-func handleMsgSetCiphertextPart(ctx sdk.Context, keeper Keeper, msg types.MsgSetCiphertextPart) sdk.Result {
+func handleMsgSetCiphertextPart(ctx sdk.Context, keeper *Keeper, msg types.MsgSetCiphertextPart) sdk.Result {
 	ctPart, err := msg.CiphertextPart.Deserialize()
 	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("coudn't deserialize ciphertext part: %v", err)).Result()
@@ -36,7 +36,7 @@ func handleMsgSetCiphertextPart(ctx sdk.Context, keeper Keeper, msg types.MsgSet
 	return sdk.Result{}
 }
 
-func handleMsgSetDecryptionShare(ctx sdk.Context, keeper Keeper, msg types.MsgSetDecryptionShare) sdk.Result {
+func handleMsgSetDecryptionShare(ctx sdk.Context, keeper *Keeper, msg types.MsgSetDecryptionShare) sdk.Result {
 	decryptionShare, err := msg.DecryptionShare.Deserialize()
 	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("coudn't deserialize dectyption share: %v", err)).Result()
