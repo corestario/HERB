@@ -1,6 +1,7 @@
 #!/bin/bash
 t=$1
 n=$2
+rm -rf ~/.dkgcli
 dkgcli gen-key-file $t $n
 cd $HOME/.dkgcli
 ck=$(cat keys.json | jq .common_key)
@@ -15,7 +16,7 @@ do
 cd $HOME/.dkgcli
 hcli keys add "node$i"
 hd add-genesis-account $(hcli keys show "node$i" -a) 1000herbtoken,100000000stake
-id=$(cat keys.json | jq .partial_keys[$i].ID)
+id=$(cat keys.json | jq .partial_keys[$i].id)
 ID=${id:1:${#id}-2}
 vk=$(cat keys.json | jq .partial_keys[$i].verification_key)
 Vk=${vk:1:${#vk}-2}
