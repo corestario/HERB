@@ -36,7 +36,7 @@ send -- \"alicealice\r\"
 expect eof" > "node$i".exp
 chmod +x ./"node$i".exp
 done
-hd set-threshold $n $t
+hd set-threshold $t $t
 hd set-common-key $Ck
 hcli config chain-id HERBchain
 hcli config output json
