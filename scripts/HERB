@@ -9,19 +9,19 @@ currentround=$(hcli query herb current-round)
 echo "ct-part sending..."
 while !  hcli tx herb ct-part $commonkey -y --from $user  
 do
-sleep 0.05
+sleep 0.01
 done 
 stage=$(hcli query herb stage)
 echo "next stage waiting..."
 while [ "$stage" != "stageDSCollecting" ]
 do
-sleep 0.05
+sleep 0.01
 stage=$(hcli query herb stage)
 done
 echo "decryption share sending..."
 while !  hcli tx herb decrypt $2 $3 -y --from $user 
 do
-sleep 0.05
+sleep 0.01
 if [ $(hcli query herb stage) = "stageCtCollecting" ] && [ $(hcli query herb current-round) -eq $(( $currentround + 1 )) ]
 then
 break
@@ -30,7 +30,7 @@ done
 echo "end round waiting..."
 while [ $round -ne $(( $currentround + 1 )) ]
 do
-sleep 0.05
+sleep 0.01
 round=$(hcli query herb current-round)
 done
 echo "The next round is:"
