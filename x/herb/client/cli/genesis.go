@@ -74,7 +74,7 @@ func AddKeyHolderCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 
 			id, err := strconv.ParseUint(args[1], 10, 64)
 			if err != nil {
-				return fmt.Errorf("n %s not a valid uint, please input a valid number", args[1])
+				return fmt.Errorf("id %s not a valid uint, please input a valid number", args[1])
 			}
 
 			_, err = kyberenc.StringHexToPoint(types.P256, args[2])
