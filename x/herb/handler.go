@@ -29,10 +29,9 @@ func handleMsgSetCiphertextPart(ctx sdk.Context, keeper *Keeper, msg types.MsgSe
 		return sdk.ErrUnknownRequest(fmt.Sprintf("coudn't deserialize ciphertext part: %v", err)).Result()
 	}
 
-	if err2 := keeper.SetCiphertext(ctx, ctPart); err2 != nil {
-		return err2.Result()
+	if err := keeper.SetCiphertext(ctx, ctPart); err != nil {
+		return err.Result()
 	}
-
 	return sdk.Result{}
 }
 
@@ -41,9 +40,8 @@ func handleMsgSetDecryptionShare(ctx sdk.Context, keeper *Keeper, msg types.MsgS
 	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("coudn't deserialize dectyption share: %v", err)).Result()
 	}
-	if err2 := keeper.SetDecryptionShare(ctx, decryptionShare); err2 != nil {
-		return err2.Result()
+	if err := keeper.SetDecryptionShare(ctx, decryptionShare); err != nil {
+		return err.Result()
 	}
-
 	return sdk.Result{}
 }

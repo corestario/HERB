@@ -54,12 +54,12 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	round := k.CurrentRound(ctx)
 	stage := k.GetStage(ctx, round)
 	pubKey, err2 := k.GetCommonPublicKey(ctx)
-	if err != nil {
+	if err2 != nil {
 		return err2
 	}
 	err = elgamal.RKVerify(P256, ctPart.Ciphertext.PointB, k.group.Point().Base(), pubKey, ctPart.RKproof)
 	if err != nil {
-		return sdk.ErrUnknownRequest("RK proof isn't correct")
+		return sdk.ErrUnknownRequest(fmt.Sprintf("RK proof isn't correct: %v", err))
 	}
 
 	if k.CurrentRound(ctx) == 0 && stage == stageUnstarted {
@@ -71,43 +71,44 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 		return sdk.ErrUnknownRequest(fmt.Sprintf("round is not on the ciphertext collecting stage. Current stage: %v", stage))
 	}
 	ctStore := ctx.KVStore(k.storeCiphertextPartsKey)
-	keyBytesCt := make([]byte, 8)
-	binary.LittleEndian.PutUint64(keyBytesCt, round)
-	var ctList []*types.CiphertextPart
-	if ctStore.Has(keyBytesCt) {
-		ctListBytes := ctStore.Get(keyBytesCt)
-		var ctListJSON []*types.CiphertextPartJSON
-		err1 := k.cdc.UnmarshalJSON(ctListBytes, &ctListJSON)
-		if err1 != nil {
-			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list from the store: %v", err1))
-		}
-		ctList, err = types.CiphertextArrayDeserialize(ctListJSON)
-		if err != nil {
-			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list from the store: %v", err2))
-		}
-	}
-	for _, ct := range ctList {
-		if ct.EntropyProvider.String() == ctPart.EntropyProvider.String() {
-			return sdk.ErrInvalidAddress("entropy provider has already send ciphertext part")
-		}
-	}
-	ctList = append(ctList, ctPart)
-	newCtListJSON, err4 := types.CiphertextArraySerialize(ctList)
-	if err4 != nil {
-		return err4
-	}
-	newCtListBytes, err := k.cdc.MarshalJSON(newCtListJSON)
-	if err != nil {
-		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal list for the store: %v", err2))
-	}
-	ctStore.Set(keyBytesCt, newCtListBytes)
-
+	keyBytesAllCt := make([]byte, 8)
+	binary.LittleEndian.PutUint64(keyBytesAllCt, round)
 	t, err2 := k.GetThresholdParts(ctx)
 	if err2 != nil {
 		return err2
 	}
 
-	if uint64(len(ctList)) >= t {
+	var addrList []string
+	if ctStore.Has(keyBytesAllCt) {
+		addrListBytes := ctStore.Get(keyBytesAllCt)
+		err := k.cdc.UnmarshalJSON(addrListBytes, &addrList)
+		if err != nil {
+			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list of all addresses from the store: %v", err))
+		}
+	}
+	addrList = append(addrList, ctPart.EntropyProvider.String())
+	newAddrListBytes, err := k.cdc.MarshalJSON(addrList)
+	if err != nil {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal list of all addresses: %v", err))
+	}
+
+	keyBytesCt := createKeyForAddr(round, ctPart.EntropyProvider)
+	if ctStore.Has(keyBytesCt) {
+		return sdk.ErrInvalidAddress("entropy provider has already send ciphertext part")
+	}
+	ctJSON, err := types.NewCiphertextPartJSON(ctPart)
+	if err != nil {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize ctPart: %v", err))
+	}
+	ctBytes, err := k.cdc.MarshalJSON(ctJSON)
+	if err != nil {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshall ctPart: %v", err))
+	}
+
+	ctStore.Set(keyBytesCt, ctBytes)
+	ctStore.Set(keyBytesAllCt, newAddrListBytes)
+
+	if uint64(len(addrList)) >= t {
 		err2 = k.computeAggregatedCiphertext(ctx, round)
 		if err2 != nil {
 			return err2
@@ -122,20 +123,17 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	if ds.KeyHolder.Empty() {
 		return sdk.ErrInvalidAddress("Key Holder can't be empty!")
 	}
-	store := ctx.KVStore(k.storeKey)
+
 	round := k.CurrentRound(ctx)
 	stage := k.GetStage(ctx, round)
 	if stage != stageDSCollecting {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("wrong round stage: %v. round: %v", stage, round))
 	}
-	ACiphertext, err := k.GetAggregatedCiphertext(ctx, round)
+	aggCiphertext, err := k.GetAggregatedCiphertext(ctx, round)
 	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't get aggregated ciphertext: %v", err))
 	}
-	keyVKBytes := []byte(keyVerificationKeys)
-	if !store.Has(keyVKBytes) {
-		return sdk.ErrUnknownRequest("Verification keys list isn't exist")
-	}
+
 	verificationKeysJSON, err := k.GetVerificationKeys(ctx)
 	if err != nil {
 		return err
@@ -144,59 +142,61 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	if err != nil {
 		return err
 	}
-	var vkholder *types.VerificationKey
-	for _, vkey := range verificationKeys {
-		if vkey.Sender.String() == ds.KeyHolder.String() {
-			vkholder = vkey
+	var vkOwner *types.VerificationKey
+	for _, verKey := range verificationKeys {
+		if verKey.Sender.String() == ds.KeyHolder.String() {
+			vkOwner = verKey
 		}
 	}
-	if vkholder == nil {
-		return sdk.ErrUnknownRequest("Verification key isn't exist")
+	if vkOwner == nil {
+		return sdk.ErrUnknownRequest("verification key isn't exist")
 	}
 
-	err2 := elgamal.DLEVerify(P256, ds.DLEproof, k.group.Point().Base(), ACiphertext.PointA, vkholder.Key, ds.DecShare.V)
+	err2 := elgamal.DLEVerify(P256, ds.DLEproof, k.group.Point().Base(), aggCiphertext.PointA, vkOwner.Key, ds.DecShare.V)
 	if err2 != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("DLE proof isn't correct: %v", err2))
 	}
+
 	dsStore := ctx.KVStore(k.storeDecryptionSharesKey)
-	keyBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(keyBytes, round)
-	var dsList []*types.DecryptionShare
-	if dsStore.Has(keyBytes) {
-		dsListBytes := dsStore.Get(keyBytes)
-		var dsListJSON []*types.DecryptionShareJSON
-		err2 = k.cdc.UnmarshalJSON(dsListBytes, &dsListJSON)
+	keyBytes := createKeyForAddr(round, vkOwner.Sender)
+	keyAllShares := make([]byte, 8)
+	binary.LittleEndian.PutUint64(keyAllShares, round)
+
+	var addrList []string
+	if dsStore.Has(keyAllShares) {
+		addrListBytes := dsStore.Get(keyAllShares)
+		err2 := k.cdc.UnmarshalJSON(addrListBytes, &addrList)
 		if err2 != nil {
-			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list from the store: %v", err2))
+			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list of all addresses from the store: %v", err2))
 		}
-		dsList, err = types.DecryptionSharesArrayDeserialize(dsListJSON)
-		if err != nil {
-			return err
-		}
+	}
+	addrList = append(addrList, ds.KeyHolder.String())
+	newAddrListBytes, err2 := k.cdc.MarshalJSON(addrList)
+	if err2 != nil {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal list of all addresses: %v", err2))
 	}
 
-	for _, dshares := range dsList {
-		if dshares.KeyHolder.String() == ds.KeyHolder.String() {
-			return sdk.ErrInvalidAddress("entropy provider has already send ciphertext part")
-		}
+	if dsStore.Has(keyBytes) {
+		return sdk.ErrInvalidAddress("key holder has already send decryption share")
 	}
-	dsList = append(dsList, ds)
-	newDsListJSON, err := types.DecryptionSharesArraySerialize(dsList)
+	dsJSON, err := types.NewDecryptionShareJSON(ds)
 	if err != nil {
 		return err
 	}
-	newDsListBytes, err2 := k.cdc.MarshalJSON(newDsListJSON)
+	dsBytes, err2 := k.cdc.MarshalJSON(dsJSON)
 	if err2 != nil {
-		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal list for the store: %v", err2))
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshall decryption share: %v", err2))
 	}
-	dsStore.Set(keyBytes, newDsListBytes)
+
+	dsStore.Set(keyBytes, dsBytes)
+	dsStore.Set(keyAllShares, newAddrListBytes)
 
 	t, err := k.GetThresholdDecryption(ctx)
 	if err != nil {
 		return err
 	}
 
-	if uint64(len(dsList)) >= t {
+	if uint64(len(addrList)) >= t {
 		err = k.computeRandomResult(ctx, round)
 		if err != nil {
 			return err
@@ -246,22 +246,41 @@ func (k *Keeper) GetAllCiphertexts(ctx sdk.Context, round uint64) ([]*types.Ciph
 		return nil, sdk.ErrUnknownRequest("round hasn't started yet")
 	}
 
-	keyBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(keyBytes, round)
+	keyBytesAllCt := make([]byte, 8)
+	binary.LittleEndian.PutUint64(keyBytesAllCt, round)
 
 	//if store doesn't have such key -> no cts was added
-	if !ctStore.Has(keyBytes) {
+	if !ctStore.Has(keyBytesAllCt) {
 		return []*types.CiphertextPart{}, nil
 	}
-	ctListBytes := ctStore.Get(keyBytes)
-	var ctListJSON []*types.CiphertextPartJSON
-	err1 := k.cdc.UnmarshalJSON(ctListBytes, &ctListJSON)
-	if err1 != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list from store: %v", err1))
-	}
-	ctList, err := types.CiphertextArrayDeserialize(ctListJSON)
+
+	addrListBytes := ctStore.Get(keyBytesAllCt)
+	var addrList []string
+	err := k.cdc.UnmarshalJSON(addrListBytes, &addrList)
 	if err != nil {
-		return nil, err
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list of all adderesses from store: %v", err))
+	}
+	ctList := make([]*types.CiphertextPart, 0, len(addrList))
+	for _, addrStr := range addrList {
+		addr, err := sdk.AccAddressFromBech32(addrStr)
+		if err != nil {
+			return nil, sdk.ErrUnknownAddress(fmt.Sprintf("can't get address from bench32: %v", err))
+		}
+		key := createKeyForAddr(round, addr)
+		if !ctStore.Has(key) {
+			return nil, sdk.ErrUnknownRequest("addresses list and real ciphertext providers doesn't meet")
+		}
+		ctBytes := ctStore.Get(key)
+		var ctJSON types.CiphertextPartJSON
+		err = k.cdc.UnmarshalJSON(ctBytes, &ctJSON)
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarthsal ciphertext: %v", err))
+		}
+		ct, err2 := ctJSON.Deserialize()
+		if err2 != nil {
+			return nil, err2
+		}
+		ctList = append(ctList, ct)
 	}
 	return ctList, nil
 }
@@ -301,20 +320,41 @@ func (k *Keeper) GetAllDecryptionShares(ctx sdk.Context, round uint64) ([]*types
 	}
 
 	dsStore := ctx.KVStore(k.storeDecryptionSharesKey)
-	keyBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(keyBytes, round)
-	if !dsStore.Has(keyBytes) {
+
+	keyAllShares := make([]byte, 8)
+	binary.LittleEndian.PutUint64(keyAllShares, round)
+
+	if !dsStore.Has(keyAllShares) {
 		return []*types.DecryptionShare{}, nil
 	}
-	dsListBytes := dsStore.Get(keyBytes)
-	var dsListJSON []*types.DecryptionShareJSON
-	err1 := k.cdc.UnmarshalJSON(dsListBytes, &dsListJSON)
-	if err1 != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal array from store: %v", err1))
-	}
-	dsList, err := types.DecryptionSharesArrayDeserialize(dsListJSON)
+
+	addrListBytes := dsStore.Get(keyAllShares)
+	var addrList []string
+	err := k.cdc.UnmarshalJSON(addrListBytes, &addrList)
 	if err != nil {
-		return nil, err
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list of all adderesses from store: %v", err))
+	}
+	dsList := make([]*types.DecryptionShare, 0, len(addrList))
+	for _, addrStr := range addrList {
+		addr, err := sdk.AccAddressFromBech32(addrStr)
+		if err != nil {
+			return nil, sdk.ErrUnknownAddress(fmt.Sprintf("can't get address from bench32: %v", err))
+		}
+		key := createKeyForAddr(round, addr)
+		if !dsStore.Has(key) {
+			return nil, sdk.ErrUnknownRequest("addresses list and real decryption share sender doesn't meet")
+		}
+		dsBytes := dsStore.Get(key)
+		var dsJSON types.DecryptionShareJSON
+		err = k.cdc.UnmarshalJSON(dsBytes, &dsJSON)
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarthsal decryption share: %v", err))
+		}
+		ds, err2 := dsJSON.Deserialize()
+		if err2 != nil {
+			return nil, err2
+		}
+		dsList = append(dsList, ds)
 	}
 	return dsList, nil
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/dgamingfoundation/HERB/dkg"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -69,14 +70,15 @@ func CiphertextTest(group proof.Suite, commonKey kyber.Point, y kyber.Scalar, r 
 
 func TestSetGetCiphertext(t *testing.T) {
 	testCases := []int{1, 2}
-	l := 3
+	n := 3
+	trh := 3
 	for round, r := range testCases {
 		var ciphertextParts []types.CiphertextPart
-		ctx, keeper, _ := Initialize(uint64(l), uint64(l), uint64(l))
-		userAddrs := CreateTestAddrs(l)
+		ctx, keeper, _ := Initialize(uint64(trh), uint64(n), uint64(n))
+		userAddrs := CreateTestAddrs(n)
 		keeper.forceRoundStage(ctx, uint64(round), stageCtCollecting)
 		keeper.forceCurrentRound(ctx, uint64(round))
-		err := SetKeyHolders(ctx, keeper, userAddrs)
+		_, err := SetKeyHolders(ctx, keeper, userAddrs, trh, n)
 		if err != nil {
 			t.Errorf("can't set public key %v", err)
 		}
@@ -91,7 +93,7 @@ func TestSetGetCiphertext(t *testing.T) {
 		if err != nil {
 			t.Errorf("can't decode common key to point")
 		}
-		for i := 0; i < l; i++ {
+		for i := 0; i < n; i++ {
 			y := keeper.group.Scalar().SetInt64(int64(r))
 			rr := keeper.group.Scalar().SetInt64(int64(r + i))
 			ct, DLK, RK, err := CiphertextTest(P256, commonkey, y, rr)
@@ -109,7 +111,7 @@ func TestSetGetCiphertext(t *testing.T) {
 		if err != nil {
 			t.Errorf("failed get all ciphertexts: %v", err)
 		}
-		for i := 0; i < l; i++ {
+		for i := 0; i < n; i++ {
 			if newCiphertexts[i].EntropyProvider.String() != ciphertextParts[i].EntropyProvider.String() {
 				t.Errorf("new map doesn't contains original entropy provider, round: %v, expected: %v", round, ciphertextParts[i].EntropyProvider.String())
 			}
@@ -162,93 +164,55 @@ func testAddr(addr string, bech string) sdk.AccAddress {
 	return res
 }
 
-/*func TestSetGetDecryptionShare(t *testing.T) {
-	testCases := []int{1, 5, 10}
-	l := 3
-	for round, r := range testCases {
-		var decryptionShares []types.DecryptionShare
-		ctx, keeper, _ := Initialize(uint64(l), uint64(l), uint64(l))
-		userAddrs := CreateTestAddrs(l)
-		keeper.forceRoundStage(ctx, uint64(round), stageDSCollecting)
-		keeper.forceCurrentRound(ctx, uint64(round))
-		g := keeper.group.Point().Base()
-		for i := 0; i < l; i++ {
-			x := keeper.group.Scalar().SetInt64(int64(r))
-			g1 := keeper.group.Point().Mul(x, g)
-			g2 := keeper.group.Point().Mul(x, g1)
-			dleProof, _, _, err := elgamal.DLE(P256, g1, g2, x)
-			if err != nil {
-				t.Errorf("Dle proof doesn't created")
-			}
-			decShare := types.DecryptionShare{share.PubShare{i, g2}, dleProof, userAddrs[i]}
-			decryptionShares = append(decryptionShares, decShare)
-			err1 := keeper.SetDecryptionShare(ctx, &decShare)
-			if err1 != nil {
-				t.Errorf("failed set decryption share: %v", err1)
-			}
-		}
-		newDecryptionShares, err := keeper.GetAllDecryptionShares(ctx, uint64(round))
-		if err != nil {
-			t.Errorf("failed get all decryption shares: %v", err)
-		}
-		for i := 0; i < r; i++ {
-			if _, ok := newDecryptionShares[decryptionShares[i].KeyHolderAddr.String()]; !ok {
-				t.Errorf("new map doesn't contains original key holder, round: %v", round)
-			}
-			if !newDecryptionShares[decryptionShares[i].KeyHolderAddr.String()].DecShare.V.Equal(decryptionShares[i].DecShare.V) {
-				t.Errorf("ciphertexts don't equal, round: %v", round)
-			}
-			if !newDecryptionShares[decryptionShares[i].KeyHolderAddr.String()].DLEproof.C.Equal(decryptionShares[i].DLEproof.C) ||
-				!newDecryptionShares[decryptionShares[i].KeyHolderAddr.String()].DLEproof.R.Equal(decryptionShares[i].DLEproof.R) ||
-				!newDecryptionShares[decryptionShares[i].KeyHolderAddr.String()].DLEproof.VG.Equal(decryptionShares[i].DLEproof.VG) ||
-				!newDecryptionShares[decryptionShares[i].KeyHolderAddr.String()].DLEproof.VH.Equal(decryptionShares[i].DLEproof.VH) {
-				t.Errorf("dle proofs don't equal")
-			}
-		}
-	}
-}*/
-
-func SetKeyHolders(ctx sdk.Context, k Keeper, adds []sdk.AccAddress) error {
+func SetKeyHolders(ctx sdk.Context, k Keeper, adds []sdk.AccAddress, t, n int) ([]kyber.Scalar, error) {
 	store := ctx.KVStore(k.storeKey)
 	keyCommonBytes := []byte(keyCommonKey)
 	if store.Has(keyCommonBytes) {
-		return sdk.ErrUnknownRequest("Public key already exist")
+		return nil, sdk.ErrUnknownRequest("Public key already exist")
 	}
-	commonKeyStr := "0452b4a6d7883102258a87539c41898cd1c78bcc27dd905d9111e8b066504ba31b160580530886a2200833c2281e10377dbb2007abc531959a23df365ffc16ee18"
-	commonkey := []byte(commonKeyStr)
-	store.Set(keyCommonBytes, commonkey)
-	VKstr := []string{"041ea050368a68a13a12f1026870b997d6d15d74a59f243ef9c38aea5089387f13dd754344b73ab5d59a716a13abcf4cc3767b723a60d1c367dde5b52d3b04781f",
-		"04711451d30356c470e156941119d44cd4e8b44f04497c1875be584c93d423405e96f8fe4efb8c7d181bdea18b2ba1673f0d639eba187e491ae00d25320711f9f5",
-		"04e90f797b084978e896f398dd408249d72218803f155044c994c4f4ac7da57db44e00771ecec98e3a213a9e141e678700011d923ab768d5d329916c611dea85cf"}
-	id := []int{0, 1, 2}
-	VK := make([]kyber.Point, len(id))
-	var err error
-	ListVerKeys := make([]*types.VerificationKey, len(id))
-	for i := 0; i < len(id); i++ {
-		VK[i], err = kyberenc.StringHexToPoint(k.group, VKstr[i])
-		if err != nil {
-			return sdk.ErrUnknownRequest("Can't decode point from string")
-		}
-		ListVerKeys[i] = &types.VerificationKey{VK[i], id[i], adds[i]}
+	decShare, verKeys, err := dkg.RabinDKGSimulator(P256.String(), n, t)
+	if err != nil {
+		return nil, err
+	}
+	commonKey := decShare[0].Public()
+	commonKeyStr, err := kyberenc.PointToStringHex(P256, commonKey)
+	if err != nil {
+		return nil, err
+	}
+	//commonkey := []byte(commonKeyStr)
+	store.Set(keyCommonBytes, []byte(commonKeyStr))
+	//VKstr := []string{"041ea050368a68a13a12f1026870b997d6d15d74a59f243ef9c38aea5089387f13dd754344b73ab5d59a716a13abcf4cc3767b723a60d1c367dde5b52d3b04781f",
+	//	"04711451d30356c470e156941119d44cd4e8b44f04497c1875be584c93d423405e96f8fe4efb8c7d181bdea18b2ba1673f0d639eba187e491ae00d25320711f9f5",
+	//	"04e90f797b084978e896f398dd408249d72218803f155044c994c4f4ac7da57db44e00771ecec98e3a213a9e141e678700011d923ab768d5d329916c611dea85cf"}
+	ListVerKeys := make([]*types.VerificationKey, n)
+	for i := 0; i < n; i++ {
+		ListVerKeys[i] = &types.VerificationKey{*verKeys[i], i, adds[i]}
 	}
 
 	ListVerKeysJSON, err := types.VerificationKeyArraySerialize(ListVerKeys)
 	if err != nil {
-		return sdk.ErrUnknownRequest("Can't serialize map")
+		return nil, sdk.ErrUnknownRequest("Can't serialize map")
 	}
 	err2 := k.SetVerificationKeys(ctx, ListVerKeysJSON)
 	if err2 != nil {
-		return err2
+		return nil, err2
 	}
-	return nil
+
+	partialKeys := make([]kyber.Scalar, n)
+	for i := 0; i < n; i++ {
+		partialKeys[i] = decShare[i].PriShare().V
+	}
+
+	return partialKeys, nil
 }
 
 func TestHERB(t *testing.T) {
 	testCases := []int{1, 5, 6, 7, 16, 48, 35, 32, 34}
-	l := 3
-	ctx, keeper, _ := Initialize(uint64(l), uint64(l), uint64(l))
-	userAddrs := CreateTestAddrs(l)
-	err := SetKeyHolders(ctx, keeper, userAddrs)
+	n := 10
+	trh := 8
+	ctx, keeper, _ := Initialize(uint64(trh), uint64(n), uint64(n))
+	userAddrs := CreateTestAddrs(n)
+	partKeys, err := SetKeyHolders(ctx, keeper, userAddrs, trh, n)
 	if err != nil {
 		t.Errorf("can't set public key and verification keys %v", err)
 	}
@@ -275,16 +239,6 @@ func TestHERB(t *testing.T) {
 	if err != nil {
 		t.Errorf("can't decode verification keys")
 	}
-	partKeys := make([]kyber.Scalar, l)
-	pk := []string{"96dd785ef52a85b516f3358fb317572b67f743a97d0c2a164660d134f7af6466",
-		"ec0d090634508f2633381696dcd628567d51cee08b73a360e461e49b4c773130",
-		"413c99ae737698964f7cf79e0694f981d5c55f69f2c37e268ea92d3ea4dbd8a9"}
-	for i := 0; i < l; i++ {
-		partKeys[i], err = kyberenc.StringHexToScalar(keeper.group, pk[i])
-		if err != nil {
-			t.Errorf("can't decode scalar from string ")
-		}
-	}
 
 	for round, r := range testCases {
 		var ciphertextParts []types.CiphertextPart
@@ -294,7 +248,7 @@ func TestHERB(t *testing.T) {
 		keeper.forceRoundStage(ctx, uint64(round), stageCtCollecting)
 		keeper.forceCurrentRound(ctx, uint64(round))
 
-		for i := 0; i < l; i++ {
+		for i := 0; i < n; i++ {
 			y := keeper.group.Scalar().SetInt64(int64(r))
 			rr := keeper.group.Scalar().SetInt64(int64(r + i))
 			ct, DLK, RK, err := CiphertextTest(P256, commonkey, y, rr)
@@ -313,7 +267,10 @@ func TestHERB(t *testing.T) {
 		if err != nil {
 			t.Errorf("failed get all ciphertexts: %v", err)
 		}
-		for i := 0; i < l; i++ {
+		if len(newCiphertexts) != n {
+			t.Errorf("Some ciphertexts weren't added to the store. Sum of ciphertextes: %v", len(newCiphertexts))
+		}
+		for i := 0; i < n; i++ {
 			providerFound := false
 			originalProvider := ciphertextParts[i].EntropyProvider
 			for _, nCt := range newCiphertexts {
@@ -343,7 +300,7 @@ func TestHERB(t *testing.T) {
 			t.Errorf("aggregated ciphertexts don't equal")
 		}
 		keeper.forceRoundStage(ctx, uint64(round), stageDSCollecting)
-		for i := 0; i < l; i++ {
+		for i := 0; i < trh; i++ {
 			ds, dle, err := elgamal.CreateDecShare(P256, ACiphertext, partKeys[i])
 			decShare := types.DecryptionShare{share.PubShare{I: Verkeys[i].KeyHolder, V: ds}, dle, userAddrs[i]}
 			decryptionShares = append(decryptionShares, decShare)
@@ -357,7 +314,7 @@ func TestHERB(t *testing.T) {
 		if err != nil {
 			t.Errorf("Can't get all decryption shares %v", err)
 		}
-		for i := 0; i < l; i++ {
+		for i := 0; i < trh; i++ {
 			holderFound := false
 			originalHolder := decryptionShares[i].KeyHolder
 			for _, ds := range newDecryptionShares {
@@ -369,7 +326,7 @@ func TestHERB(t *testing.T) {
 				t.Errorf("new map doesn't contains original key holder, round: %v", round)
 			}
 			if !newDecryptionShares[i].DecShare.V.Equal(decryptionShares[i].DecShare.V) {
-				t.Errorf("ciphertexts don't equal, round: %v", round)
+				t.Errorf("decryption shares don't equal, round: %v", round)
 			}
 			if !newDecryptionShares[i].DLEproof.C.Equal(decryptionShares[i].DLEproof.C) ||
 				!newDecryptionShares[i].DLEproof.R.Equal(decryptionShares[i].DLEproof.R) ||
@@ -378,7 +335,7 @@ func TestHERB(t *testing.T) {
 				t.Errorf("dle proofs don't equal")
 			}
 		}
-		resultPoint := elgamal.Decrypt(keeper.group, ACiphertext, dshares, l)
+		resultPoint := elgamal.Decrypt(keeper.group, ACiphertext, dshares, n)
 		hash := P256.Hash()
 		_, err2 := resultPoint.MarshalTo(hash)
 		if err2 != nil {
