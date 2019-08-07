@@ -4,43 +4,29 @@ commonkey=$4
 round=0
 while true
 do
-START=$(date +%s)
 currentround=$(hcli query herb current-round)
-echo "ct-part sending..."
-while !  hcli tx herb ct-part $commonkey -y --from $user  
+while !  hcli tx herb ct-part $commonkey -y --from $user> /dev/null
 do
-sleep 0.01
+sleep "$(($3/75))"
 done 
 stage=$(hcli query herb stage)
-echo "next stage waiting..."
 while [ "$stage" != "stageDSCollecting" ]
 do
-sleep 0.01
+sleep "$(($3/75))"
 stage=$(hcli query herb stage)
 done
-echo "decryption share sending..."
-while !  hcli tx herb decrypt $2 $3 -y --from $user 
+while !  hcli tx herb decrypt $2 $3 -y --from $user> /dev/null
 do
-sleep 0.01
+sleep "$(($3/75))"
 if [ $(hcli query herb stage) = "stageCtCollecting" ] && [ $(hcli query herb current-round) -eq $(( $currentround + 1 )) ]
 then
 break
 fi
 done
-echo "end round waiting..."
 while [ $round -ne $(( $currentround + 1 )) ]
 do
-sleep 0.01
+sleep "$(($3/75))"
 round=$(hcli query herb current-round)
 done
-echo "The next round is:"
-hcli query herb current-round
-END=$(date +%s)
-DIFF=$(( $END - $START ))
-echo ""
-echo "The result is:"
-hcli query herb get-random $(($round-1))
-echo ""
-echo "It took $DIFF seconds"
 done
 
