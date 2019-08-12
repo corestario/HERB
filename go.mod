@@ -6,6 +6,7 @@ require (
 	github.com/btcsuite/btcd v0.0.0-20190629003639-c26ffa870fd8 // indirect
 	github.com/cosmos/cosmos-sdk v0.28.2-0.20190616100639-18415eedaf25
 	github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d // indirect
+	github.com/dgamingfoundation/cosmos_utils/storewrapper v0.0.0-20190812164253-393e34a341b1
 	github.com/go-kit/kit v0.9.0 // indirect
 	github.com/gorilla/mux v1.7.0
 	github.com/kr/pretty v0.1.0 // indirect

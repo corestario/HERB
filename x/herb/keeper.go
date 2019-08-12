@@ -3,6 +3,7 @@ package herb
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -44,6 +45,11 @@ func NewKeeper(storeKey sdk.StoreKey, storeCiphertextParts *sdk.KVStoreKey, stor
 
 // SetCiphertext store the ciphertext from the entropyProvider to the kv-store
 func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sdk.Error {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("PANIC:", r)
+		}
+	}()
 	if ctPart.EntropyProvider.Empty() {
 		return sdk.ErrInvalidAddress("Entropy provider can't be empty!")
 	}
@@ -53,9 +59,9 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	}
 	round := k.CurrentRound(ctx)
 	stage := k.GetStage(ctx, round)
-	pubKey, err2 := k.GetCommonPublicKey(ctx)
-	if err != nil {
-		return err2
+	pubKey, err1 := k.GetCommonPublicKey(ctx)
+	if err1 != nil {
+		return err1
 	}
 	err = elgamal.RKVerify(P256, ctPart.Ciphertext.PointB, k.group.Point().Base(), pubKey, ctPart.RKproof)
 	if err != nil {
@@ -71,9 +77,8 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 		return sdk.ErrUnknownRequest(fmt.Sprintf("round is not on the ciphertext collecting stage. Current stage: %v", stage))
 	}
 	ctStore := ctx.KVStore(k.storeCiphertextPartsKey)
-	ctStoreWrapper := storewrapper.NewKVStore(ctStore, 128)
-	keyBytesCt := make([]byte, 8)
-	binary.LittleEndian.PutUint64(keyBytesCt, round)
+	ctStoreWrapper := storewrapper.NewKVStore(ctStore, 4096)
+	keyBytesCt := []byte(fmt.Sprintf("rd_%d", round))
 	var ctList []*types.CiphertextPart
 	_, ok, err := ctStoreWrapper.HasW(keyBytesCt)
 	if err != nil {
@@ -84,44 +89,49 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 		if err != nil {
 			return sdk.ErrUnknownRequest(fmt.Sprintf("can't get from ctStoreWrapper: %v", err))
 		}
+
 		var ctListJSON []*types.CiphertextPartJSON
 		err = k.cdc.UnmarshalJSON(ctListBytes, &ctListJSON)
 		if err != nil {
 			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list from the store: %v", err))
 		}
-		ctList, err2 = types.CiphertextArrayDeserialize(ctListJSON)
-		if err2 != nil {
-			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list from the store: %v", err2))
+		ctList, err = types.CiphertextArrayDeserialize(ctListJSON)
+		if err != nil {
+			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list from the store: %v", err))
 		}
 	}
 	for _, ct := range ctList {
+		ct := ct
 		if ct.EntropyProvider.String() == ctPart.EntropyProvider.String() {
 			return sdk.ErrInvalidAddress("entropy provider has already send ciphertext part")
 		}
 	}
+
 	ctList = append(ctList, ctPart)
-	newCtListJSON, err2 := types.CiphertextArraySerialize(ctList)
-	if err2 != nil {
-		return err2
+	newCtListJSON, err1 := types.CiphertextArraySerialize(ctList)
+	if err1 != nil {
+		return err1
 	}
+
 	newCtListBytes, err := k.cdc.MarshalJSON(newCtListJSON)
 	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal list for the store: %v", err))
 	}
+
 	_, err = ctStoreWrapper.SetW(keyBytesCt, newCtListBytes)
 	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't check if ctStoreWrapper has key: %v", err))
 	}
 
-	t, err2 := k.GetThresholdParts(ctx)
-	if err2 != nil {
-		return err2
+	t, err1 := k.GetThresholdParts(ctx)
+	if err1 != nil {
+		return err1
 	}
 
 	if uint64(len(ctList)) >= t {
-		err2 = k.computeAggregatedCiphertext(ctx, round)
-		if err2 != nil {
-			return err2
+		err1 = k.computeAggregatedCiphertext(ctx, round)
+		if err1 != nil {
+			return err1
 		}
 		k.setStage(ctx, round, stageDSCollecting)
 	}
