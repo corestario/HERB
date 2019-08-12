@@ -1,11 +1,11 @@
 #!/bin/bash
 
 k=$1
-for (( i=0; i<3; i++ ))
+for (( i=0; i<24; i++ ))
 do
 j=$(($k+$i))
 cd $HOME/HERB/bots
 ./"node$j".exp &
 done
-j=$(($k+3))
+j=$(($k+24))
 ./"node$j".exp

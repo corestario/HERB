@@ -208,8 +208,8 @@ func SetKeyHolders(ctx sdk.Context, k Keeper, adds []sdk.AccAddress, t, n int) (
 
 func TestHERB(t *testing.T) {
 	testCases := []int{1, 5, 6, 7, 16, 48, 35, 32, 34}
-	n := 10
-	trh := 8
+	n := 100
+	trh := 67
 	ctx, keeper, _ := Initialize(uint64(trh), uint64(n), uint64(n))
 	userAddrs := CreateTestAddrs(n)
 	partKeys, err := SetKeyHolders(ctx, keeper, userAddrs, trh, n)

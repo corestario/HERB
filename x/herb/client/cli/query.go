@@ -120,6 +120,7 @@ func GetCmdAllCiphertexts(queryRoute string, cdc *codec.Codec) *cobra.Command {
 			for _, ctPart := range out {
 				fmt.Printf("Entropy provider address: %v \n Ciphertext: %v \n", ctPart.EntropyProvider.String(), ctPart.Ciphertext.String())
 			}
+			fmt.Printf("All ct-part sum: %v\n", len(out))
 			return nil
 		},
 	}
@@ -166,6 +167,7 @@ func GetCmdAllDecryptionShares(queryRoute string, cdc *codec.Codec) *cobra.Comma
 			for _, share := range out {
 				fmt.Printf("Key holder address: %v \n Descryption Share: %v \n", share.KeyHolder.String(), share.DecShare.V.String())
 			}
+			fmt.Printf("All shares sum: %v\n", len(out))
 			return nil
 		},
 	}
