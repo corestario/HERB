@@ -226,6 +226,16 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	}
 
 	if uint64(len(addrList)) >= t {
+		if round == 0 {
+			t := time.Now().UTC()
+			k.resTime = t
+		} else {
+			t1 := time.Now().UTC()
+			secRound := t1.Sub(k.resTime)
+			k.randmetric.Random.Set(secRound.Seconds())
+			k.resTime = t1
+		}
+		k.randmetric.CountRandom.Inc()
 		k.setStage(ctx, round, stageCompleted)
 		k.increaseCurrentRound(ctx)
 		k.setStage(ctx, k.CurrentRound(ctx), stageCtCollecting)
@@ -462,16 +472,6 @@ func (k *Keeper) RandomResult(ctx sdk.Context, round uint64) ([]byte, sdk.Error)
 		return nil, sdk.ErrInternal(fmt.Sprintf("failed to marshal result point to hash: %v", err))
 	}
 	result := hash.Sum(nil)
-	if round == 0 {
-		t := time.Now().UTC()
-		k.resTime = t
-	} else {
-		t1 := time.Now().UTC()
-		secRound := t1.Sub(k.resTime)
-		k.randmetric.Random.Set(secRound.Seconds())
-		k.resTime = t1
-	}
-	k.randmetric.CountRandom.Inc()
 	return result, nil
 }
 
