@@ -78,7 +78,7 @@ func TestSetGetCiphertext(t *testing.T) {
 		userAddrs := CreateTestAddrs(n)
 		keeper.forceRoundStage(ctx, uint64(round), stageCtCollecting)
 		keeper.forceCurrentRound(ctx, uint64(round))
-		_, err := SetKeyHolders(ctx, keeper, userAddrs, trh, n)
+		_, err := SetKeyHolders(ctx, &keeper, userAddrs, trh, n)
 		if err != nil {
 			t.Errorf("can't set public key %v", err)
 		}
@@ -164,7 +164,7 @@ func testAddr(addr string, bech string) sdk.AccAddress {
 	return res
 }
 
-func SetKeyHolders(ctx sdk.Context, k Keeper, adds []sdk.AccAddress, t, n int) ([]kyber.Scalar, error) {
+func SetKeyHolders(ctx sdk.Context, k *Keeper, adds []sdk.AccAddress, t, n int) ([]kyber.Scalar, error) {
 	store := ctx.KVStore(k.storeKey)
 	keyCommonBytes := []byte(keyCommonKey)
 	if store.Has(keyCommonBytes) {
@@ -179,11 +179,7 @@ func SetKeyHolders(ctx sdk.Context, k Keeper, adds []sdk.AccAddress, t, n int) (
 	if err != nil {
 		return nil, err
 	}
-	//commonkey := []byte(commonKeyStr)
 	store.Set(keyCommonBytes, []byte(commonKeyStr))
-	//VKstr := []string{"041ea050368a68a13a12f1026870b997d6d15d74a59f243ef9c38aea5089387f13dd754344b73ab5d59a716a13abcf4cc3767b723a60d1c367dde5b52d3b04781f",
-	//	"04711451d30356c470e156941119d44cd4e8b44f04497c1875be584c93d423405e96f8fe4efb8c7d181bdea18b2ba1673f0d639eba187e491ae00d25320711f9f5",
-	//	"04e90f797b084978e896f398dd408249d72218803f155044c994c4f4ac7da57db44e00771ecec98e3a213a9e141e678700011d923ab768d5d329916c611dea85cf"}
 	ListVerKeys := make([]*types.VerificationKey, n)
 	for i := 0; i < n; i++ {
 		ListVerKeys[i] = &types.VerificationKey{*verKeys[i], i, adds[i]}
@@ -197,7 +193,10 @@ func SetKeyHolders(ctx sdk.Context, k Keeper, adds []sdk.AccAddress, t, n int) (
 	if err2 != nil {
 		return nil, err2
 	}
-
+	err2 = k.InitializeVerificationKeys(ctx)
+	if err2 != nil {
+		panic(err2)
+	}
 	partialKeys := make([]kyber.Scalar, n)
 	for i := 0; i < n; i++ {
 		partialKeys[i] = decShare[i].PriShare().V
@@ -212,7 +211,7 @@ func TestHERB(t *testing.T) {
 	trh := 8
 	ctx, keeper, _ := Initialize(uint64(trh), uint64(n), uint64(n))
 	userAddrs := CreateTestAddrs(n)
-	partKeys, err := SetKeyHolders(ctx, keeper, userAddrs, trh, n)
+	partKeys, err := SetKeyHolders(ctx, &keeper, userAddrs, trh, n)
 	if err != nil {
 		t.Errorf("can't set public key and verification keys %v", err)
 	}

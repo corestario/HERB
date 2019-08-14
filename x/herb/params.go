@@ -45,6 +45,24 @@ func (k *Keeper) SetVerificationKeys(ctx sdk.Context, verificationKeys []types.V
 
 	store.Set([]byte(keyVerificationKeys), verificationKeysBytes)
 	return nil
+
+}
+
+func (k *Keeper) InitializeVerificationKeys(ctx sdk.Context) sdk.Error {
+	verificationKeysJSON, err := k.GetVerificationKeys(ctx)
+	if err != nil {
+		return err
+	}
+	verificationKeys, err := types.VerificationKeyArrayDeserialize(verificationKeysJSON)
+	if err != nil {
+		return err
+	}
+	vk := make(map[string]types.VerificationKey)
+	for _, key := range verificationKeys {
+		vk[key.Sender.String()] = *key
+	}
+	k.verificationKeys = vk
+	return nil
 }
 
 // GetVerificationKeys returns verification keys corresponding to each address

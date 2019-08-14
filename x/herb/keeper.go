@@ -24,6 +24,7 @@ type Keeper struct {
 	cdc                      *codec.Codec
 	randmetric               *Metrics
 	resTime                  time.Time
+	verificationKeys         map[string]types.VerificationKey
 }
 
 // NewKeeper creates new instances of the HERB Keeper
@@ -68,6 +69,10 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	}
 
 	if k.CurrentRound(ctx) == 0 && stage == stageUnstarted {
+		err := k.InitializeVerificationKeys(ctx)
+		if err != nil {
+			return err
+		}
 		stage = stageCtCollecting
 		k.setStage(ctx, round, stage)
 	}
@@ -163,21 +168,8 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't get aggregated ciphertext: %v", err))
 	}
 
-	verificationKeysJSON, err := k.GetVerificationKeys(ctx)
-	if err != nil {
-		return err
-	}
-	verificationKeys, err := types.VerificationKeyArrayDeserialize(verificationKeysJSON)
-	if err != nil {
-		return err
-	}
-	var vkOwner *types.VerificationKey
-	for _, verKey := range verificationKeys {
-		if verKey.Sender.String() == ds.KeyHolder.String() {
-			vkOwner = verKey
-		}
-	}
-	if vkOwner == nil {
+	vkOwner, ok := k.verificationKeys[ds.KeyHolder.String()]
+	if !ok {
 		return sdk.ErrUnknownRequest("verification key isn't exist")
 	}
 
@@ -389,7 +381,8 @@ func (k *Keeper) GetAllDecryptionShares(ctx sdk.Context, round uint64) ([]*types
 
 // GetRandom returns random bytes array of the given round
 func (k *Keeper) GetRandom(ctx sdk.Context, round uint64) ([]byte, sdk.Error) {
-	stage := k.GetStage(ctx, round)
+	return k.RandomResult(ctx, round)
+	/*stage := k.GetStage(ctx, round)
 	if stage != stageCompleted {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("wrong round stage: %v. round: %v", stage, round))
 	}
@@ -400,7 +393,7 @@ func (k *Keeper) GetRandom(ctx sdk.Context, round uint64) ([]byte, sdk.Error) {
 		return nil, sdk.ErrInternal("There is not round result in the store")
 	}
 	result := store.Get(keyBytes)
-	return result, nil
+	return result, nil*/
 }
 
 // GetStage returns stage of the given round
