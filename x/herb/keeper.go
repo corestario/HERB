@@ -10,7 +10,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
-	"github.com/dgamingfoundation/cosmos_utils/storewrapper"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/share"
 )
@@ -59,13 +58,13 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	}
 	round := k.CurrentRound(ctx)
 	stage := k.GetStage(ctx, round)
-	pubKey, err1 := k.GetCommonPublicKey(ctx)
-	if err1 != nil {
-		return err1
+	pubKey, err2 := k.GetCommonPublicKey(ctx)
+	if err2 != nil {
+		return err2
 	}
 	err = elgamal.RKVerify(P256, ctPart.Ciphertext.PointB, k.group.Point().Base(), pubKey, ctPart.RKproof)
 	if err != nil {
-		return sdk.ErrUnknownRequest("RK proof isn't correct")
+		return sdk.ErrUnknownRequest(fmt.Sprintf("RK proof isn't correct: %v", err))
 	}
 
 	if k.CurrentRound(ctx) == 0 && stage == stageUnstarted {
@@ -77,64 +76,74 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 		return sdk.ErrUnknownRequest(fmt.Sprintf("round is not on the ciphertext collecting stage. Current stage: %v", stage))
 	}
 	ctStore := ctx.KVStore(k.storeCiphertextPartsKey)
-	ctStoreWrapper := storewrapper.NewKVStore(ctStore, 4096)
-	keyBytesCt := []byte(fmt.Sprintf("rd_%d", round))
-	var ctList []*types.CiphertextPart
-	_, ok, err := ctStoreWrapper.HasW(keyBytesCt)
+	keyBytesAllCt := []byte(fmt.Sprintf("rd_%d", round))
+	t, err2 := k.GetThresholdParts(ctx)
+	if err2 != nil {
+		return err2
+	}
+
+	var addrList []string
+	if ctStore.Has(keyBytesAllCt) {
+		addrListBytes := ctStore.Get(keyBytesAllCt)
+		err := k.cdc.UnmarshalJSON(addrListBytes, &addrList)
+		if err != nil {
+			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list of all addresses from the store: %v", err))
+		}
+	}
+	addrList = append(addrList, ctPart.EntropyProvider.String())
+	newAddrListBytes, err := k.cdc.MarshalJSON(addrList)
 	if err != nil {
-		return sdk.ErrUnknownRequest(fmt.Sprintf("can't check if ctStoreWrapper has key: %v", err))
-	}
-	if ok {
-		ctListBytes, err := ctStoreWrapper.GetW(keyBytesCt)
-		if err != nil {
-			return sdk.ErrUnknownRequest(fmt.Sprintf("can't get from ctStoreWrapper: %v", err))
-		}
-
-		var ctListJSON []*types.CiphertextPartJSON
-		err = k.cdc.UnmarshalJSON(ctListBytes, &ctListJSON)
-		if err != nil {
-			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list from the store: %v", err))
-		}
-		ctList, err = types.CiphertextArrayDeserialize(ctListJSON)
-		if err != nil {
-			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list from the store: %v", err))
-		}
-	}
-	for _, ct := range ctList {
-		ct := ct
-		if ct.EntropyProvider.String() == ctPart.EntropyProvider.String() {
-			return sdk.ErrInvalidAddress("entropy provider has already send ciphertext part")
-		}
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal list of all addresses: %v", err))
 	}
 
-	ctList = append(ctList, ctPart)
-	newCtListJSON, err1 := types.CiphertextArraySerialize(ctList)
+	keyBytesCt := createKeyForAddr(round, ctPart.EntropyProvider)
+	if ctStore.Has(keyBytesCt) {
+		return sdk.ErrInvalidAddress("entropy provider has already send ciphertext part")
+	}
+	ctJSON, err := types.NewCiphertextPartJSON(ctPart)
+	if err != nil {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize ctPart: %v", err))
+	}
+	ctBytes, err := k.cdc.MarshalJSON(ctJSON)
+	if err != nil {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshall ctPart: %v", err))
+	}
+	aggregatedCt, err1 := k.GetAggregatedCiphertext(ctx, round)
 	if err1 != nil {
 		return err1
 	}
-
-	newCtListBytes, err := k.cdc.MarshalJSON(newCtListJSON)
-	if err != nil {
-		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal list for the store: %v", err))
+	var newAggregatedCt elgamal.Ciphertext
+	if aggregatedCt == nil {
+		newAggregatedCt = ctPart.Ciphertext
+	} else {
+		newAggregatedCt = elgamal.AggregateCiphertext(P256, []elgamal.Ciphertext{ctPart.Ciphertext, *aggregatedCt})
 	}
-
-	_, err = ctStoreWrapper.SetW(keyBytesCt, newCtListBytes)
+	err1 = k.SetAggregatedCiphertext(ctx, round, &newAggregatedCt)
 	if err != nil {
-		return sdk.ErrUnknownRequest(fmt.Sprintf("can't check if ctStoreWrapper has key: %v", err))
-	}
-
-	t, err1 := k.GetThresholdParts(ctx)
-	if err1 != nil {
 		return err1
 	}
+	ctStore.Set(keyBytesCt, ctBytes)
+	ctStore.Set(keyBytesAllCt, newAddrListBytes)
 
-	if uint64(len(ctList)) >= t {
-		err1 = k.computeAggregatedCiphertext(ctx, round)
-		if err1 != nil {
-			return err1
-		}
+	if uint64(len(addrList)) >= t {
 		k.setStage(ctx, round, stageDSCollecting)
 	}
+	return nil
+}
+
+func (k *Keeper) SetAggregatedCiphertext(ctx sdk.Context, round uint64, ct *elgamal.Ciphertext) sdk.Error {
+	store := ctx.KVStore(k.storeKey)
+	keyBytes := createKeyBytesByRound(round, keyAggregatedCiphertext)
+
+	ctJSON, err := elgamal.NewCiphertextJSON(ct, P256)
+	if err != nil {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize aggregated ct: %v", err))
+	}
+	ctBytes, err := k.cdc.MarshalJSON(ctJSON)
+	if err != nil {
+		return sdk.ErrInternal(fmt.Sprintf("can't marhsal aggregated ct: %v", err))
+	}
+	store.Set(keyBytes, ctBytes)
 	return nil
 }
 
@@ -143,20 +152,17 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	if ds.KeyHolder.Empty() {
 		return sdk.ErrInvalidAddress("Key Holder can't be empty!")
 	}
-	store := ctx.KVStore(k.storeKey)
+
 	round := k.CurrentRound(ctx)
 	stage := k.GetStage(ctx, round)
 	if stage != stageDSCollecting {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("wrong round stage: %v. round: %v", stage, round))
 	}
-	ACiphertext, err := k.GetAggregatedCiphertext(ctx, round)
+	aggCiphertext, err := k.GetAggregatedCiphertext(ctx, round)
 	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't get aggregated ciphertext: %v", err))
 	}
-	keyVKBytes := []byte(keyVerificationKeys)
-	if !store.Has(keyVKBytes) {
-		return sdk.ErrUnknownRequest("Verification keys list isn't exist")
-	}
+
 	verificationKeysJSON, err := k.GetVerificationKeys(ctx)
 	if err != nil {
 		return err
@@ -165,63 +171,61 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	if err != nil {
 		return err
 	}
-	var vkholder *types.VerificationKey
-	for _, vkey := range verificationKeys {
-		if vkey.Sender.String() == ds.KeyHolder.String() {
-			vkholder = vkey
+	var vkOwner *types.VerificationKey
+	for _, verKey := range verificationKeys {
+		if verKey.Sender.String() == ds.KeyHolder.String() {
+			vkOwner = verKey
 		}
 	}
-	if vkholder == nil {
-		return sdk.ErrUnknownRequest("Verification key isn't exist")
+	if vkOwner == nil {
+		return sdk.ErrUnknownRequest("verification key isn't exist")
 	}
 
-	err2 := elgamal.DLEVerify(P256, ds.DLEproof, k.group.Point().Base(), ACiphertext.PointA, vkholder.Key, ds.DecShare.V)
+	err2 := elgamal.DLEVerify(P256, ds.DLEproof, k.group.Point().Base(), aggCiphertext.PointA, vkOwner.Key, ds.DecShare.V)
 	if err2 != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("DLE proof isn't correct: %v", err2))
 	}
+
 	dsStore := ctx.KVStore(k.storeDecryptionSharesKey)
-	keyBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(keyBytes, round)
-	var dsList []*types.DecryptionShare
-	if dsStore.Has(keyBytes) {
-		dsListBytes := dsStore.Get(keyBytes)
-		var dsListJSON []*types.DecryptionShareJSON
-		err2 = k.cdc.UnmarshalJSON(dsListBytes, &dsListJSON)
+	keyBytes := createKeyForAddr(round, vkOwner.Sender)
+	keyAllShares := make([]byte, 8)
+	binary.LittleEndian.PutUint64(keyAllShares, round)
+
+	var addrList []string
+	if dsStore.Has(keyAllShares) {
+		addrListBytes := dsStore.Get(keyAllShares)
+		err2 := k.cdc.UnmarshalJSON(addrListBytes, &addrList)
 		if err2 != nil {
-			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list from the store: %v", err2))
+			return sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list of all addresses from the store: %v", err2))
 		}
-		dsList, err = types.DecryptionSharesArrayDeserialize(dsListJSON)
-		if err != nil {
-			return err
-		}
+	}
+	addrList = append(addrList, ds.KeyHolder.String())
+	newAddrListBytes, err2 := k.cdc.MarshalJSON(addrList)
+	if err2 != nil {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal list of all addresses: %v", err2))
 	}
 
-	for _, dshares := range dsList {
-		if dshares.KeyHolder.String() == ds.KeyHolder.String() {
-			return sdk.ErrInvalidAddress("entropy provider has already send ciphertext part")
-		}
+	if dsStore.Has(keyBytes) {
+		return sdk.ErrInvalidAddress("key holder has already send decryption share")
 	}
-	dsList = append(dsList, ds)
-	newDsListJSON, err := types.DecryptionSharesArraySerialize(dsList)
+	dsJSON, err := types.NewDecryptionShareJSON(ds)
 	if err != nil {
 		return err
 	}
-	newDsListBytes, err2 := k.cdc.MarshalJSON(newDsListJSON)
+	dsBytes, err2 := k.cdc.MarshalJSON(dsJSON)
 	if err2 != nil {
-		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshal list for the store: %v", err2))
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't marshall decryption share: %v", err2))
 	}
-	dsStore.Set(keyBytes, newDsListBytes)
+
+	dsStore.Set(keyBytes, dsBytes)
+	dsStore.Set(keyAllShares, newAddrListBytes)
 
 	t, err := k.GetThresholdDecryption(ctx)
 	if err != nil {
 		return err
 	}
 
-	if uint64(len(dsList)) >= t {
-		err = k.computeRandomResult(ctx, round)
-		if err != nil {
-			return err
-		}
+	if uint64(len(addrList)) >= t {
 		k.setStage(ctx, round, stageCompleted)
 		k.increaseCurrentRound(ctx)
 		k.setStage(ctx, k.CurrentRound(ctx), stageCtCollecting)
@@ -261,52 +265,56 @@ func (k *Keeper) increaseCurrentRound(ctx sdk.Context) {
 // GetAllCiphertexts returns all ciphertext parts for the given round as go-slice
 func (k *Keeper) GetAllCiphertexts(ctx sdk.Context, round uint64) ([]*types.CiphertextPart, sdk.Error) {
 	ctStore := ctx.KVStore(k.storeCiphertextPartsKey)
-	ctStoreWrapper := storewrapper.NewKVStore(ctStore, 128)
 	stage := k.GetStage(ctx, round)
 
 	if stage == stageUnstarted {
 		return nil, sdk.ErrUnknownRequest("round hasn't started yet")
 	}
 
-	keyBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(keyBytes, round)
+	keyBytesAllCt := []byte(fmt.Sprintf("rd_%d", round))
 
 	//if store doesn't have such key -> no cts was added
-	_, ok, err2 := ctStoreWrapper.HasW(keyBytes)
-	if err2 != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't check if ctStoreWrapper has key: %v", err2))
-	}
-	if !ok {
+	if !ctStore.Has(keyBytesAllCt) {
 		return []*types.CiphertextPart{}, nil
 	}
-	ctListBytes, err2 := ctStoreWrapper.GetW(keyBytes)
-	if err2 != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't get from ctStoreWrapper: %v", err2))
-	}
-	var ctListJSON []*types.CiphertextPartJSON
-	err1 := k.cdc.UnmarshalJSON(ctListBytes, &ctListJSON)
-	if err1 != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list from store: %v", err1))
-	}
-	ctList, err := types.CiphertextArrayDeserialize(ctListJSON)
+
+	addrListBytes := ctStore.Get(keyBytesAllCt)
+	var addrList []string
+	err := k.cdc.UnmarshalJSON(addrListBytes, &addrList)
 	if err != nil {
-		return nil, err
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list of all adderesses from store: %v", err))
+	}
+	ctList := make([]*types.CiphertextPart, 0, len(addrList))
+	for _, addrStr := range addrList {
+		addr, err := sdk.AccAddressFromBech32(addrStr)
+		if err != nil {
+			return nil, sdk.ErrUnknownAddress(fmt.Sprintf("can't get address from bench32: %v", err))
+		}
+		key := createKeyForAddr(round, addr)
+		if !ctStore.Has(key) {
+			return nil, sdk.ErrUnknownRequest("addresses list and real ciphertext providers doesn't meet")
+		}
+		ctBytes := ctStore.Get(key)
+		var ctJSON types.CiphertextPartJSON
+		err = k.cdc.UnmarshalJSON(ctBytes, &ctJSON)
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarthsal ciphertext: %v", err))
+		}
+		ct, err2 := ctJSON.Deserialize()
+		if err2 != nil {
+			return nil, err2
+		}
+		ctList = append(ctList, ct)
 	}
 	return ctList, nil
 }
 
 // GetAggregatedCiphertext aggregate all sended ciphertext parts in one ciphertext and returns it
 func (k *Keeper) GetAggregatedCiphertext(ctx sdk.Context, round uint64) (*elgamal.Ciphertext, sdk.Error) {
-
-	stage := k.GetStage(ctx, round)
-	if stage != stageDSCollecting && stage != stageCompleted {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("wrong round stage: %v. round: %v", stage, round))
-	}
-
 	store := ctx.KVStore(k.storeKey)
 	keyBytes := createKeyBytesByRound(round, keyAggregatedCiphertext)
 	if !store.Has(keyBytes) {
-		return nil, sdk.ErrInternal("There is not aggregated ciphertext in the store")
+		return nil, nil
 	}
 
 	result := store.Get(keyBytes)
@@ -330,20 +338,41 @@ func (k *Keeper) GetAllDecryptionShares(ctx sdk.Context, round uint64) ([]*types
 	}
 
 	dsStore := ctx.KVStore(k.storeDecryptionSharesKey)
-	keyBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(keyBytes, round)
-	if !dsStore.Has(keyBytes) {
+
+	keyAllShares := make([]byte, 8)
+	binary.LittleEndian.PutUint64(keyAllShares, round)
+
+	if !dsStore.Has(keyAllShares) {
 		return []*types.DecryptionShare{}, nil
 	}
-	dsListBytes := dsStore.Get(keyBytes)
-	var dsListJSON []*types.DecryptionShareJSON
-	err1 := k.cdc.UnmarshalJSON(dsListBytes, &dsListJSON)
-	if err1 != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal array from store: %v", err1))
-	}
-	dsList, err := types.DecryptionSharesArrayDeserialize(dsListJSON)
+
+	addrListBytes := dsStore.Get(keyAllShares)
+	var addrList []string
+	err := k.cdc.UnmarshalJSON(addrListBytes, &addrList)
 	if err != nil {
-		return nil, err
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarshal list of all adderesses from store: %v", err))
+	}
+	dsList := make([]*types.DecryptionShare, 0, len(addrList))
+	for _, addrStr := range addrList {
+		addr, err := sdk.AccAddressFromBech32(addrStr)
+		if err != nil {
+			return nil, sdk.ErrUnknownAddress(fmt.Sprintf("can't get address from bench32: %v", err))
+		}
+		key := createKeyForAddr(round, addr)
+		if !dsStore.Has(key) {
+			return nil, sdk.ErrUnknownRequest("addresses list and real decryption share sender doesn't meet")
+		}
+		dsBytes := dsStore.Get(key)
+		var dsJSON types.DecryptionShareJSON
+		err = k.cdc.UnmarshalJSON(dsBytes, &dsJSON)
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't unmarthsal decryption share: %v", err))
+		}
+		ds, err2 := dsJSON.Deserialize()
+		if err2 != nil {
+			return nil, err2
+		}
+		dsList = append(dsList, ds)
 	}
 	return dsList, nil
 }
@@ -407,13 +436,10 @@ func (k *Keeper) computeAggregatedCiphertext(ctx sdk.Context, round uint64) sdk.
 	return nil
 }
 
-func (k *Keeper) computeRandomResult(ctx sdk.Context, round uint64) sdk.Error {
-	store := ctx.KVStore(k.storeRandomResultsKey)
-	keyBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(keyBytes, round)
+func (k *Keeper) RandomResult(ctx sdk.Context, round uint64) ([]byte, sdk.Error) {
 	dsList, err := k.GetAllDecryptionShares(ctx, round)
 	if err != nil {
-		return sdk.ErrUnknownRequest(fmt.Sprintf("can't get all decryption shares from store: %v", err))
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't get all decryption shares from store: %v", err))
 	}
 	ds := make([]*share.PubShare, 0, len(dsList))
 	for _, decShare := range dsList {
@@ -421,19 +447,19 @@ func (k *Keeper) computeRandomResult(ctx sdk.Context, round uint64) sdk.Error {
 	}
 	aggCt, err := k.GetAggregatedCiphertext(ctx, round)
 	if err != nil {
-		return sdk.ErrUnknownRequest(fmt.Sprintf("can't get aggregated ciphertext from store: %v", err))
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't get aggregated ciphertext from store: %v", err))
 	}
 
 	n, err := k.GetKeyHoldersNumber(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	resultPoint := elgamal.Decrypt(P256, *aggCt, ds, int(n))
 	hash := P256.Hash()
 	_, err2 := resultPoint.MarshalTo(hash)
 	if err2 != nil {
-		return sdk.ErrInternal(fmt.Sprintf("failed to marshal result point to hash: %v", err))
+		return nil, sdk.ErrInternal(fmt.Sprintf("failed to marshal result point to hash: %v", err))
 	}
 	result := hash.Sum(nil)
 	if round == 0 {
@@ -446,8 +472,7 @@ func (k *Keeper) computeRandomResult(ctx sdk.Context, round uint64) sdk.Error {
 		k.resTime = t1
 	}
 	k.randmetric.CountRandom.Inc()
-	store.Set(keyBytes, result)
-	return nil
+	return result, nil
 }
 
 // for tests purposes

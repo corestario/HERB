@@ -33,6 +33,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 		GetCmdCurrentRound(storeKey, cdc),
 		GetCmdKeyHoldersNumber(storeKey, cdc),
 		GetCmdRoundStage(storeKey, cdc),
+		GetCmdRoundResult(storeKey, cdc),
 	)...)
 
 	return herbQueryCmd
@@ -284,6 +285,42 @@ func GetCmdRoundStage(queryRoute string, cdc *codec.Codec) *cobra.Command {
 			stageBytes, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryStage), bz)
 
 			fmt.Print(string(stageBytes))
+
+			return nil
+		},
+	}
+}
+
+func GetCmdRoundResult(queryRoute string, cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "result [round]",
+		Short: "returns round result random number",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
+
+			var round int64
+			if len(args) > 0 {
+				parsedRound, err := strconv.ParseUint(args[0], 10, 64)
+				if err != nil {
+					return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
+				}
+				round = int64(parsedRound)
+			} else {
+				round = -1
+			}
+
+			params := types.NewQueryByRound(round)
+			bz, err := cdc.MarshalJSON(params)
+			if err != nil {
+				return err
+			}
+
+			resBytes, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryResult), bz)
+			if err != nil {
+				return fmt.Errorf(fmt.Sprintf("%v", err))
+			}
+			fmt.Printf("random data: %v\n", resBytes)
 
 			return nil
 		},

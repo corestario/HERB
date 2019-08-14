@@ -29,6 +29,8 @@ func NewQuerier(keeper Keeper) sdk.Querier {
 			return queryCurrentRound(ctx, keeper)
 		case types.QueryKeyHoldersNumber:
 			return queryKeyHoldersNumber(ctx, keeper)
+		case types.QueryResult:
+			return queryResult(ctx, req, keeper)
 		default:
 			return nil, sdk.ErrUnknownRequest("unknown herb query endpoint")
 		}
@@ -135,6 +137,19 @@ func queryCurrentRound(ctx sdk.Context, keeper Keeper) ([]byte, sdk.Error) {
 	roundBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(roundBytes, round)
 	return roundBytes, nil
+}
+
+func queryResult(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
+	round, err := getRoundFromQuery(ctx, req, keeper)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := keeper.RandomResult(ctx, round)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 func getRoundFromQuery(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) (uint64, sdk.Error) {

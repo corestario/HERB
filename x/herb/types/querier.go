@@ -1,13 +1,14 @@
 package types
 
 const (
-	QueryAggregatedCt = "queryAggregatedCiphertext"
-	QueryAllCt        = "queryAllCiphertexts"
+	QueryAggregatedCt         = "queryAggregatedCiphertext"
+	QueryAllCt                = "queryAllCiphertexts"
 	QueryAllDescryptionShares = "queryAllDecryptionShares"
-	QueryRandom = "queryRandom"
-	QueryStage = "queryStage"
-	QueryKeyHoldersNumber = "queryKeyHoldersNumber"
-	QueryCurrentRound = "queryCurrentRound"
+	QueryRandom               = "queryRandom"
+	QueryStage                = "queryStage"
+	QueryKeyHoldersNumber     = "queryKeyHoldersNumber"
+	QueryCurrentRound         = "queryCurrentRound"
+	QueryResult               = "quertResult"
 )
 
 type QueryByRound struct {
