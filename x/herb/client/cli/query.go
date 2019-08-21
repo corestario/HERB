@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
-
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
+
 	"github.com/spf13/cobra"
 
+	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
 )
 
@@ -28,10 +28,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 	herbQueryCmd.AddCommand(client.GetCommands(
 		GetCmdAggregatedCiphertext(storeKey, cdc),
 		GetCmdAllCiphertexts(storeKey, cdc),
-		GetCmdAllDecryptionShares(storeKey, cdc),
-		GetCmdRandom(storeKey, cdc),
 		GetCmdCurrentRound(storeKey, cdc),
-		GetCmdKeyHoldersNumber(storeKey, cdc),
 		GetCmdRoundStage(storeKey, cdc),
 		GetCmdRoundResult(storeKey, cdc),
 	)...)
@@ -42,7 +39,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 // GetCmdAggregatedCiphertext implements the query aggregated ciphertext command.
 func GetCmdAggregatedCiphertext(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "aggregated-ct [round]",
+		Use:   "aggregated-ct [round](optional)",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Query aggregated elgamal ciphertext for the given round",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -77,7 +74,6 @@ func GetCmdAggregatedCiphertext(queryRoute string, cdc *codec.Codec) *cobra.Comm
 			}
 			fmt.Println(out.String())
 			return nil
-			//return cliCtx.PrintOutput(outJSON)
 		},
 	}
 }
@@ -85,7 +81,7 @@ func GetCmdAggregatedCiphertext(queryRoute string, cdc *codec.Codec) *cobra.Comm
 // GetCmdAllCiphertexts implements the query of all ciphertexts command.
 func GetCmdAllCiphertexts(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "all-ct [round]",
+		Use:   "all-ct [round](optional)",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Query all elgamal ciphertexts for the given round",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -121,7 +117,7 @@ func GetCmdAllCiphertexts(queryRoute string, cdc *codec.Codec) *cobra.Command {
 			for _, ctPart := range out {
 				fmt.Printf("Entropy provider address: %v \n Ciphertext: %v \n", ctPart.EntropyProvider.String(), ctPart.Ciphertext.String())
 			}
-			fmt.Printf("All ct-part sum: %v\n", len(out))
+			fmt.Printf("Total ct-parts: %v\n", len(out))
 			return nil
 		},
 	}
@@ -130,7 +126,7 @@ func GetCmdAllCiphertexts(queryRoute string, cdc *codec.Codec) *cobra.Command {
 // GetCmdAllDecryptionShares implements the query of all decryption shares command.
 func GetCmdAllDecryptionShares(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "all-shares [round]",
+		Use:   "all-shares [round](optional)",
 		Short: "Queries all decryption shares for the given round",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -166,70 +162,9 @@ func GetCmdAllDecryptionShares(queryRoute string, cdc *codec.Codec) *cobra.Comma
 				return err
 			}
 			for _, share := range out {
-				fmt.Printf("Key holder address: %v \n Descryption Share: %v \n", share.KeyHolder.String(), share.DecShare.V.String())
+				fmt.Printf("Key holder address: %v \n Descryption Share: %v \n", share.KeyHolderAddr.String(), share.DecShare.V.String())
 			}
-			fmt.Printf("All shares sum: %v\n", len(out))
-			return nil
-		},
-	}
-}
-
-// GetCmdRandom implements the query of the random number result.
-func GetCmdRandom(queryRoute string, cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
-		Use:   "get-random [round]",
-		Short: "Queries the random number generation result",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
-
-			var round int64
-			if len(args) > 0 {
-				parsedRound, err := strconv.ParseUint(args[0], 10, 64)
-				if err != nil {
-					return fmt.Errorf("round %s not a valid uint, please input a valid round", args[0])
-				}
-				round = int64(parsedRound)
-			} else {
-				round = -1
-			}
-
-			params := types.NewQueryByRound(round)
-			bz, err := cdc.MarshalJSON(params)
-			if err != nil {
-				return err
-			}
-
-			res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryRandom), bz)
-			if err != nil {
-				return err
-			}
-
-			fmt.Printf("random data: %v", res)
-
-			return nil
-		},
-	}
-}
-
-// GetCmdKeyHoldersNumber is required for the testing purposes
-func GetCmdKeyHoldersNumber(queryRoute string, cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
-		Use:   "kh-number",
-		Short: "returns key holders number",
-		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
-
-			res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryKeyHoldersNumber), nil)
-			if err != nil {
-				return err
-			}
-
-			n := binary.LittleEndian.Uint64(res)
-
-			fmt.Printf("number of key holders: %v", n)
-
+			fmt.Printf("Total shares: %v\n", len(out))
 			return nil
 		},
 	}
@@ -259,7 +194,7 @@ func GetCmdCurrentRound(queryRoute string, cdc *codec.Codec) *cobra.Command {
 
 func GetCmdRoundStage(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "stage [round]",
+		Use:   "stage [round](optional)",
 		Short: "returns rounds stage",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -293,7 +228,7 @@ func GetCmdRoundStage(queryRoute string, cdc *codec.Codec) *cobra.Command {
 
 func GetCmdRoundResult(queryRoute string, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "result [round]",
+		Use:   "get-random [round](optional)",
 		Short: "returns round result random number",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

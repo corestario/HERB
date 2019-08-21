@@ -2,29 +2,34 @@ package types
 
 import (
 	"bytes"
+	"encoding/base64"
+	"encoding/gob"
 	"fmt"
 
 	"go.dedis.ch/kyber/v3"
-	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
-
-	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
-
 	"go.dedis.ch/kyber/v3/group/nist"
 	"go.dedis.ch/kyber/v3/proof/dleq"
 	"go.dedis.ch/kyber/v3/share"
-
-	"encoding/base64"
-	"encoding/gob"
+	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 )
 
 var P256 = nist.NewBlakeSHA256P256()
 
+// GenesisState - herb genesis state
+type GenesisState struct {
+	ThresholdParts      uint64                `json:"threshold_parts"`
+	ThresholdDecryption uint64                `json:"threshold_decryption"`
+	CommonPublicKey     string                `json:"common_public_key"`
+	KeyHolders          []VerificationKeyJSON `json:"key_holders"`
+}
+
 type VerificationKey struct {
-	Key       kyber.Point
-	KeyHolder int
-	Sender    sdk.AccAddress
+	Key         kyber.Point
+	KeyHolderID int
+	Sender      sdk.AccAddress
 }
 
 type VerificationKeyJSON struct {
@@ -40,7 +45,7 @@ func NewVerificationKeyJSON(vk *VerificationKey) (VerificationKeyJSON, sdk.Error
 	}
 	return VerificationKeyJSON{
 		Key:         vkJSON,
-		KeyHolderID: vk.KeyHolder,
+		KeyHolderID: vk.KeyHolderID,
 		Sender:      vk.Sender,
 	}, nil
 }
@@ -50,33 +55,10 @@ func (vkJSON VerificationKeyJSON) Deserialize() (*VerificationKey, sdk.Error) {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode verification key: %v", err))
 	}
 	return &VerificationKey{
-		Key:       vk,
-		KeyHolder: vkJSON.KeyHolderID,
-		Sender:    vkJSON.Sender,
+		Key:         vk,
+		KeyHolderID: vkJSON.KeyHolderID,
+		Sender:      vkJSON.Sender,
 	}, nil
-}
-func VerificationKeyArraySerialize(vkList []*VerificationKey) ([]VerificationKeyJSON, sdk.Error) {
-	vkJSONList := make([]VerificationKeyJSON, len(vkList))
-	var err error
-	for i, vk := range vkList {
-		vkJSONList[i], err = NewVerificationKeyJSON(vk)
-		if err != nil {
-			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize array: %v", err))
-		}
-	}
-	return vkJSONList, nil
-}
-
-func VerificationKeyArrayDeserialize(vkJSONList []VerificationKeyJSON) ([]*VerificationKey, sdk.Error) {
-	vkList := make([]*VerificationKey, len(vkJSONList))
-	var err error
-	for i, vk := range vkJSONList {
-		vkList[i], err = vk.Deserialize()
-		if err != nil {
-			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize verification keys array: %v", err))
-		}
-	}
-	return vkList, nil
 }
 
 // CiphertextPart represents ciphertext part and additional information for the first HERB phase.
@@ -115,7 +97,7 @@ func (ctJSON *CiphertextPartJSON) Deserialize() (*CiphertextPart, sdk.Error) {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to base64-decode ciphertextJSON: %v", err))
 	}
 	ciphertextJSONDec := gob.NewDecoder(bytes.NewBuffer(ciphertextJSONBytes))
-	ciphertextjson := elgamal.CiphertextJSON{"", ""}
+	ciphertextjson := elgamal.CiphertextJSON{PointA: "", PointB: ""}
 	if err := ciphertextJSONDec.Decode(&ciphertextjson); err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode ciphertext json : %v", err))
 	}
@@ -128,6 +110,61 @@ func (ctJSON *CiphertextPartJSON) Deserialize() (*CiphertextPart, sdk.Error) {
 		DLKproof:        ctJSON.DLKproof,
 		RKproof:         ctJSON.RKproof,
 		EntropyProvider: ctJSON.EntropyProvider,
+	}, nil
+}
+
+type DecryptionShare struct {
+	DecShare      share.PubShare
+	DLEproof      *dleq.Proof
+	KeyHolderAddr sdk.AccAddress
+}
+type DecryptionShareJSON struct {
+	DecShare      string         `json:"decryption_share"`
+	DLEproof      string         `json:"dle_proof"`
+	KeyHolderAddr sdk.AccAddress `json:"key_holder"`
+}
+
+func NewDecryptionShareJSON(decShares *DecryptionShare) (DecryptionShareJSON, sdk.Error) {
+	dsBuf := bytes.NewBuffer(nil)
+	dsEnc := gob.NewEncoder(dsBuf)
+	if err := dsEnc.Encode(decShares.DecShare); err != nil {
+		return DecryptionShareJSON{}, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode decryption shares: %v", err))
+	}
+	dleBuf := bytes.NewBuffer(nil)
+	dleEnc := gob.NewEncoder(dleBuf)
+	if err := dleEnc.Encode(decShares.DLEproof); err != nil {
+		return DecryptionShareJSON{}, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode dle proof: %v", err))
+	}
+	return DecryptionShareJSON{
+		DecShare:      base64.StdEncoding.EncodeToString(dsBuf.Bytes()),
+		DLEproof:      base64.StdEncoding.EncodeToString(dleBuf.Bytes()),
+		KeyHolderAddr: decShares.KeyHolderAddr,
+	}, nil
+}
+func (dsJSON DecryptionShareJSON) Deserialize() (*DecryptionShare, sdk.Error) {
+	dsBytes, err := base64.StdEncoding.DecodeString(dsJSON.DecShare)
+	if err != nil {
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to base64-decode decryption shares: %v", err))
+	}
+	dsDec := gob.NewDecoder(bytes.NewBuffer(dsBytes))
+	decshare := share.PubShare{I: 0, V: P256.Point().Base()}
+	if err := dsDec.Decode(&decshare); err != nil {
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode decryption share : %v", err))
+	}
+
+	dleBytes, err := base64.StdEncoding.DecodeString(dsJSON.DLEproof)
+	if err != nil {
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to base64-decode DLE proof: %v", err))
+	}
+	dleDec := gob.NewDecoder(bytes.NewBuffer(dleBytes))
+	dleproof := dleq.Proof{C: P256.Scalar().Zero(), R: P256.Scalar().Zero(), VG: P256.Point().Base(), VH: P256.Point().Base()}
+	if err := dleDec.Decode(&dleproof); err != nil {
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode DLE proof : %v", err))
+	}
+	return &DecryptionShare{
+		DecShare:      decshare,
+		DLEproof:      &dleproof,
+		KeyHolderAddr: dsJSON.KeyHolderAddr,
 	}, nil
 }
 
@@ -155,60 +192,6 @@ func CiphertextArrayDeserialize(ctJSONArray []*CiphertextPartJSON) ([]*Ciphertex
 	return ctArray, nil
 }
 
-type DecryptionShare struct {
-	DecShare  share.PubShare
-	DLEproof  *dleq.Proof
-	KeyHolder sdk.AccAddress
-}
-type DecryptionShareJSON struct {
-	DecShare      string         `json:"decryption_share"`
-	DLEproof      string         `json:"dle_proof"`
-	KeyHolderAddr sdk.AccAddress `json:"key_holder"`
-}
-
-func NewDecryptionShareJSON(decShares *DecryptionShare) (DecryptionShareJSON, sdk.Error) {
-	dsBuf := bytes.NewBuffer(nil)
-	dsEnc := gob.NewEncoder(dsBuf)
-	if err := dsEnc.Encode(decShares.DecShare); err != nil {
-		return DecryptionShareJSON{}, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode decryption shares: %v", err))
-	}
-	dleBuf := bytes.NewBuffer(nil)
-	dleEnc := gob.NewEncoder(dleBuf)
-	if err := dleEnc.Encode(decShares.DLEproof); err != nil {
-		return DecryptionShareJSON{}, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode dle proof: %v", err))
-	}
-	return DecryptionShareJSON{
-		DecShare:      base64.StdEncoding.EncodeToString(dsBuf.Bytes()),
-		DLEproof:      base64.StdEncoding.EncodeToString(dleBuf.Bytes()),
-		KeyHolderAddr: decShares.KeyHolder,
-	}, nil
-}
-func (dsJSON DecryptionShareJSON) Deserialize() (*DecryptionShare, sdk.Error) {
-	dsBytes, err := base64.StdEncoding.DecodeString(dsJSON.DecShare)
-	if err != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to base64-decode decryption shares: %v", err))
-	}
-	dsDec := gob.NewDecoder(bytes.NewBuffer(dsBytes))
-	decshare := share.PubShare{I: 0, V: P256.Point().Base()}
-	if err := dsDec.Decode(&decshare); err != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode decryption share : %v", err))
-	}
-
-	dleBytes, err := base64.StdEncoding.DecodeString(dsJSON.DLEproof)
-	if err != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to base64-decode DLE proof: %v", err))
-	}
-	dleDec := gob.NewDecoder(bytes.NewBuffer(dleBytes))
-	dleproof := dleq.Proof{P256.Scalar().Zero(), P256.Scalar().Zero(), P256.Point().Base(), P256.Point().Base()}
-	if err := dleDec.Decode(&dleproof); err != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode DLE proof : %v", err))
-	}
-	return &DecryptionShare{
-		DecShare:  decshare,
-		DLEproof:  &dleproof,
-		KeyHolder: dsJSON.KeyHolderAddr,
-	}, nil
-}
 func DecryptionSharesArraySerialize(dsArray []*DecryptionShare) ([]DecryptionShareJSON, sdk.Error) {
 	dsJSONArray := make([]DecryptionShareJSON, len(dsArray))
 	var err sdk.Error
@@ -232,10 +215,26 @@ func DecryptionSharesArrayDeserialize(dsJSONArray []*DecryptionShareJSON) ([]*De
 	return dsArray, nil
 }
 
-// GenesisState - herb genesis state
-type GenesisState struct {
-	ThresholdParts      uint64                `json:"threshold_parts"`
-	ThresholdDecryption uint64                `json:"threshold_decryption"`
-	CommonPublicKey     string                `json:"common_public_key"`
-	KeyHolders          []VerificationKeyJSON `json:"key_holders"`
+func VerificationKeyArraySerialize(vkList []*VerificationKey) ([]VerificationKeyJSON, sdk.Error) {
+	vkJSONList := make([]VerificationKeyJSON, len(vkList))
+	var err error
+	for i, vk := range vkList {
+		vkJSONList[i], err = NewVerificationKeyJSON(vk)
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize array: %v", err))
+		}
+	}
+	return vkJSONList, nil
+}
+
+func VerificationKeyArrayDeserialize(vkJSONList []VerificationKeyJSON) ([]*VerificationKey, sdk.Error) {
+	vkList := make([]*VerificationKey, len(vkJSONList))
+	var err error
+	for i, vk := range vkJSONList {
+		vkList[i], err = vk.Deserialize()
+		if err != nil {
+			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize verification keys array: %v", err))
+		}
+	}
+	return vkList, nil
 }

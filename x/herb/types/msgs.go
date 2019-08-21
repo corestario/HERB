@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -10,15 +11,15 @@ const RouterKey = ModuleName
 
 // MsgSetCiphertextPart defines message for the first HERB phase (collecting ciphertext part)
 type MsgSetCiphertextPart struct {
-	CiphertextPart CiphertextPartJSON    `json:"ciphertext_part"`
-	Sender sdk.AccAddress `json:"sender"`
+	CiphertextPart CiphertextPartJSON `json:"ciphertext_part"`
+	Sender         sdk.AccAddress     `json:"sender"`
 }
 
 // NewMsgSetCiphertextPart is a constructor for set ciphertext part message (first HERB phase)
 func NewMsgSetCiphertextPart(ctPart CiphertextPartJSON, sender sdk.AccAddress) MsgSetCiphertextPart {
 	return MsgSetCiphertextPart{
 		CiphertextPart: ctPart,
-		Sender: sender,
+		Sender:         sender,
 	}
 }
 
@@ -31,17 +32,17 @@ func (msg MsgSetCiphertextPart) Type() string { return "setCiphertextPart" }
 // ValidateBasic runs stateless checks on the message
 func (msg MsgSetCiphertextPart) ValidateBasic() sdk.Error {
 	if msg.Sender.Empty() {
-		return sdk.ErrInvalidAddress("missing entropyProvider address")
+		return sdk.ErrInvalidAddress("missing entropy provider address")
 	}
 
 	ctPart, err := msg.CiphertextPart.Deserialize()
 
 	if err != nil {
-		return sdk.ErrUnknownRequest(fmt.Sprintf("Coudn't deserialaize ciphertext: %v", err))
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialaize ciphertext: %v", err))
 	}
 
 	if !ctPart.EntropyProvider.Equals(msg.Sender) {
-		return sdk.ErrUnauthorized("Entropy provider and sender are not equal")
+		return sdk.ErrUnauthorized("entropy provider and sender are not equal")
 	}
 
 	return nil
@@ -59,15 +60,15 @@ func (msg MsgSetCiphertextPart) GetSigners() []sdk.AccAddress {
 
 // MsgSetCiphertextPart defines message for the first HERB phase (collecting ciphertext part)
 type MsgSetDecryptionShare struct {
-	DecryptionShare DecryptionShareJSON    `json:"decryption_share"`
-	Sender sdk.AccAddress `json:"sender"`
+	DecryptionShare DecryptionShareJSON `json:"decryption_share"`
+	Sender          sdk.AccAddress      `json:"sender"`
 }
 
 // NewMsgSetCiphertextPart is a constructor for set ciphertext part message (first HERB phase)
 func NewMsgSetDecryptionShare(decryptionShare DecryptionShareJSON, sender sdk.AccAddress) MsgSetDecryptionShare {
 	return MsgSetDecryptionShare{
 		DecryptionShare: decryptionShare,
-		Sender: sender,
+		Sender:          sender,
 	}
 }
 
@@ -80,17 +81,17 @@ func (msg MsgSetDecryptionShare) Type() string { return "setDecryptionShare" }
 // ValidateBasic runs stateless checks on the message
 func (msg MsgSetDecryptionShare) ValidateBasic() sdk.Error {
 	if msg.Sender.Empty() {
-		return sdk.ErrInvalidAddress("missing entropyProvider address")
+		return sdk.ErrInvalidAddress("missing key holder address")
 	}
 
 	share, err := msg.DecryptionShare.Deserialize()
 
 	if err != nil {
-		return sdk.ErrUnknownRequest(fmt.Sprintf("Coudn't deserialaize ciphertext: %v", err))
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialaize decryption share: %v", err))
 	}
 
-	if !share.KeyHolder.Equals(msg.Sender) {
-		return sdk.ErrUnauthorized("Key holder and sender are not equal")
+	if !share.KeyHolderAddr.Equals(msg.Sender) {
+		return sdk.ErrUnauthorized("key holder and sender are not equal")
 	}
 
 	return nil

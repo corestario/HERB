@@ -31,7 +31,7 @@ func createKeyBytesByRound(round uint64, keyPrefix string) []byte {
 	return keyBytes
 }
 
-func createKeyForAddr(round uint64, addr sdk.AccAddress) []byte {
+func createKeyBytesByAddr(round uint64, addr sdk.AccAddress) []byte {
 	keyStr := strconv.FormatUint(round, 10) + addr.String()
 	return []byte(keyStr)
 }

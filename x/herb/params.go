@@ -35,12 +35,12 @@ func (k *Keeper) GetKeyHoldersNumber(ctx sdk.Context) (uint64, sdk.Error) {
 func (k *Keeper) SetVerificationKeys(ctx sdk.Context, verificationKeys []types.VerificationKeyJSON) sdk.Error {
 	store := ctx.KVStore(k.storeKey)
 	if store.Has([]byte(keyVerificationKeys)) {
-		return sdk.ErrUnknownRequest("Verification keys already exist")
+		return sdk.ErrUnknownRequest("verification keys already exist")
 	}
 
 	verificationKeysBytes, err := k.cdc.MarshalJSON(verificationKeys)
 	if err != nil {
-		return sdk.ErrUnknownRequest("Can't marshal list")
+		return sdk.ErrUnknownRequest("can't marshal list")
 	}
 
 	store.Set([]byte(keyVerificationKeys), verificationKeysBytes)
@@ -48,6 +48,9 @@ func (k *Keeper) SetVerificationKeys(ctx sdk.Context, verificationKeys []types.V
 
 }
 
+// InitializeVerificationKeys runs at the start of the HERB protocol
+// It's purpose is get verification keys from the KVStore and save them as a keeper field
+// By default we can get gas limit problem with storing verification keys only in KVStore
 func (k *Keeper) InitializeVerificationKeys(ctx sdk.Context) sdk.Error {
 	verificationKeysJSON, err := k.GetVerificationKeys(ctx)
 	if err != nil {
@@ -88,10 +91,11 @@ func (k *Keeper) SetThreshold(ctx sdk.Context, thresholdParts uint64, thresholdD
 	store.Set([]byte(keyThresholdDecrypt), thresholdDecryptBytes)
 }
 
+// GetThresholdParts returns the total number of ciphertexts which required by HERB settings
 func (k *Keeper) GetThresholdParts(ctx sdk.Context) (uint64, sdk.Error) {
 	store := ctx.KVStore(k.storeKey)
 	if !store.Has([]byte(keyThresholdParts)) {
-		return 0, sdk.ErrUnknownRequest("Threshold for ciphertext parts is not defined")
+		return 0, sdk.ErrUnknownRequest("threshold for ciphertext parts is not defined")
 	}
 
 	tBytes := store.Get([]byte(keyThresholdParts))
@@ -99,10 +103,11 @@ func (k *Keeper) GetThresholdParts(ctx sdk.Context) (uint64, sdk.Error) {
 	return t, nil
 }
 
+// GetThresholdDecryption returns threshold value for ElGamal cryptosystem
 func (k *Keeper) GetThresholdDecryption(ctx sdk.Context) (uint64, sdk.Error) {
 	store := ctx.KVStore(k.storeKey)
 	if !store.Has([]byte(keyThresholdDecrypt)) {
-		return 0, sdk.ErrUnknownRequest("Decryption threshold is not defined")
+		return 0, sdk.ErrUnknownRequest("decryption threshold is not defined")
 	}
 
 	tBytes := store.Get([]byte(keyThresholdDecrypt))
@@ -121,7 +126,7 @@ func (k *Keeper) GetCommonPublicKey(ctx sdk.Context) (kyber.Point, sdk.Error) {
 	keyBytes := store.Get([]byte(keyCommonKey))
 	key, err := kyberenc.StringHexToPoint(P256, string(keyBytes))
 	if err != nil {
-		return nil, sdk.ErrUnknownRequest("Common key is not defined")
+		return nil, sdk.ErrUnknownRequest("common key is not defined")
 	}
 	return key, nil
 }

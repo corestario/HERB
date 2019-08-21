@@ -8,12 +8,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
+
 	"github.com/spf13/cobra"
 
 	"github.com/dgamingfoundation/HERB/x/herb/types"
 	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )
-
 
 // SetThresholdsCmd  implements command for setting decryption threhold and ciphertext parts threshold
 func SetThresholdsCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
@@ -24,12 +24,12 @@ func SetThresholdsCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			thresholdParts, err := strconv.ParseUint(args[0], 10, 64)
 			if err != nil {
-				return fmt.Errorf("n %s not a valid uint, please input a valid number", args[0])
+				return fmt.Errorf("ciphertext-thr %s not a valid uint, please input a valid number", args[0])
 			}
 
-			thresholdDecryption, err := strconv.ParseUint(args[0], 10, 64)
+			thresholdDecryption, err := strconv.ParseUint(args[1], 10, 64)
 			if err != nil {
-				return fmt.Errorf("n %s not a valid uint, please input a valid number", args[0])
+				return fmt.Errorf("decryption-thr %s not a valid uint, please input a valid number", args[0])
 			}
 
 			config := ctx.Config
@@ -59,6 +59,7 @@ func SetThresholdsCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 	return cmd
 }
 
+// AddKeyHolderCmd  implements command for setting key holder's id and verification key
 func AddKeyHolderCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "add-key-holder [address] [id] [verification_key]",
@@ -116,6 +117,7 @@ func AddKeyHolderCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 	}
 }
 
+// SetCommonPublicKeyCmd implements command for setting common key given in a hexidecimal representation
 func SetCommonPublicKeyCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
 		Use:   "set-common-key [keyHex]",

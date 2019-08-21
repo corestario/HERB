@@ -67,7 +67,6 @@ type herbApp struct {
 	keyHERB          *sdk.KVStoreKey
 	keyCtParts       *sdk.KVStoreKey
 	keyDecShares     *sdk.KVStoreKey
-	keyRandomResults *sdk.KVStoreKey
 	keyParams        *sdk.KVStoreKey
 	tkeyParams       *sdk.TransientStoreKey
 	keySlashing      *sdk.KVStoreKey
@@ -107,7 +106,6 @@ func NewHERBApp(logger log.Logger, db dbm.DB) *herbApp {
 		keyHERB:          sdk.NewKVStoreKey(herb.StoreKey),
 		keyCtParts:       sdk.NewKVStoreKey(herb.CtStoreKey),
 		keyDecShares:     sdk.NewKVStoreKey(herb.DsStoreKey),
-		keyRandomResults: sdk.NewKVStoreKey(herb.RandResultKey),
 		keyParams:        sdk.NewKVStoreKey(params.StoreKey),
 		tkeyParams:       sdk.NewTransientStoreKey(params.TStoreKey),
 		keySlashing:      sdk.NewKVStoreKey(slashing.StoreKey),
@@ -177,8 +175,8 @@ func NewHERBApp(logger log.Logger, db dbm.DB) *herbApp {
 		app.keyHERB,
 		app.keyCtParts,
 		app.keyDecShares,
-		app.keyRandomResults,
-		app.cdc,)
+		app.cdc,
+	)
 
 	app.mm = module.NewManager(
 		genaccounts.NewAppModule(app.accountKeeper),
@@ -234,7 +232,6 @@ func NewHERBApp(logger log.Logger, db dbm.DB) *herbApp {
 		app.keyHERB,
 		app.keyCtParts,
 		app.keyDecShares,
-		app.keyRandomResults,
 		app.keyParams,
 		app.tkeyParams,
 	)

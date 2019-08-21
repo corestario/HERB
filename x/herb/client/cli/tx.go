@@ -7,12 +7,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
 	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
+
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	"github.com/dgamingfoundation/HERB/x/herb/types"
 
 	"github.com/spf13/cobra"
@@ -62,7 +61,7 @@ func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 			}
 
 			sender := cliCtx.GetFromAddress()
-			ctPart := types.CiphertextPart{ct, dlkProof, rkProof, sender}
+			ctPart := types.CiphertextPart{Ciphertext: ct, DLKproof: dlkProof, RKproof: rkProof, EntropyProvider: sender}
 			ctPartJSON, err := types.NewCiphertextPartJSON(&ctPart)
 			if err != nil {
 				return err
@@ -121,9 +120,9 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 			sharePoint, proof, err := elgamal.CreateDecShare(group, *aggregatedCt, privKey)
 
 			decryptionShare := &types.DecryptionShare{
-				DecShare:  share.PubShare{I: int(id), V: sharePoint},
-				DLEproof:  proof,
-				KeyHolder: cliCtx.GetFromAddress(),
+				DecShare:      share.PubShare{I: int(id), V: sharePoint},
+				DLEproof:      proof,
+				KeyHolderAddr: cliCtx.GetFromAddress(),
 			}
 
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))

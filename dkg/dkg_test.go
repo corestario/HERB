@@ -34,26 +34,26 @@ func DemoBLSDKG(t *testing.T, n int, threshold int) {
 	}
 	msg := []byte("Hello World")
 	group1 := parties[0 : len(parties)-1]
-	sign1, err := CommonSignature(group1, suiteG1, msg, threshold, n)
+	sign1, err := commonSignature(group1, suiteG1, msg, threshold, n)
 	if err != nil {
 		t.Errorf("Common signature for the first group %q", err)
 		return
 	}
 	publicKey := parties[0].Public()
-	verErr := bls.Verify(suiteG1, publicKey, msg, sign1)
-	if verErr != nil {
+	err = bls.Verify(suiteG1, publicKey, msg, sign1)
+	if err != nil {
 		t.Errorf("Verification first group signature: %q", err)
 		return
 	}
 
 	group2 := parties[1:]
-	sign2, err := CommonSignature(group2, suiteG1, msg, threshold, n)
+	sign2, err := commonSignature(group2, suiteG1, msg, threshold, n)
 	if err != nil {
 		t.Errorf("Common signature for the second group %q", err)
 		return
 	}
-	verErr = bls.Verify(suiteG1, publicKey, msg, sign2)
-	if verErr != nil {
+	err = bls.Verify(suiteG1, publicKey, msg, sign2)
+	if err != nil {
 		t.Errorf("Verification second group signature: %q", err)
 		return
 	}
@@ -65,7 +65,8 @@ func DemoBLSDKG(t *testing.T, n int, threshold int) {
 
 }
 
-func CommonSignature(distKeyShares []*kyberdkg.DistKeyShare, suite pairing.Suite, msg []byte, t int, n int) ([]byte, error) {
+// generate common TBLS signature for the set of distKeyShares
+func commonSignature(distKeyShares []*kyberdkg.DistKeyShare, suite pairing.Suite, msg []byte, t int, n int) ([]byte, error) {
 	signatures := make([][]byte, 0)
 	for _, keyShare := range distKeyShares {
 		sign, err := tbls.Sign(suite, keyShare.PriShare(), msg)
