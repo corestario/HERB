@@ -10,7 +10,6 @@ const (
 	StoreKey   = types.StoreKey
 	CtStoreKey = types.CtStoreKey
 	DsStoreKey = types.DsStoreKey
-	RandResultKey = types.RandResultKey
 )
 
 var (

@@ -9,5 +9,4 @@ const (
 	StoreKey   = ModuleName
 	CtStoreKey = "herbCtStoreKey"
 	DsStoreKey = "herbDecSharesKey"
-	RandResultKey = "herbRandResultKey"
 )

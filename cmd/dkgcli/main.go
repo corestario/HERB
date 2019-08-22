@@ -9,8 +9,8 @@ import (
 	"github.com/tendermint/tendermint/libs/cli"
 
 	app "github.com/dgamingfoundation/HERB"
-	"github.com/dgamingfoundation/HERB/x/herb"
 	"github.com/dgamingfoundation/HERB/dkg"
+	"github.com/dgamingfoundation/HERB/x/herb"
 	"github.com/spf13/cobra"
 
 	"go.dedis.ch/kyber/v3"
@@ -21,7 +21,7 @@ func main() {
 	cobra.EnableCommandSorting = false
 
 	rootCmd := &cobra.Command{
-		Use: "dkg",
+		Use:   "dkg",
 		Short: "Distributed Key Generation simulator for HERB",
 	}
 
@@ -37,9 +37,9 @@ func main() {
 
 func generateKeyFile(defaultDKGHome string) *cobra.Command {
 	return &cobra.Command{
-		Use: "gen-key-file [t] [n]",
+		Use:   "gen-key-file [t] [n]",
 		Short: "generates JSON key file which contains keys for (t, n)-threshold cryptosystem",
-		Args: cobra.ExactArgs(2),
+		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			t, err := strconv.ParseInt(args[0], 10, 64)
@@ -119,14 +119,14 @@ type keyGenResult struct {
 }
 
 type keyHolder struct {
-	ID int64
-	PrivateKey kyber.Scalar
+	ID              int64
+	PrivateKey      kyber.Scalar
 	VerificationKey kyber.Point
 }
 
 type keyHolderJSON struct {
-	ID string `json:"id"`
-	PrivateKeyHex string `json:"private_key"`
+	ID                 string `json:"id"`
+	PrivateKeyHex      string `json:"private_key"`
 	VerificationKeyHex string `json:"verification_key"`
 }
 
@@ -140,8 +140,8 @@ func generateKeys(t int, n int) (kyber.Point, []keyHolder, error) {
 	keyHolders := make([]keyHolder, n)
 	for i, p := range parties {
 		keyHolders[i] = keyHolder{
-			ID: int64(p.PriShare().I),
-			PrivateKey: p.PriShare().V,
+			ID:              int64(p.PriShare().I),
+			PrivateKey:      p.PriShare().V,
 			VerificationKey: group.Point().Mul(p.PriShare().V, nil),
 		}
 	}

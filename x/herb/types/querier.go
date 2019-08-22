@@ -4,11 +4,9 @@ const (
 	QueryAggregatedCt         = "queryAggregatedCiphertext"
 	QueryAllCt                = "queryAllCiphertexts"
 	QueryAllDescryptionShares = "queryAllDecryptionShares"
-	QueryRandom               = "queryRandom"
 	QueryStage                = "queryStage"
-	QueryKeyHoldersNumber     = "queryKeyHoldersNumber"
 	QueryCurrentRound         = "queryCurrentRound"
-	QueryResult               = "quertResult"
+	QueryResult               = "queryResult"
 )
 
 type QueryByRound struct {

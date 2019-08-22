@@ -3,6 +3,7 @@ package dkg
 import (
 	"errors"
 	"fmt"
+
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/suites"
 	"go.dedis.ch/kyber/v3/util/key"
@@ -14,10 +15,10 @@ import (
 //RabinDKGSimulator generates n DistKeyGenerator objects which can generate DistKeyShare
 //DistKeyShare contains secret and public keys
 func RabinDKGSimulator(suiteName string, n int, t int) ([]*dkg.DistKeyShare, []*kyber.Point, error) {
-	suite, findErr := suites.Find(suiteName)
+	suite, err := suites.Find(suiteName)
 
-	if findErr != nil {
-		return nil, nil, findErr
+	if err != nil {
+		return nil, nil, err
 	}
 
 	//Each party generate their own master secret key and corresponding public key. This secret key will become a shared key.
@@ -34,21 +35,21 @@ func RabinDKGSimulator(suiteName string, n int, t int) ([]*dkg.DistKeyShare, []*
 	}
 
 	//Share distribution phase
-	distributionPhaseResponses, distDealErr := dealsDistributionAndProcessing(dkgs, n)
-	if distDealErr != nil {
-		return nil, nil, distDealErr
+	distributionPhaseResponses, err := dealsDistributionAndProcessing(dkgs, n)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	justificationErr := JustificationPhase(dkgs, distributionPhaseResponses)
-	if justificationErr != nil {
-		return nil, nil, justificationErr
+	err = JustificationPhase(dkgs, distributionPhaseResponses)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	//each participant verify that he is certified
 	var qual []int
 	for i, dkgInstance := range dkgs {
 		if !dkgInstance.Certified() {
-			fmt.Printf("Praticipant %v is not certified", i)
+			return nil, nil, errors.New(fmt.Sprintf("praticipant %v is not certified", i))
 		} else {
 			//all honest participant have the same QUAL-set
 			if qual == nil {
@@ -58,19 +59,19 @@ func RabinDKGSimulator(suiteName string, n int, t int) ([]*dkg.DistKeyShare, []*
 	}
 
 	//each party publishes unmasked commit
-	complaints, unmaskErr := UnmaskedCommitesDist(dkgs, qual)
-	if unmaskErr != nil {
-		return nil, nil, unmaskErr
+	complaints, err := UnmaskedCommitesDist(dkgs, qual)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	complaintErr := ComplaintProcessing(dkgs, qual, complaints)
-	if complaintErr != nil {
-		return nil, nil, complaintErr
+	err = ComplaintProcessing(dkgs, qual, complaints)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	for _, idx := range qual {
 		if !dkgs[idx].Finished() {
-			return nil, nil, errors.New("participant isn't finished")
+			return nil, nil, errors.New(fmt.Sprintf("participant %v isn't finished", idx))
 		}
 	}
 
@@ -89,7 +90,7 @@ func RabinDKGSimulator(suiteName string, n int, t int) ([]*dkg.DistKeyShare, []*
 	for i, keyShare := range distShares {
 		verificationKey := pubPoly.Eval(keyShare.PriShare().I)
 		if verificationKey == nil {
-			return nil, nil, errors.New("verification key equals nil")
+			return nil, nil, errors.New(fmt.Sprintf("can't get verification key for %v participant", i))
 		}
 		verificationKeys[i] = &verificationKey.V
 	}

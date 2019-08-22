@@ -50,6 +50,7 @@ func ValidateGenesis(data GenesisState) error {
 }
 
 // DefaultGenesisState returns default testing genesis state
+// TO DO
 func DefaultGenesisState() GenesisState {
 	return GenesisState{
 		ThresholdParts:      1,
@@ -89,7 +90,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.Valid
 }
 
 // ExportGenesis returns a GenesisState for a given context and keeper.
-//TO DO: export genesis (need to complete keeper)
+//TO DO
 func ExportGenesis(ctx sdk.Context, k Keeper) GenesisState {
 	return GenesisState{
 		ThresholdParts:      1,
