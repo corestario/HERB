@@ -123,6 +123,9 @@ func TestHERB(t *testing.T) {
 		keeper.forceRoundStage(ctx, uint64(round), stageDSCollecting)
 		for i := 0; i < trh; i++ {
 			ds, dle, err := elgamal.CreateDecShare(P256, ACiphertext, partKeys[i])
+			if err != nil {
+				t.Errorf("failed creating decryption share: %v", err)
+			}
 			decShare := types.DecryptionShare{share.PubShare{I: Verkeys[i].KeyHolderID, V: ds}, dle, userAddrs[i]}
 			decryptionShares = append(decryptionShares, decShare)
 			dshares = append(dshares, &share.PubShare{I: Verkeys[i].KeyHolderID, V: ds})

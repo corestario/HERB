@@ -218,6 +218,9 @@ func GetCmdRoundStage(queryRoute string, cdc *codec.Codec) *cobra.Command {
 			}
 
 			stageBytes, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryStage), bz)
+			if err != nil {
+				return err
+			}
 
 			fmt.Print(string(stageBytes))
 

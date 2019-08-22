@@ -115,10 +115,6 @@ func elGamalPositive(t *testing.T, shares []*kyberDKG.DistKeyShare, verkeys []*k
 	}
 }
 
-type errorf interface {
-	Errorf(format string, args ...interface{})
-}
-
 type publishedMessage struct {
 	id        int
 	msg       kyber.Point
@@ -131,9 +127,9 @@ func publishMessages(shares []*kyberDKG.DistKeyShare, curve proof.Suite) chan pu
 	publish := make(chan publishedMessage, len(shares))
 
 	wg := sync.WaitGroup{}
+	wg.Add(len(shares))
 
 	go func() {
-		wg.Add(len(shares))
 
 		for i := range shares {
 			go func(id int) {
@@ -161,9 +157,9 @@ func decryptMessages(shares []*kyberDKG.DistKeyShare, curve proof.Suite, commonC
 	decrypted := make(chan decryptedMessage, len(parties))
 
 	wg := sync.WaitGroup{}
+	wg.Add(len(parties))
 
 	go func() {
-		wg.Add(len(parties))
 
 		for i := range parties {
 			go func(id int) {

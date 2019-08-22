@@ -20,11 +20,6 @@ import (
 	"github.com/tendermint/tendermint/libs/cli"
 )
 
-const (
-	storeAcc  = "acc"
-	storeHERB = "HERB"
-)
-
 func main() {
 	cobra.EnableCommandSorting = false
 

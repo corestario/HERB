@@ -1,7 +1,6 @@
 package dkg
 
 import (
-	"errors"
 	"fmt"
 
 	"go.dedis.ch/kyber/v3"
@@ -49,7 +48,7 @@ func RabinDKGSimulator(suiteName string, n int, t int) ([]*dkg.DistKeyShare, []*
 	var qual []int
 	for i, dkgInstance := range dkgs {
 		if !dkgInstance.Certified() {
-			return nil, nil, errors.New(fmt.Sprintf("praticipant %v is not certified", i))
+			return nil, nil, fmt.Errorf("praticipant %v is not certified", i)
 		} else {
 			//all honest participant have the same QUAL-set
 			if qual == nil {
@@ -71,7 +70,7 @@ func RabinDKGSimulator(suiteName string, n int, t int) ([]*dkg.DistKeyShare, []*
 
 	for _, idx := range qual {
 		if !dkgs[idx].Finished() {
-			return nil, nil, errors.New(fmt.Sprintf("participant %v isn't finished", idx))
+			return nil, nil, fmt.Errorf("participant %v isn't finished", idx)
 		}
 	}
 
@@ -90,7 +89,7 @@ func RabinDKGSimulator(suiteName string, n int, t int) ([]*dkg.DistKeyShare, []*
 	for i, keyShare := range distShares {
 		verificationKey := pubPoly.Eval(keyShare.PriShare().I)
 		if verificationKey == nil {
-			return nil, nil, errors.New(fmt.Sprintf("can't get verification key for %v participant", i))
+			return nil, nil, fmt.Errorf("can't get verification key for %v participant", i)
 		}
 		verificationKeys[i] = &verificationKey.V
 	}

@@ -88,7 +88,6 @@ func TestDecryptionSharesSerialization(t *testing.T) {
 		!newdecShare.DLEproof.VH.Equal(decShare.DLEproof.VH) {
 		t.Errorf("dle proofs are not equal")
 	}
-	return
 }
 func TestEncodingDecodingPoint(t *testing.T) {
 	group := P256
@@ -98,7 +97,7 @@ func TestEncodingDecodingPoint(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to encode key as a string: %v", err)
 	}
-	fmt.Printf(str)
+	fmt.Print(str)
 	newKey, err := kyberenc.StringHexToPoint(group, str)
 	if err != nil {
 		t.Errorf("failed to decode key: %v", err)

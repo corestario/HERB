@@ -118,6 +118,9 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 			}
 
 			sharePoint, proof, err := elgamal.CreateDecShare(group, *aggregatedCt, privKey)
+			if err != nil {
+				return err
+			}
 
 			decryptionShare := &types.DecryptionShare{
 				DecShare:      share.PubShare{I: int(id), V: sharePoint},
