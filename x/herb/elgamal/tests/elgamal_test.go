@@ -1,20 +1,20 @@
 package tests
 
 import (
-	"bytes"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"sync"
 	"testing"
 
-	"go.dedis.ch/kyber"
-	"go.dedis.ch/kyber/group/nist"
-	"go.dedis.ch/kyber/proof"
-	"go.dedis.ch/kyber/proof/dleq"
-
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/distributed-key-generation/dkg"
+	"go.dedis.ch/kyber/v3"
+	"go.dedis.ch/kyber/v3/group/nist"
+	"go.dedis.ch/kyber/v3/proof"
+	"go.dedis.ch/kyber/v3/proof/dleq"
+	"go.dedis.ch/kyber/v3/share"
+	kyberDKG "go.dedis.ch/kyber/v3/share/dkg/rabin"
+	"go.dedis.ch/kyber/v3/util/random"
 )
 
 func Test_ElGamal_Positive(t *testing.T) {
@@ -22,18 +22,36 @@ func Test_ElGamal_Positive(t *testing.T) {
 	testCasesT := []int{2, 3, 4}
 	for i, tc := range testCasesN {
 		t.Run(fmt.Sprintf("validators set %d", tc), func(t *testing.T) {
-			parties, curve, err := initElGamal(t, tc, testCasesT[i])
+			suite := nist.NewBlakeSHA256P256()
+			keyShares, verificationKeysDKG, err := dkg.DKG("P256", tc, testCasesT[i])
+			if err != nil {
+				t.Errorf("DKG failed with error")
+			}
 			if err != nil {
 				t.Errorf("can't init DKG with error %q", err)
 			} else {
-				elGamalPositive(t, parties, curve, testCasesT[i])
+				elGamalPositive(t, keyShares, verificationKeysDKG, suite, testCasesT[i])
 			}
 		})
 	}
 }
-
-func elGamalPositive(t *testing.T, parties []elgamal.Participant, curve proof.Suite, tr int) {
-	n := len(parties)
+func encCiphertext(group proof.Suite, commonKey kyber.Point) (ct elgamal.Ciphertext, M kyber.Point, DLKproof []byte, RKproof []byte, err error) {
+	y := group.Scalar().Pick(random.New())
+	M = group.Point().Mul(y, nil)
+	r := group.Scalar().Pick(random.New())
+	S := group.Point().Mul(r, commonKey)
+	A := group.Point().Mul(r, nil)
+	B := S.Add(group.Point().Mul(r, commonKey), M)
+	ct = elgamal.Ciphertext{A, B}
+	DLKproof, err = elgamal.DLK(group, group.Point().Base(), r, ct.PointA)
+	if err != nil {
+		return
+	}
+	RKproof, err = elgamal.RK(group, group.Point().Base(), y, commonKey, r, ct.PointB)
+	return
+}
+func elGamalPositive(t *testing.T, shares []*kyberDKG.DistKeyShare, verkeys []*kyber.Point, curve proof.Suite, tr int) {
+	n := len(shares)
 
 	//Any system user generates some message, encrypts and publishes it
 	//We use our validators set (parties) just for example
@@ -41,7 +59,7 @@ func elGamalPositive(t *testing.T, parties []elgamal.Participant, curve proof.Su
 	DLKproofs := make([][]byte, n)
 	RKproofs := make([][]byte, n)
 	newMessages := make([]kyber.Point, n)
-	publishChan := publishMessages(parties, curve)
+	publishChan := publishMessages(shares, curve)
 	for publishedMessage := range publishChan {
 		i := publishedMessage.id
 		DLKproofs[i] = publishedMessage.DLKproof
@@ -51,10 +69,11 @@ func elGamalPositive(t *testing.T, parties []elgamal.Participant, curve proof.Su
 	}
 	//verify all ciphertexts by parties[1]
 	for i := 0; i < n; i++ {
-		errDLK, errRK := parties[1].VerifyCiphertext(curve, DLKproofs[i], publishedCiphertextes[i], RKproofs[i])
+		errDLK := elgamal.DLKVerify(curve, publishedCiphertextes[i].PointA, curve.Point().Base(), DLKproofs[i])
 		if errDLK != nil {
 			t.Errorf("DLK proof isn't verified with error %q", errDLK)
 		}
+		errRK := elgamal.RKVerify(curve, publishedCiphertextes[i].PointB, curve.Point().Base(), shares[i].Public(), RKproofs[i])
 		if errRK != nil {
 			t.Errorf("RK proof isn't verified with error %q", errRK)
 		}
@@ -66,7 +85,7 @@ func elGamalPositive(t *testing.T, parties []elgamal.Participant, curve proof.Su
 	//decrypt the random
 	decryptParts := make([]kyber.Point, tr)
 	DLEproofs := make([]*dleq.Proof, tr)
-	decrypted := decryptMessages(parties, curve, commonCiphertext, tr)
+	decrypted := decryptMessages(shares, curve, commonCiphertext, tr)
 	for msg := range decrypted {
 		i := msg.id
 		decryptParts[i] = msg.msg
@@ -74,12 +93,16 @@ func elGamalPositive(t *testing.T, parties []elgamal.Participant, curve proof.Su
 	}
 	//verify decrypted parts
 	for i := 0; i < tr; i++ {
-		errDLE := parties[1].VerifyDecParts(curve, DLEproofs[i], commonCiphertext, decryptParts[i], parties[i].VerificationKey)
+		errDLE := elgamal.DLEVerify(curve, DLEproofs[i], curve.Point().Base(), commonCiphertext.PointA, *verkeys[i], decryptParts[i])
 		if errDLE != nil {
 			t.Errorf("DLE proof isn't verified with error %q", errDLE)
 		}
 	}
-	decryptedMessage := elgamal.Decrypt(curve, commonCiphertext, decryptParts, n)
+	decryptShares := make([]*share.PubShare, 0)
+	for i := 0; i < tr; i++ {
+		decryptShares = append(decryptShares, &share.PubShare{I: i, V: decryptParts[i]})
+	}
+	decryptedMessage := elgamal.Decrypt(curve, commonCiphertext, decryptShares, n)
 
 	expectedMessage := curve.Point().Null()
 	for i := range newMessages {
@@ -96,74 +119,6 @@ type errorf interface {
 	Errorf(format string, args ...interface{})
 }
 
-func getBytes(data interface{}) ([]byte, error) {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	err := enc.Encode(data)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
-func getInterface(bts []byte, data interface{}) error {
-	buf := bytes.NewBuffer(bts)
-	dec := gob.NewDecoder(buf)
-	err := dec.Decode(data)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func initElGamal(t errorf, n int, tr int) ([]elgamal.Participant, proof.Suite, error) {
-	// creating elliptic curve
-	suite := nist.NewBlakeSHA256P256()
-
-	//generating key
-	keyShares, verificationKeysDKG, err := dkg.DKG("P256", n, tr)
-
-	if err != nil {
-		return nil, nil, err
-	}
-	participants := make([]elgamal.Participant, n)
-	for i, share := range keyShares {
-		participants[i].ID = i + 1
-		partialKeyBytes, errPK := getBytes(share.PriShare().V)
-		if errPK != nil {
-			return nil, nil, errPK
-		}
-
-		commonKeyBytes, errCK := getBytes(share.Public())
-		if errCK != nil {
-			return nil, nil, errPK
-		}
-
-		verificationKeyBytes, errVK := getBytes(verificationKeysDKG[i])
-		if errVK != nil {
-			return nil, nil, errPK
-		}
-
-		participants[i].PartialKey = suite.Scalar()
-		participants[i].CommonKey = suite.Point()
-		participants[i].VerificationKey = suite.Point()
-		err := getInterface(partialKeyBytes, participants[i].PartialKey)
-		if err != nil {
-			return nil, nil, err
-		}
-		err = getInterface(commonKeyBytes, participants[i].CommonKey)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		err = getInterface(verificationKeyBytes, participants[i].VerificationKey)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-	return participants, suite, nil
-}
-
 type publishedMessage struct {
 	id        int
 	msg       kyber.Point
@@ -172,18 +127,17 @@ type publishedMessage struct {
 	RKproof   []byte
 }
 
-func publishMessages(parties []elgamal.Participant, curve proof.Suite) chan publishedMessage {
-	publish := make(chan publishedMessage, len(parties))
+func publishMessages(shares []*kyberDKG.DistKeyShare, curve proof.Suite) chan publishedMessage {
+	publish := make(chan publishedMessage, len(shares))
 
 	wg := sync.WaitGroup{}
 
 	go func() {
-		wg.Add(len(parties))
+		wg.Add(len(shares))
 
-		for i := range parties {
+		for i := range shares {
 			go func(id int) {
-				encryptedMessage, message, DLKproof, RKproof, _, _ := parties[id].Encrypt(curve)
-
+				encryptedMessage, message, DLKproof, RKproof, _ := encCiphertext(curve, shares[id].Public())
 				publish <- publishedMessage{id, message, encryptedMessage, DLKproof, RKproof}
 				wg.Done()
 			}(i)
@@ -202,8 +156,8 @@ type decryptedMessage struct {
 	DLEproof *dleq.Proof
 }
 
-func decryptMessages(participant []elgamal.Participant, curve proof.Suite, commonCiphertext elgamal.Ciphertext, tr int) chan decryptedMessage {
-	parties := participant[:tr]
+func decryptMessages(shares []*kyberDKG.DistKeyShare, curve proof.Suite, commonCiphertext elgamal.Ciphertext, tr int) chan decryptedMessage {
+	parties := shares[:tr]
 	decrypted := make(chan decryptedMessage, len(parties))
 
 	wg := sync.WaitGroup{}
@@ -213,8 +167,7 @@ func decryptMessages(participant []elgamal.Participant, curve proof.Suite, commo
 
 		for i := range parties {
 			go func(id int) {
-				decryptedMsg, DLEpr := parties[id].PartialDecrypt(curve, commonCiphertext)
-
+				decryptedMsg, DLEpr, _ := elgamal.CreateDecShare(curve, commonCiphertext, shares[id].PriShare().V)
 				decrypted <- decryptedMessage{id, decryptedMsg, DLEpr}
 				wg.Done()
 			}(i)
