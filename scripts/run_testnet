@@ -1,0 +1,14 @@
+#!/bin/bash
+i=$(($3))
+j=$((0))
+entrypoint=$4
+while IFS= read -r line; do
+    s=$(($i*$2 + $j))
+    gnome-terminal -x ./run_tendermint $i $s $2 $line $entrypoint
+    j=$(($j+1))
+    if [[ $j==$2 ]]; then
+        j=$((0))
+    fi
+    i=$(($i+1))
+    echo "Text read from file: $line"
+done < "$1"
