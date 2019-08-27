@@ -2,6 +2,8 @@
 set timeout -1
 set t [lindex $argv 0]
 set n [lindex $argv 1]
+exec "echo 1"
+exit 1
 spawn ./startchain_main $t $n
 match_max 100000
 for {set COUNT 0} {$COUNT < $n} {incr COUNT} {

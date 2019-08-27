@@ -1,6 +1,8 @@
 #!/bin/bash
+
 t=$1
 n=$2
+
 rm -rf ~/.dkgcli
 dkgcli gen-key-file $t $n
 cd $HOME/.dkgcli
