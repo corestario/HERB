@@ -3,6 +3,7 @@ FROM golang:1.12-alpine3.10
 RUN apk update
 RUN apk upgrade
 RUN apk add bash ca-certificates git libc-dev expect make jq
+RUN mkdir /root/tmp
 ENV GO111MODULE=off
 ENV PATH /go/bin:$PATH
 ENV GOPATH /go

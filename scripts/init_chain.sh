@@ -4,6 +4,7 @@ t=$1
 n=$2
 
 rm -rf $HOME/.dkgcli
+
 dir_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
 herb_path=$dir_path/..
 bots_path=$herb_path/bots
