@@ -99,8 +99,6 @@ echo "bots_per_node: $bots_per_node"
 
 n=$((n+1))
 
-exit
-
 cur_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
 
 cd $cur_path
