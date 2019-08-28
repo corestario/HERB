@@ -11,7 +11,8 @@ while test $# -gt 0; do
       echo "-h, --help                show brief help"
       echo "-t, --treshhold=t         specify a treshhold"
       echo "-n, --maximum_nodes=n     specify maximum node count"
-      echo "-c, --node_count=n        specify node count"
+      echo "-c, --node_count=c        specify node count"
+      echo "-p, --bots_per_node=p     specify bots per node count"
       exit 0
       ;;
     -t|--treshhold)
@@ -20,6 +21,16 @@ while test $# -gt 0; do
         export t=$1
       else
         echo "no treshhold specified"
+        exit 1
+      fi
+      shift
+      ;;
+    -p|--bots_per_node)
+      shift
+      if test $# -gt 0; then
+        export bots_per_node=$1
+      else
+        echo "no bots_per_node specified"
         exit 1
       fi
       shift
@@ -54,23 +65,41 @@ while test $# -gt 0; do
   esac
 done
 
-
-if [[ t == "" ]]
+if [[ -n $bots_per_node ]] && [[ -n $node_count ]]
 then
-      t=7
+      n=$(( $bots_per_node*$node_count ))
 fi
 
-
-if [[ n == "" ]]
+if [[ -z $n ]]
 then
       n=12
 fi
 
-node_count=$((n+1))
-echo $node_count
+if [[ -z $bots_per_node ]]
+then
+      bots_per_node=1
+      node_count=$n
+fi
+
+
+if [[ -z $node_count ]]
+then
+      node_count=$(($n/$bots_per_node))
+fi
+
+if [[ -z $t ]]
+then
+      t=$(((n*2)/3))
+fi
+
 
 echo "params: $t $n"
 echo "node_count: $node_count"
+echo "bots_per_node: $bots_per_node"
+
+n=$((n+1))
+
+exit
 
 cur_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
 
@@ -99,7 +128,7 @@ HERBPATH=/go/src/github.com/dgamingfoundation/HERB
 
 echo "run node0"
 
-node0_full_id=$(docker run -d herb_testnet /bin/bash -c "$HERBPATH/scripts/init_chain.sh $t $node_count;
+node0_full_id=$(docker run -d herb_testnet /bin/bash -c "$HERBPATH/scripts/init_chain.sh $t $n;
  sed -i 's/timeout_commit = "5s"/timeout_commit = "1s"/' /root/.hd/config/config.toml;
  hd start")
 node0_id=${node0_full_id:0:12}
@@ -135,8 +164,6 @@ sed -i "s/seeds = \"\"/seeds = $node0_addr/" ./node0_config/.hd/config/config.to
 
 nodeArray=($node0_id)
 
-node_count=$((node_count-1))
-
 for ((i=1;i<=$node_count;i++));
 do
     nodeN_full_id=$(docker create -t herb_testnet /bin/bash -c "$HERBPATH/scripts/startchain.sh $i && hd start")
@@ -158,6 +185,7 @@ done
 sleep 5
 
 echo "${nodeArray[@]}" > nodeArray.txt
+
 chmod 0777 ./nodeArray.txt
 
 echo "${nodeArray[@]}"
@@ -167,7 +195,7 @@ echo "run runMnodes"
 for ((i=0;i<=$node_count;i++));
 do
   nodeN_id=${nodeArray[$i]}
-  docker exec -t -d $nodeN_id /bin/bash -c "$HERBPATH/scripts/runMnodes.sh $i 1"
+  docker exec -t -d $nodeN_id /bin/bash -c "$HERBPATH/scripts/runMnodes.sh $i $bots_per_node"
 
   echo "node_num: $i, node_id: $nodeN_id"
 done
