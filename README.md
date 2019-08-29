@@ -21,7 +21,7 @@ There are two types of entities who maintains the system:
 
 * Scripts ([HERB](scripts/HERB)) which represents protocol participants. Let's call them *clients*. 
 
-  Clients use application command line interface for querying app state and sending transactions.  
+  Clients use application command line interface for querying app state and sending transactions.
 
 ### How to run it locally
 
@@ -70,7 +70,7 @@ There are two types of entities who maintains the system:
    ./scripts/run_clients.sh 0 3
    ```
 
-   `run_clients k j` runs *j* clients (bot%i%.exp files) starting from *k*-th client. For instance, command above runs 3 client: bot0.exp, bot1.exp, bot2.exp. 
+   `run_clients k j` runs *j* clients (bot%i%.exp files) starting from *k*-th client. For instance, command above runs 3 client: client0.exp, client1.exp, client2.exp. 
 
 8. Random number generation process is started! You can check the current HERB round by query:
 
@@ -99,47 +99,56 @@ For Ubuntu:
    ```
    scp -r %ssh-keys path% root@%node-00 ip%:.ssh/
    ```
+4. Run machine_setup.sh script for both nodes. It installs Go and other required software.
 
-4. Connect to node-00 and perform  actions below:
+   ```
+   cd $HOME/HERB/scripts
+   ssh root@%node-ip% 'bash -s' < machine_setup.sh
+   ```
 
-   1. Run machine_setup.sh script. It installs Go and other required software.
+5. Connect to node-00 and perform  actions below:
 
-   2. Clone [repository](https://github.com/dgamingfoundation/HERB/tree/master) to the $HOME directory.
+   1. Clone [repository](https://github.com/dgamingfoundation/HERB/tree/master) to the $HOME directory.
 
-   3. Install application:
+      ```
+      git clone https://%username%@github.com/dgamingfoundation/HERB
+      ```
 
-      ```bash
+   2. Install application:
+
+      ```
       cd ~/HERB
       make install
       ```
 
-   4. Run setup script:
+   3. Run setup script:
 
       ```
-      ./scripts/init_chain.exp 2 2 3
+      cd $HOME/HERB/scripts
+      ./init_chain.exp 2 2 3
       ```
 
       Here *t1* = *t2* = 2, *n* = 3. *n* is a  total number of clients, *t1, t2* is a thresholds (see simplified protocol description). `init_chain.exp` initializes blockchain parameters and creates clients' secret keys (bots folder). 
 
-   5. Send configuration files and keys to node-01:
+   4. Send configuration files and keys to node-01:
 
       ```
-      scp .hd/config/genesis.json root@%node-01 ip%:
+      scp $HOME/.hd/config/genesis.json root@%node-01-ip%:
       
-      scp -r .hcli/keys root@%node-01 ip%:
+      scp -r $HOME/.hcli/keys root@%node-01-ip%:
       
-      scp .hd/config/config.toml root@%node-01 ip%:
+      scp $HOME/.hd/config/config.toml root@%node-01-ip%:
       
-      scp -r HERB/bots root@%node-01 ip%:
+      scp -r $HOME/HERB/bots root@%node-01-ip%:
       ```
 
-   6. Run app daemon:
+   5. Run app daemon:
 
       ```
       hd start
       ```
 
-5. Connect to node-00 again:
+6. Connect to node-00 again:
 
    1. Get node-00 tendermint-id:
 
@@ -155,30 +164,48 @@ For Ubuntu:
       cd prometheus-2.11.1.linux-amd64
       ./prometheus --config.file=$HOME/HERB/prometheus.yml
       ```
+6. Connect to node-00 one more time:
+   1. Run first clients:
 
-6. Connect to node-01:
+      ```
+      cd $HOME/HERB/scripts
+      ./run_clients.sh 0 %k%
+      ```
+    
+      `run_clients k j` runs *j* clients (bot%i%.exp files) starting from *k*-th client. Other clients will be launched by the `run_testnet.sh` sctip later.
 
-   1. Run `machine_setup.sh` script.
+7. Connect to node-01:
 
-   2. Clone [repository](https://github.com/dgamingfoundation/HERB/tree/master) to the $HOME directory
+   1. Clone [repository](https://github.com/dgamingfoundation/HERB/tree/master) to the $HOME directory
 
-   3. Install application:
+      ```
+      git clone https://%username%@github.com/dgamingfoundation/HERB
+      ```
 
-      ```bash
+   2. Install application:
+
+      ```
       cd ~/HERB
       make install
       ```
 
-7. Now node-01 is our blueprint for other nodes. Make a DigitalOcean snapshot of the node-01.
+   3. Set node-00 as seed for tendermintL
 
-8. Create as mush droplets from node-01 snapshot as you need.
+      ```
+      sed -i 's/seeds = ""/seeds = "%node-00 id%@%node-00 ip%:26656"/' config.toml
+      ```
 
-9. Copy IPs all nodes except node-00 to `HERB/scripts/servers.txt` on your own machine.
+8. Now node-01 is our blueprint for other nodes. Make a DigitalOcean snapshot of the node-01.
 
-10. Launch all application daemons and clients on the nodes from server.txt file:
+9. Create as mush droplets from node-01 snapshot as you need.
+
+10. Copy IPs all nodes except node-00 to `HERB/scripts/servers.txt` on your own machine.
+
+11. Launch all application daemons and clients on the nodes from server.txt file:
 
     ```
-    .$HOME/HERB/scripts/run_testnet.sh $HOME/HERB/scripts/servers.txt %first node number% %client per node%
+    cd $HOME/HERB/scripts
+    ./run_testnet.sh servers.txt %first node number% %client per node%
     ```
 
     Here is two arguments:
@@ -192,5 +219,10 @@ For Ubuntu:
     .$HOME/HERB/scripts/run_testnet.sh $HOME/HERB/scripts/servers.txt 0 3
     ```
 
-    It will launch clients: `bot0.exp`, `bot1.exp`, `bot2.exp` on the first node; `bot3.exp`, `bot4.exp`, `bot5.exp` on the second node; `bot6.exp`, `bot7.exp`, `bot8.exp`  on the third node.
+    It will launch clients: `client0.exp`, `client1.exp`, `client2.exp` on the first node; `client3.exp`, `client4.exp`, `client5.exp` on the second node; `client6.exp`, `client7.exp`, `client8.exp`  on the third node.
 
+12. Now you can check the progress by quering current-round:
+
+   ```
+   hcli query herb current-round
+   ```

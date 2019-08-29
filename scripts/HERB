@@ -2,7 +2,6 @@
 user=$1
 commonkey=$4
 round=0
-#sleeptime=$(($3%5/100))
 sleeptime=0.03
 while true
 do

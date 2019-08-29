@@ -8,6 +8,7 @@ hcli config chain-id HERBchain
 hcli config output json
 hcli config indent true
 hcli config trust-node true
+cd $HOME
 mkdir -p $HOME/.hd/config
 cp genesis.json .hd/config
 cp config.toml .hd/config

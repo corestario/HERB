@@ -11,7 +11,7 @@ send -- "alicealice\r"
 expect "Repeat the passphrase:"
 send -- "alicealice\r"
 }
-expect "Password to sign with 'node0':"
+expect "Password to sign with 'client0':"
 send -- "alicealice\r"
 expect eof
  
