@@ -3,7 +3,7 @@
 k=$1
 m=$(($2-1))
 
-cd /root/HERB/bots
+cd $HOME/HERB/bots
 
 for (( i=0; i<$m; i++ ))
 do
