@@ -107,7 +107,7 @@ rm -rf ./vendor
 rm -rf ./node0_config
 mkdir ./node0_config
 
-gopath=$(whereis go | grep -oP '(?<=go: ")(.*)(?= .*)' -m 1)
+gopath=$(whereis go | grep -oP '(?<=go: )(\S*)(?= .*)' -m 1)
 PATH=$gopath:$gopath/bin:$PATH
 
 echo $GOBIN
