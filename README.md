@@ -49,7 +49,8 @@ There are two types of entities who maintains the system:
 5. Run setup script:
 
    ```
-   ./scripts/init_chain.exp 2 3
+   cd scripts
+   ./init_chain.exp 2 2 3
    ```
 
    Here *t1* = *t2* = 2, *n* = 3. *n* is a  total number of clients, *t1, t2* is a thresholds (see simplified protocol description). `init_chain.exp` initializes blockchain parameters and creates clients' secret keys (bots folder). 
@@ -65,10 +66,11 @@ There are two types of entities who maintains the system:
 7. In another terminal run clients:
 
    ```
-   ./scripts/runMnodes 0 3
+   cd $HOME/HERB
+   ./scripts/run_clients.sh 0 3
    ```
 
-   *runMnodes k j* runs *j* clients (bot$i.exp files) starting from k-th client. For instance, command above runs 3 client: bot0.exp, bot1.exp, bot2.exp. 
+   `run_clients k j` runs *j* clients (bot%i%.exp files) starting from *k*-th client. For instance, command above runs 3 client: bot0.exp, bot1.exp, bot2.exp. 
 
 8. Random number generation process is started! You can check the current HERB round by query:
 
