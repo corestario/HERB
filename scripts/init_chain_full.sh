@@ -1,8 +1,9 @@
 #!/bin/bash
-t=$1
-n=$2
+t1=$1
+t2=$2
+n=$3
 rm -rf ~/.dkgcli
-dkgcli gen-key-file $t $n
+dkgcli gen-key-file $t2 $n
 cd $HOME/.dkgcli
 ck=$(cat keys.json | jq .common_key)
 Ck=${ck:1:${#ck}-2}
@@ -36,7 +37,7 @@ send -- \"alicealice\r\"
 expect eof" > "node$i".exp
 chmod +x ./"node$i".exp
 done
-hd set-threshold $t $t
+hd set-threshold $t1 $t2
 hd set-common-key $Ck
 hcli config chain-id HERBchain
 hcli config output json
