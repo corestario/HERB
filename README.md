@@ -3,7 +3,7 @@ Homomorphic Encryption Random Beacon
 
 ### What is it
 
-This repo contains cosmos-application which allows to generate random numbers in a secure way. It's based on the HERB-protocol.
+This repo contains cosmos-application which allows securely generating random numbers. It's based on the HERB-protocol.
 
 Simplified protocol description:
 
@@ -15,7 +15,7 @@ Simplified protocol description:
 
 ### How it works
 
-There are two types of entities who maintains the system: 
+There are two types of entities who maintain the system: 
 
 * Blockchain full nodes who run application daemon (hd). Let's denote them as *nodes*. 
 
@@ -50,10 +50,10 @@ There are two types of entities who maintains the system:
 
    ```
    cd scripts
-   ./init_chain.exp 2 2 3
+   ./init_chain.exp t1 t2 n
    ```
 
-   Here *t1* = *t2* = 2, *n* = 3. *n* is a  total number of clients, *t1, t2* is a thresholds (see simplified protocol description). `init_chain.exp` initializes blockchain parameters and creates clients' secret keys (bots folder). 
+   For example, *t1* = *t2* = 2, *n* = 3. *n* is a  total number of clients, *t1, t2* is a thresholds (see simplified protocol description). `init_chain.exp` initializes blockchain parameters and creates clients' secret keys (bots folder). 
 
 6. Run application daemon:
 
@@ -67,10 +67,10 @@ There are two types of entities who maintains the system:
 
    ```
    cd $HOME/HERB
-   ./scripts/run_clients.sh 0 3
+   ./scripts/run_clients.sh k j
    ```
 
-   `run_clients k j` runs *j* clients (bot%i%.exp files) starting from *k*-th client. For instance, command above runs 3 client: client0.exp, client1.exp, client2.exp. 
+   `run_clients k j` runs *j* clients (bot%i%.exp files) starting from *k*-th client. For instance, for *k*=0, *j*=3 it runs 3 client: client0.exp, client1.exp, client2.exp. 
 
 8. Random number generation process is started! You can check the current HERB round by query:
 
@@ -92,7 +92,7 @@ For Ubuntu:
 
 1. Create two DigitalOcean ubuntu-droplets (we'll call them node-00 and node-01). 
 
-   First one is a "zero"-node, which run full setup phase. Second one is a "blueprint" which will be duplicated later. 
+   The first one is a "zero"-node, which runs full setup phase. The second one is a "blueprint" which will be duplicated later. 
 
 3. Send DigitalOcean associated ssh-keys to node-00:
 
@@ -125,10 +125,10 @@ For Ubuntu:
 
       ```
       cd $HOME/HERB/scripts
-      ./init_chain.exp 2 2 3
+      ./init_chain.exp t1 t1 n
       ```
 
-      Here *t1* = *t2* = 2, *n* = 3. *n* is a  total number of clients, *t1, t2* is a thresholds (see simplified protocol description). `init_chain.exp` initializes blockchain parameters and creates clients' secret keys (bots folder). 
+     For example, *t1* = *t2* = 2, *n* = 3. *n* is a  total number of clients, *t1, t2* is a thresholds (see simplified protocol description). `init_chain.exp` initializes blockchain parameters and creates clients' secret keys (bots folder). 
 
    4. Send configuration files and keys to node-01:
 
@@ -172,7 +172,7 @@ For Ubuntu:
       ./run_clients.sh 0 %k%
       ```
     
-      `run_clients k j` runs *j* clients (bot%i%.exp files) starting from *k*-th client. Other clients will be launched by the `run_testnet.sh` sctip later.
+      `run_clients k j` runs *j* clients (bot%i%.exp files) starting from *k*-th client. Other clients will be launched by the `run_testnet.sh` script later.
 
 7. Connect to node-01:
 
@@ -195,11 +195,11 @@ For Ubuntu:
       sed -i 's/seeds = ""/seeds = "%node-00 id%@%node-00 ip%:26656"/' config.toml
       ```
 
-8. Now node-01 is our blueprint for other nodes. Make a DigitalOcean snapshot of the node-01.
+8. Now, node-01 is our blueprint for other nodes. Make a DigitalOcean snapshot of the node-01.
 
 9. Create as mush droplets from node-01 snapshot as you need.
 
-10. Copy IPs all nodes except node-00 to `HERB/scripts/servers.txt` on your own machine.
+10. Copy IPs all nodes except node-00 to `HERB/scripts/servers.txt` on your machine.
 
 11. Launch all application daemons and clients on the nodes from server.txt file:
 
@@ -208,10 +208,10 @@ For Ubuntu:
     ./run_testnet.sh servers.txt %first node number% %client per node%
     ```
 
-    Here is two arguments:
+    Here are two arguments:
 
     * first node number - define moniker for node daemon and the number of the first launching client
-    * client per node - define how many clients (bots files) will be launched on the each node
+    * client per node - define how many clients (bots files) will be launched on each node
 
     For example: if we run the command with three IPs in the server.txt  file:
 
@@ -221,8 +221,8 @@ For Ubuntu:
 
     It will launch clients: `client0.exp`, `client1.exp`, `client2.exp` on the first node; `client3.exp`, `client4.exp`, `client5.exp` on the second node; `client6.exp`, `client7.exp`, `client8.exp`  on the third node.
 
-12. Now you can check the progress by quering current-round:
+12. Now you can check the progress by querying current-round:
 
-   ```
-   hcli query herb current-round
-   ```
+    ```
+    hcli query herb current-round
+    ```
