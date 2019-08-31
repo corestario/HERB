@@ -6,8 +6,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/dgamingfoundation/HERB/dkg"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
-	"github.com/dgamingfoundation/distributed-key-generation/dkg"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/group/nist"
 	"go.dedis.ch/kyber/v3/proof"
@@ -23,7 +23,7 @@ func Test_ElGamal_Positive(t *testing.T) {
 	for i, tc := range testCasesN {
 		t.Run(fmt.Sprintf("validators set %d", tc), func(t *testing.T) {
 			suite := nist.NewBlakeSHA256P256()
-			keyShares, verificationKeysDKG, err := dkg.DKG("P256", tc, testCasesT[i])
+			keyShares, verificationKeysDKG, err := dkg.RabinDKGSimulator("P256", tc, testCasesT[i])
 			if err != nil {
 				t.Errorf("DKG failed with error")
 			}
