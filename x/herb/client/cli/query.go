@@ -185,7 +185,7 @@ func GetCmdCurrentRound(queryRoute string, cdc *codec.Codec) *cobra.Command {
 
 			round := binary.LittleEndian.Uint64(roundBytes)
 
-			fmt.Println(round)
+			fmt.Printf("%v\n", round)
 
 			return nil
 		},
@@ -222,7 +222,7 @@ func GetCmdRoundStage(queryRoute string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			fmt.Print(string(stageBytes))
+			fmt.Printf("%v\n", string(stageBytes))
 
 			return nil
 		},

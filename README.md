@@ -29,7 +29,7 @@ There are two types of entities who maintain the system:
 
 2. Install dependencies: 
 
-   ```bash
+   ```
    sudo apt-get install expect -y
    sudo apt-get install make -y
    sudo apt-get install jq -y
@@ -41,7 +41,7 @@ There are two types of entities who maintain the system:
 
 4. Install application:
 
-   ```bash
+   ```
    cd ~/HERB
    make install
    ```
@@ -50,12 +50,19 @@ There are two types of entities who maintain the system:
 
    ```
    cd scripts
-   ./init_chain.exp t1 t2 n
+   ./init_chain_full.sh t1 t2 n
    ```
 
    For example, *t1* = *t2* = 2, *n* = 3. *n* is a  total number of clients, *t1, t2* is a thresholds (see simplified protocol description). `init_chain.exp` initializes blockchain parameters and creates clients' secret keys (bots folder). 
 
-6. Run application daemon:
+6. Setup blocktime:
+
+   ```
+   cd $HOME/.hd/config
+   sed -i 's/timeout_commit = "5s"/timeout_commit = "1s"/' config.toml;
+   ```
+
+7. Run application daemon:
 
    ```
    hd start
@@ -63,7 +70,7 @@ There are two types of entities who maintain the system:
 
    Now node is running and blocks are being generated. 
 
-7. In another terminal run clients:
+8. In another terminal run clients:
 
    ```
    cd $HOME/HERB
@@ -72,13 +79,13 @@ There are two types of entities who maintain the system:
 
    `run_clients k j` runs *j* clients (bot%i%.exp files) starting from *k*-th client. For instance, for *k*=0, *j*=3 it runs 3 client: client0.exp, client1.exp, client2.exp. 
 
-8. Random number generation process is started! You can check the current HERB round by query:
+9. Random number generation process is started! You can check the current HERB round by query:
 
    ```
    hcli query herb current-round
    ```
 
-9. You can get the random number generated at the round $j by query:
+10. You can get the random number generated at the round $j by query:
 
    ```
    hcli query herb get-random $j
@@ -125,24 +132,31 @@ For Ubuntu:
 
       ```
       cd $HOME/HERB/scripts
-      ./init_chain.exp t1 t1 n
+      ./init_chain_full.sh t1 t1 n
       ```
 
-     For example, *t1* = *t2* = 2, *n* = 3. *n* is a  total number of clients, *t1, t2* is a thresholds (see simplified protocol description). `init_chain.exp` initializes blockchain parameters and creates clients' secret keys (bots folder). 
+     For example, *t1* = *t2* = 2, *n* = 3. *n* is a  total number of clients, *t1, t2* is a thresholds (see simplified protocol description). `init_chain.exp` initializes blockchain parameters and creates clients' secret keys (bots folder).
 
-   4. Send configuration files and keys to node-01:
+   4. Setup blocktime:
 
       ```
-      scp $HOME/.hd/config/genesis.json root@%node-01-ip%:
+      cd $HOME/.hd/config
+      sed -i 's/timeout_commit = "5s"/timeout_commit = "1s"/' config.toml;
+      ``` 
+
+   5. Send configuration files and keys to node-01:
+
+      ```
+      scp $HOME/.hd/config/genesis.json root@%node-01-ip%:tmp/
       
-      scp -r $HOME/.hcli/keys root@%node-01-ip%:
+      scp -r $HOME/.hcli/keys root@%node-01-ip%:tmp/
       
-      scp $HOME/.hd/config/config.toml root@%node-01-ip%:
+      scp $HOME/.hd/config/config.toml root@%node-01-ip%:tmp/
       
-      scp -r $HOME/HERB/bots root@%node-01-ip%:
+      scp -r $HOME/HERB/bots root@%node-01-ip%:tmp/
       ```
 
-   5. Run app daemon:
+   6. Run app daemon:
 
       ```
       hd start

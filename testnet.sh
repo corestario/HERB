@@ -126,7 +126,7 @@ HERBPATH=/go/src/github.com/dgamingfoundation/HERB
 
 echo "run node0"
 
-node0_full_id=$(docker run -d herb_testnet /bin/bash -c "$HERBPATH/scripts/init_chain.sh $t $n;
+node0_full_id=$(docker run -d herb_testnet /bin/bash -c "$HERBPATH/scripts/init_chain_full.sh $t $t $n;
  sed -i 's/timeout_commit = "5s"/timeout_commit = "1s"/' /root/.hd/config/config.toml;
  hd start")
 node0_id=${node0_full_id:0:12}
@@ -164,7 +164,7 @@ nodeArray=($node0_id)
 
 for ((i=1;i<=$node_count;i++));
 do
-    nodeN_full_id=$(docker create -t herb_testnet /bin/bash -c "$HERBPATH/scripts/startchain.sh $i && hd start")
+    nodeN_full_id=$(docker create -t herb_testnet /bin/bash -c "$HERBPATH/scripts/init_chain.sh $i && hd start")
     nodeN_id=${nodeN_full_id:0:12}
 
     nodeArray+=($nodeN_id)
@@ -188,12 +188,13 @@ chmod 0777 ./nodeArray.txt
 
 echo "${nodeArray[@]}"
 echo "all nodes started"
-echo "run runMnodes"
+echo "run run_clients"
 
 for ((i=0;i<=$node_count;i++));
 do
   nodeN_id=${nodeArray[$i]}
-  docker exec -t -d $nodeN_id /bin/bash -c "$HERBPATH/scripts/runMnodes.sh $i $bots_per_node"
+  j=$(($i*$bots_per_node))
+  docker exec -t -d $nodeN_id /bin/bash -c "$HERBPATH/scripts/run_clients.sh $j $bots_per_node"
 
   echo "node_num: $i, node_id: $nodeN_id"
 done
