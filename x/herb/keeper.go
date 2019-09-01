@@ -3,7 +3,6 @@ package herb
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -43,11 +42,6 @@ func NewKeeper(storeKey sdk.StoreKey, storeCiphertextParts *sdk.KVStoreKey, stor
 
 // SetCiphertext store the ciphertext from the entropyProvider to the kv-store
 func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sdk.Error {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Println("PANIC:", r)
-		}
-	}()
 	if ctPart.EntropyProvider.Empty() {
 		return sdk.ErrInvalidAddress("entropy provider can't be empty!")
 	}
@@ -152,11 +146,6 @@ func (k *Keeper) SetAggregatedCiphertext(ctx sdk.Context, round uint64, ct *elga
 
 // SetDecryptionShare stores decryption share for the current round
 func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) sdk.Error {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Println("PANIC:", r)
-		}
-	}()
 
 	if ds.KeyHolderAddr.Empty() {
 		return sdk.ErrInvalidAddress("key Holder can't be empty!")
