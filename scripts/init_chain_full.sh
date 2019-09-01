@@ -5,7 +5,8 @@ t2=$2
 n=$3
 
 dir_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
-bots_path=$HOME/HERB/bots
+herb_path=$dir_path/..
+bots_path=$herb_path/bots
 
 rm -rf $HOME/.dkgcli
 
@@ -52,7 +53,7 @@ do
         set timeout -1
         cd $dir_path
  
-        spawn ./HERB client$i $Pk $ID $Ck
+        spawn ./HERB.sh client$i $Pk $ID $Ck
         
         match_max 100000
 
