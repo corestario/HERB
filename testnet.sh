@@ -8,19 +8,30 @@ while test $# -gt 0; do
       echo "testnet [options]"
       echo " "
       echo "options:"
-      echo "-h, --help                show brief help"
-      echo "-t, --treshhold=t         specify a treshhold"
-      echo "-n, --maximum_nodes=n     specify maximum node count"
-      echo "-c, --node_count=c        specify node count"
-      echo "-p, --bots_per_node=p     specify bots per node count"
+      echo "-h, --help                    show brief help"
+      echo "-s, --share_treshhold=s       specify a share treshhold"
+      echo "-d, --decryption_threshold=d  specify a decryption threshold"
+      echo "-n, --maximum_nodes=n         specify maximum node count"
+      echo "-c, --node_count=c            specify node count"
+      echo "-p, --bots_per_node=p         specify bots per node count"
       exit 0
       ;;
-    -t|--treshhold)
+    -s|--share_treshhold)
       shift
       if test $# -gt 0; then
-        export t=$1
+        export t1=$1
       else
-        echo "no treshhold specified"
+        echo "no share treshhold specified"
+        exit 1
+      fi
+      shift
+      ;;
+    -d|--decryption_threshold)
+      shift
+      if test $# -gt 0; then
+        export t2=$1
+      else
+        echo "no decryption treshhold specified"
         exit 1
       fi
       shift
@@ -87,15 +98,21 @@ then
       node_count=$(($n/$bots_per_node))
 fi
 
-if [[ -z $t ]]
+if [[ -z $t2 ]]
 then
-      t=$(((n*2)/3))
+      t2=$(((n*2)/3))
 fi
 
+if [[ -z $t1 ]]
+then
+      t1=$t2
+fi
 
-echo "params: $t $n"
+echo "params: $t1 $t2 $n"
 echo "node_count: $node_count"
 echo "bots_per_node: $bots_per_node"
+
+sleep 3
 
 n=$((n+1))
 
@@ -126,7 +143,7 @@ HERBPATH=/go/src/github.com/dgamingfoundation/HERB
 
 echo "run node0"
 
-node0_full_id=$(docker run -d herb_testnet /bin/bash -c "$HERBPATH/scripts/init_chain_full.sh $t $t $n;
+node0_full_id=$(docker run -d herb_testnet /bin/bash -c "$HERBPATH/scripts/init_chain_full.sh $t1 $t2 $n;
  sed -i 's/timeout_commit = "5s"/timeout_commit = "1s"/' /root/.hd/config/config.toml;
  hd start")
 node0_id=${node0_full_id:0:12}
