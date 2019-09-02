@@ -1,17 +1,24 @@
-#!/bin/bash
-rm -rf ~/.hcli
-rm -rf ~/.hd
-rm -rf ~/HERB/bots
-mkdir ~/HERB/bots
+#!/usr/bin/env bash
+
+bots_path=$herb_path/bots
+
+rm -rf $HOME/.hcli
+rm -rf $HOME/.hd
+rm -rf $bots_path
+
+mkdir $bots_path
+
 hd init moniker --chain-id HERBchain
+
 hcli config chain-id HERBchain
 hcli config output json
 hcli config indent true
 hcli config trust-node true
-cd $HOME
+
 mkdir -p $HOME/.hd/config
-cp genesis.json .hd/config
-cp config.toml .hd/config
-cp -r keys .hcli/
-cp -r bots HERB/
-sed -i 's/moniker = "moniker"/moniker = "node-'"$1"'"/' .hd/config/config.toml
+
+cp $HOME/tmp/genesis.json $HOME/.hd/config
+cp $HOME/tmp/config.toml $HOME/.hd/config
+cp -r $HOME/tmp/keys $HOME/.hcli/
+cp -r $HOME/tmp/bots $HOME/HERB/
+sed -i 's/moniker = "moniker"/moniker = "node-'"$1"'"/' $HOME/.hd/config/config.toml

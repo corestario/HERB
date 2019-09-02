@@ -29,7 +29,7 @@ There are two types of entities who maintain the system:
 
 2. Install dependencies: 
 
-   ```bash
+   ```
    sudo apt-get install expect -y
    sudo apt-get install make -y
    sudo apt-get install jq -y
@@ -41,7 +41,7 @@ There are two types of entities who maintain the system:
 
 4. Install application:
 
-   ```bash
+   ```
    cd ~/HERB
    make install
    ```
@@ -50,12 +50,19 @@ There are two types of entities who maintain the system:
 
    ```
    cd scripts
-   ./init_chain.exp t1 t2 n
+   ./init_chain_full.sh t1 t2 n
    ```
 
    For example, *t1* = *t2* = 2, *n* = 3. *n* is a  total number of clients, *t1, t2* is a thresholds (see simplified protocol description). `init_chain.exp` initializes blockchain parameters and creates clients' secret keys (bots folder). 
 
-6. Run application daemon:
+6. Setup blocktime:
+
+   ```
+   cd $HOME/.hd/config
+   sed -i 's/timeout_commit = "5s"/timeout_commit = "1s"/' config.toml;
+   ```
+
+7. Run application daemon:
 
    ```
    hd start
@@ -63,7 +70,7 @@ There are two types of entities who maintain the system:
 
    Now node is running and blocks are being generated. 
 
-7. In another terminal run clients:
+8. In another terminal run clients:
 
    ```
    cd $HOME/HERB
@@ -72,16 +79,54 @@ There are two types of entities who maintain the system:
 
    `run_clients k j` runs *j* clients (bot%i%.exp files) starting from *k*-th client. For instance, for *k*=0, *j*=3 it runs 3 client: client0.exp, client1.exp, client2.exp. 
 
-8. Random number generation process is started! You can check the current HERB round by query:
+9. Random number generation process is started! You can check the current HERB round by query:
 
    ```
    hcli query herb current-round
    ```
 
-9. You can get the random number generated at the round $j by query:
+10. You can get the random number generation results by query:
 
    ```
-   hcli query herb get-random $j
+   hcli query herb get-random %round-number%
+   ```
+
+  
+
+### How to run a local testnet with docker
+
+1. Run the `testnet.sh` script:
+
+   ```
+   cd $HOME/HERB
+   ./testnet.sh
+   ```
+
+   Script will display see created docker containers' id. 
+
+   You can get help:
+
+   ```
+   ./testnet.sh -h
+   ```
+
+2. If you want to check the random numbers generation process, then connect to the docker container:
+
+   ```
+   sudo docker exec -it %container-id% /bin/bash 
+   ```
+
+3. Then you can use hcli commands:
+
+   ```
+   hcli query herb current-round
+   hcli query herb get-random %round-number%
+   ```
+
+4. To stop the testnet run:
+
+   ```
+   ./testnet_stop.sh
    ```
 
    
@@ -97,7 +142,7 @@ For Ubuntu:
 3. Send DigitalOcean associated ssh-keys to node-00:
 
    ```
-   scp -r %ssh-keys path% root@%node-00 ip%:.ssh/
+   scp %ssh-keys path% root@%node-00 ip%:.ssh/
    ```
 4. Run machine_setup.sh script for both nodes. It installs Go and other required software.
 
@@ -106,48 +151,56 @@ For Ubuntu:
    ssh root@%node-ip% 'bash -s' < machine_setup.sh
    ```
 
-5. Connect to node-00 and perform  actions below:
+4. Connect to node-00 and perform  actions below:
 
-   0. 
-   ```
-   source ~/.profile
-   ```
+   1. Export environment variables:
 
-   1. Clone [repository](https://github.com/dgamingfoundation/HERB/tree/master) to the $HOME directory.
+      ```
+      source ~/.profile
+      ```
+
+   2. Clone [repository](https://github.com/dgamingfoundation/HERB/tree/master) to the $HOME directory.
 
       ```
       git clone https://%username%@github.com/dgamingfoundation/HERB
       ```
 
-   2. Install application:
+   3. Install application:
 
       ```
       cd ~/HERB
       make install
       ```
 
-   3. Run setup script:
+   4. Run setup script:
 
       ```
       cd $HOME/HERB/scripts
-      ./init_chain.exp t1 t1 n
+      ./init_chain_full.sh t1 t1 n
       ```
 
-     For example, *t1* = *t2* = 2, *n* = 3. *n* is a  total number of clients, *t1, t2* is a thresholds (see simplified protocol description). `init_chain.exp` initializes blockchain parameters and creates clients' secret keys (bots folder). 
+     For example, *t1* = *t2* = 2, *n* = 3. *n* is a  total number of clients, *t1, t2* is a thresholds (see simplified protocol description). `init_chain.exp` initializes blockchain parameters and creates clients' secret keys (bots folder).
 
-   4. Send configuration files and keys to node-01:
+   4. Setup blocktime:
 
       ```
-      scp $HOME/.hd/config/genesis.json root@%node-01-ip%:
-      
-      scp -r $HOME/.hcli/keys root@%node-01-ip%:
-      
-      scp $HOME/.hd/config/config.toml root@%node-01-ip%:
-      
-      scp -r $HOME/HERB/bots root@%node-01-ip%:
+      cd $HOME/.hd/config
+      sed -i 's/timeout_commit = "5s"/timeout_commit = "1s"/' config.toml
       ```
 
-   5. Run app daemon:
+   5. Send configuration files and keys to node-01:
+
+      ```
+      scp $HOME/.hd/config/genesis.json root@%node-01-ip%:tmp/
+      
+      scp -r $HOME/.hcli/keys root@%node-01-ip%:tmp/
+      
+      scp $HOME/.hd/config/config.toml root@%node-01-ip%:tmp/
+      
+      scp -r $HOME/HERB/bots root@%node-01-ip%:tmp/
+      ```
+
+   6. Run app daemon:
 
       ```
       hd start
@@ -176,10 +229,15 @@ For Ubuntu:
       cd $HOME/HERB/scripts
       ./run_clients.sh 0 %k%
       ```
-    
+   
       `run_clients k j` runs *j* clients (bot%i%.exp files) starting from *k*-th client. Other clients will be launched by the `run_testnet.sh` script later.
 
 7. Connect to node-01:
+
+   0. 
+      ```
+      source ~/.profile
+      ```
 
    1. Clone [repository](https://github.com/dgamingfoundation/HERB/tree/master) to the $HOME directory
 
@@ -194,17 +252,17 @@ For Ubuntu:
       make install
       ```
 
-   3. Set node-00 as seed for tendermintL
+   3. Set node-00 as seed for tendermint:
 
       ```
-      sed -i 's/seeds = ""/seeds = "%node-00 id%@%node-00 ip%:26656"/' config.toml
+      sed -i 's/seeds = ""/seeds = "%node-00 id%@%node-00 ip%:26656"/' tmp/config.toml
       ```
 
 8. Now, node-01 is our blueprint for other nodes. Make a DigitalOcean snapshot of the node-01.
 
 9. Create as mush droplets from node-01 snapshot as you need.
 
-10. Copy IPs all nodes except node-00 to `HERB/scripts/servers.txt` on your machine.
+10. Copy IPs all nodes except node-00 to `HERB/scripts/servers.txt` line by line on your machine.
 
 11. Launch all application daemons and clients on the nodes from server.txt file:
 
@@ -218,13 +276,13 @@ For Ubuntu:
     * first node number - define moniker for node daemon and the number of the first launching client
     * client per node - define how many clients (bots files) will be launched on each node
 
-    For example: if we run the command with three IPs in the server.txt  file:
+    For example: if we run the command with two IPs in the server.txt  file:
 
     ```
-    .$HOME/HERB/scripts/run_testnet.sh $HOME/HERB/scripts/servers.txt 0 3
+    ./run_distributed_testnet.sh servers.txt 1 3
     ```
 
-    It will launch clients: `client0.exp`, `client1.exp`, `client2.exp` on the first node; `client3.exp`, `client4.exp`, `client5.exp` on the second node; `client6.exp`, `client7.exp`, `client8.exp`  on the third node.
+    It will launch clients: `client3.exp`, `client4.exp`, `client5.exp` on the second node; `client6.exp`, `client7.exp`, `client8.exp`  on the third node.
 
 12. Now you can check the progress by querying current-round:
 

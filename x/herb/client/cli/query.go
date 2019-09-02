@@ -222,7 +222,7 @@ func GetCmdRoundStage(queryRoute string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			fmt.Print(string(stageBytes))
+			fmt.Println(string(stageBytes))
 
 			return nil
 		},
