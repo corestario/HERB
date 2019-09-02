@@ -108,6 +108,11 @@ For Ubuntu:
 
 5. Connect to node-00 and perform  actions below:
 
+   0. 
+   ```
+   source ~/.profile
+   ```
+
    1. Clone [repository](https://github.com/dgamingfoundation/HERB/tree/master) to the $HOME directory.
 
       ```
