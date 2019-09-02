@@ -15,7 +15,7 @@ do
   do
     sleep $sleeptime
 
-    if [ $(hcli query herb stage) = "stageDSCollecting" ]
+    if [ "$(hcli query herb stage)" = "stageDSCollecting" ]
     then
       break
     fi
@@ -33,7 +33,7 @@ do
   do
     sleep $sleeptime
 
-    if [ $(hcli query herb stage) = "stageCtCollecting" ] && [ $(hcli query herb current-round) -eq $(( $currentround + 1 )) ]
+    if [ "$(hcli query herb stage)" = "stageCtCollecting" ] && [ $(hcli query herb current-round) -eq $(( $currentround + 1 )) ]
     then
       break
     fi

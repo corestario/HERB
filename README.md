@@ -104,7 +104,7 @@ For Ubuntu:
 3. Send DigitalOcean associated ssh-keys to node-00:
 
    ```
-   scp -r %ssh-keys path% root@%node-00 ip%:.ssh/
+   scp %ssh-keys path% root@%node-00 ip%:.ssh/
    ```
 4. Run machine_setup.sh script for both nodes. It installs Go and other required software.
 
@@ -114,6 +114,11 @@ For Ubuntu:
    ```
 
 5. Connect to node-00 and perform  actions below:
+
+   0. 
+      ```
+      source ~/.profile
+      ```
 
    1. Clone [repository](https://github.com/dgamingfoundation/HERB/tree/master) to the $HOME directory.
 
@@ -141,7 +146,7 @@ For Ubuntu:
 
       ```
       cd $HOME/.hd/config
-      sed -i 's/timeout_commit = "5s"/timeout_commit = "1s"/' config.toml;
+      sed -i 's/timeout_commit = "5s"/timeout_commit = "1s"/' config.toml
       ``` 
 
    5. Send configuration files and keys to node-01:
@@ -190,6 +195,11 @@ For Ubuntu:
 
 7. Connect to node-01:
 
+   0. 
+      ```
+      source ~/.profile
+      ```
+
    1. Clone [repository](https://github.com/dgamingfoundation/HERB/tree/master) to the $HOME directory
 
       ```
@@ -206,14 +216,14 @@ For Ubuntu:
    3. Set node-00 as seed for tendermintL
 
       ```
-      sed -i 's/seeds = ""/seeds = "%node-00 id%@%node-00 ip%:26656"/' config.toml
+      sed -i 's/seeds = ""/seeds = "%node-00 id%@%node-00 ip%:26656"/' tmp/config.toml
       ```
 
 8. Now, node-01 is our blueprint for other nodes. Make a DigitalOcean snapshot of the node-01.
 
 9. Create as mush droplets from node-01 snapshot as you need.
 
-10. Copy IPs all nodes except node-00 to `HERB/scripts/servers.txt` on your machine.
+10. Copy IPs all nodes except node-00 to `HERB/scripts/servers.txt` line by line on your machine.
 
 11. Launch all application daemons and clients on the nodes from server.txt file:
 
@@ -227,13 +237,13 @@ For Ubuntu:
     * first node number - define moniker for node daemon and the number of the first launching client
     * client per node - define how many clients (bots files) will be launched on each node
 
-    For example: if we run the command with three IPs in the server.txt  file:
+    For example: if we run the command with two IPs in the server.txt  file:
 
     ```
-    .$HOME/HERB/scripts/run_testnet.sh $HOME/HERB/scripts/servers.txt 0 3
+    ./run_testnet.sh servers.txt 1 3
     ```
 
-    It will launch clients: `client0.exp`, `client1.exp`, `client2.exp` on the first node; `client3.exp`, `client4.exp`, `client5.exp` on the second node; `client6.exp`, `client7.exp`, `client8.exp`  on the third node.
+    It will launch clients: `client3.exp`, `client4.exp`, `client5.exp` on the second node; `client6.exp`, `client7.exp`, `client8.exp`  on the third node.
 
 12. Now you can check the progress by querying current-round:
 
