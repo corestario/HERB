@@ -85,10 +85,48 @@ There are two types of entities who maintain the system:
    hcli query herb current-round
    ```
 
-10. You can get the random number generated at the round $j by query:
+10. You can get the random number generation results by query:
 
    ```
-   hcli query herb get-random $j
+   hcli query herb get-random %round-number%
+   ```
+
+  
+
+### How to run a local testnet with docker
+
+1. Run the `testnet.sh` script:
+
+   ```
+   cd $HOME/HERB
+   ./testnet.sh
+   ```
+
+   Script will display see created docker containers' id. 
+
+   You can get help:
+
+   ```
+   ./testnet.sh -h
+   ```
+
+2. If you want to check the random numbers generation process, then connect to the docker container:
+
+   ```
+   sudo docker exec -it %container-id% /bin/bash 
+   ```
+
+3. Then you can use hcli commands:
+
+   ```
+   hcli query herb current-round
+   hcli query herb get-random %round-number%
+   ```
+
+4. To stop the testnet run:
+
+   ```
+   ./testnet_stop.sh
    ```
 
    
@@ -113,27 +151,28 @@ For Ubuntu:
    ssh root@%node-ip% 'bash -s' < machine_setup.sh
    ```
 
-5. Connect to node-00 and perform  actions below:
+4. Connect to node-00 and perform  actions below:
 
-   0. 
+   1. Export environment variables:
+
       ```
       source ~/.profile
       ```
 
-   1. Clone [repository](https://github.com/dgamingfoundation/HERB/tree/master) to the $HOME directory.
+   2. Clone [repository](https://github.com/dgamingfoundation/HERB/tree/master) to the $HOME directory.
 
       ```
       git clone https://%username%@github.com/dgamingfoundation/HERB
       ```
 
-   2. Install application:
+   3. Install application:
 
       ```
       cd ~/HERB
       make install
       ```
 
-   3. Run setup script:
+   4. Run setup script:
 
       ```
       cd $HOME/HERB/scripts
@@ -147,7 +186,7 @@ For Ubuntu:
       ```
       cd $HOME/.hd/config
       sed -i 's/timeout_commit = "5s"/timeout_commit = "1s"/' config.toml
-      ``` 
+      ```
 
    5. Send configuration files and keys to node-01:
 
@@ -190,7 +229,7 @@ For Ubuntu:
       cd $HOME/HERB/scripts
       ./run_clients.sh 0 %k%
       ```
-    
+   
       `run_clients k j` runs *j* clients (bot%i%.exp files) starting from *k*-th client. Other clients will be launched by the `run_testnet.sh` script later.
 
 7. Connect to node-01:
@@ -213,7 +252,7 @@ For Ubuntu:
       make install
       ```
 
-   3. Set node-00 as seed for tendermintL
+   3. Set node-00 as seed for tendermint:
 
       ```
       sed -i 's/seeds = ""/seeds = "%node-00 id%@%node-00 ip%:26656"/' tmp/config.toml
@@ -240,7 +279,7 @@ For Ubuntu:
     For example: if we run the command with two IPs in the server.txt  file:
 
     ```
-    ./run_testnet.sh servers.txt 1 3
+    ./run_distributed_testnet.sh servers.txt 1 3
     ```
 
     It will launch clients: `client3.exp`, `client4.exp`, `client5.exp` on the second node; `client6.exp`, `client7.exp`, `client8.exp`  on the third node.
