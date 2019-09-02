@@ -9,24 +9,24 @@ while test $# -gt 0; do
       echo " "
       echo "options:"
       echo "-h, --help                    show brief help"
-      echo "-s, --share_treshhold=s       specify a share treshhold"
-      echo "-d, --decryption_threshold=d  specify a decryption threshold"
-      echo "-n, --maximum_nodes=n         specify maximum node count"
+      echo "-ct, --ct_treshhold=ct        specify a ciphertext parts treshhold"
+      echo "-t, --decryption_threshold=t  specify a decryption threshold"
+      echo "-n, --maximum_clients=n       specify maximum clients count"
       echo "-c, --node_count=c            specify node count"
       echo "-p, --bots_per_node=p         specify bots per node count"
       exit 0
       ;;
-    -s|--share_treshhold)
+    -ct|--ct_treshhold)
       shift
       if test $# -gt 0; then
         export t1=$1
       else
-        echo "no share treshhold specified"
+        echo "no cipertext parts treshhold specified"
         exit 1
       fi
       shift
       ;;
-    -d|--decryption_threshold)
+    -t|--decryption_threshold)
       shift
       if test $# -gt 0; then
         export t2=$1
@@ -46,12 +46,12 @@ while test $# -gt 0; do
       fi
       shift
       ;;
-    -n|--maximum_nodes)
+    -n|--maximum_clients)
       shift
       if test $# -gt 0; then
         export n=$1
       else
-        echo "no maximum_nodes specified"
+        echo "no maximum_clients specified"
         exit 1
       fi
       shift
