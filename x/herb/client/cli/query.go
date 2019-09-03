@@ -28,6 +28,7 @@ func GetQueryCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 	herbQueryCmd.AddCommand(client.GetCommands(
 		GetCmdAggregatedCiphertext(storeKey, cdc),
 		GetCmdAllCiphertexts(storeKey, cdc),
+		GetCmdAllDecryptionShares(storeKey, cdc),
 		GetCmdCurrentRound(storeKey, cdc),
 		GetCmdRoundStage(storeKey, cdc),
 		GetCmdRoundResult(storeKey, cdc),

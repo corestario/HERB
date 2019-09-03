@@ -7,8 +7,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/server"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth/genaccounts"
-	genaccscli "github.com/cosmos/cosmos-sdk/x/auth/genaccounts/client/cli"
+	"github.com/cosmos/cosmos-sdk/x/genaccounts"
+	genaccscli "github.com/cosmos/cosmos-sdk/x/genaccounts/client/cli"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 
@@ -16,9 +16,9 @@ import (
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/cli"
-	dbm "github.com/tendermint/tendermint/libs/db"
 	tlog "github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
+	dbm "github.com/tendermint/tm-db"
 
 	app "github.com/dgamingfoundation/HERB"
 	herbcli "github.com/dgamingfoundation/HERB/x/herb/client/cli"
@@ -30,7 +30,6 @@ func main() {
 			log.Println("PANIC:", r)
 		}
 	}()
-	cobra.EnableCommandSorting = false
 
 	cdc := app.MakeCodec()
 
@@ -42,6 +41,7 @@ func main() {
 
 	ctx := server.NewDefaultContext()
 
+	cobra.EnableCommandSorting = false
 	rootCmd := &cobra.Command{
 		Use:               "hd",
 		Short:             "HERB App Daemon (server)",
