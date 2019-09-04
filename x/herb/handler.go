@@ -2,7 +2,6 @@ package herb
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/dgamingfoundation/HERB/x/herb/types"
 
@@ -49,11 +48,6 @@ func handleMsgSetDecryptionShare(ctx sdk.Context, keeper *Keeper, msg types.MsgS
 }
 func handleMsgSetRandomResult(ctx sdk.Context, keeper *Keeper, msg types.MsgSetRandomResult) sdk.Result {
 	err := keeper.SetRandomResult(ctx, msg.Round)
-	defer func() {
-		if r := recover(); r != nil {
-			log.Println("PANIC:", r)
-		}
-	}()
 	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't set random result: %v", err)).Result()
 	}
