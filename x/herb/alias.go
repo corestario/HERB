@@ -21,6 +21,7 @@ var (
 
 type (
 	MsgSetCiphertextPart  = types.MsgSetCiphertextPart
+	MsgSetRandomResult    = types.MsgSetRandomResult
 	MsgSetDecryptionShare = types.MsgSetDecryptionShare
 	CiphertextPart        = types.CiphertextPart
 	CiphertextPartJSON    = types.CiphertextPartJSON

@@ -16,6 +16,8 @@ func NewHandler(keeper Keeper) sdk.Handler {
 			return handleMsgSetCiphertextPart(ctx, &keeper, msg)
 		case MsgSetDecryptionShare:
 			return handleMsgSetDecryptionShare(ctx, &keeper, msg)
+		case MsgSetRandomResult:
+			return handleMsgSetRandomResult(ctx, &keeper, msg)
 		default:
 			errMsg := fmt.Sprintf("unrecognized herb Msg type: %v", msg.Type())
 			return sdk.ErrUnknownRequest(errMsg).Result()
@@ -42,6 +44,13 @@ func handleMsgSetDecryptionShare(ctx sdk.Context, keeper *Keeper, msg types.MsgS
 	}
 	if err := keeper.SetDecryptionShare(ctx, decryptionShare); err != nil {
 		return err.Result()
+	}
+	return sdk.Result{}
+}
+func handleMsgSetRandomResult(ctx sdk.Context, keeper *Keeper, msg types.MsgSetRandomResult) sdk.Result {
+	err := keeper.SetRandomResult(ctx, msg.Round)
+	if err != nil {
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't set random result: %v", err)).Result()
 	}
 	return sdk.Result{}
 }

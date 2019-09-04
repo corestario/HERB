@@ -15,6 +15,7 @@ func init() {
 func RegisterCodec(cdc *codec.Codec) {
 	cdc.RegisterConcrete(MsgSetCiphertextPart{}, "herb/MsgSetCiphertextPart", nil)
 	cdc.RegisterConcrete(MsgSetDecryptionShare{}, "herb/MsgSetDecryptionShare", nil)
+	cdc.RegisterConcrete(MsgSetRandomResult{}, "herb/MsgSetRandomResult", nil)
 	cdc.RegisterConcrete(CiphertextPartJSON{}, "herb/CiphertextPartJSON", nil)
 	cdc.RegisterConcrete(CiphertextPart{}, "herb/CiphertextPart", nil)
 

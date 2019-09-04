@@ -33,6 +33,7 @@ func GetTxCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 	herbTxCmd.AddCommand(client.PostCommands(
 		GetCmdSetCiphertextPart(cdc),
 		GetCmdSetDecryptionShare(cdc),
+		GetCmdSetRandomResult(cdc),
 	)...)
 
 	return herbTxCmd
@@ -140,6 +141,25 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
+			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
+		},
+	}
+}
+
+// GetCmdSetRandomResult implements send random result transaction command.
+func GetCmdSetRandomResult(cdc *codec.Codec) *cobra.Command {
+	return &cobra.Command{
+		Use:   "set-random [round]",
+		Short: "Set random result in blockchain",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cliCtx := context.NewCLIContext().WithCodec(cdc).WithAccountDecoder(cdc)
+			round, err := strconv.ParseUint(args[0], 10, 64)
+			if err != nil {
+				return fmt.Errorf("id %s not a valid int, please input a valid id", args[1])
+			}
+			msg := types.NewMsgSetRandomResult(round, cliCtx.GetFromAddress())
+			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
 		},
 	}

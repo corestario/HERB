@@ -386,11 +386,10 @@ func (k *Keeper) setStage(ctx sdk.Context, round uint64, stage string) {
 	keyBytes := createKeyBytesByRound(round, keyStage)
 	store.Set(keyBytes, []byte(stage))
 }
-
-func (k *Keeper) RandomResult(ctx sdk.Context, round uint64) ([]byte, sdk.Error) {
+func (k *Keeper) SetRandomResult(ctx sdk.Context, round uint64) sdk.Error {
 	dsList, err := k.GetAllDecryptionShares(ctx, round)
 	if err != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't get all decryption shares from store: %v", err))
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't get all decryption shares from store: %v", err))
 	}
 	ds := make([]*share.PubShare, 0, len(dsList))
 	for _, decShare := range dsList {
@@ -398,21 +397,33 @@ func (k *Keeper) RandomResult(ctx sdk.Context, round uint64) ([]byte, sdk.Error)
 	}
 	aggCt, err := k.GetAggregatedCiphertext(ctx, round)
 	if err != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't get aggregated ciphertext from store: %v", err))
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't get aggregated ciphertext from store: %v", err))
 	}
 
 	n, err := k.GetKeyHoldersNumber(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	resultPoint := elgamal.Decrypt(P256, *aggCt, ds, int(n))
 	hash := P256.Hash()
 	_, err2 := resultPoint.MarshalTo(hash)
 	if err2 != nil {
-		return nil, sdk.ErrInternal(fmt.Sprintf("failed to marshal result point to hash: %v", err))
+		return sdk.ErrInternal(fmt.Sprintf("failed to marshal result point to hash: %v", err))
 	}
 	result := hash.Sum(nil)
+	store := ctx.KVStore(k.storeKey)
+	keyBytes := createKeyBytesByRound(round, keyRandomResult)
+	store.Set(keyBytes, result)
+	return nil
+}
+func (k *Keeper) RandomResult(ctx sdk.Context, round uint64) ([]byte, sdk.Error) {
+	store := ctx.KVStore(k.storeKey)
+	keyBytes := createKeyBytesByRound(round, keyRandomResult)
+	if !store.Has(keyBytes) {
+		return nil, sdk.ErrUnknownRequest("can't get random result from store: %v")
+	}
+	result := store.Get(keyBytes)
 	return result, nil
 }
 
