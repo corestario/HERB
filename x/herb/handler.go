@@ -2,6 +2,7 @@ package herb
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/dgamingfoundation/HERB/x/herb/types"
 
@@ -30,7 +31,6 @@ func handleMsgSetCiphertextPart(ctx sdk.Context, keeper *Keeper, msg types.MsgSe
 	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize ciphertext part: %v", err)).Result()
 	}
-
 	if err := keeper.SetCiphertext(ctx, ctPart); err != nil {
 		return err.Result()
 	}
@@ -49,6 +49,11 @@ func handleMsgSetDecryptionShare(ctx sdk.Context, keeper *Keeper, msg types.MsgS
 }
 func handleMsgSetRandomResult(ctx sdk.Context, keeper *Keeper, msg types.MsgSetRandomResult) sdk.Result {
 	err := keeper.SetRandomResult(ctx, msg.Round)
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("PANIC:", r)
+		}
+	}()
 	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't set random result: %v", err)).Result()
 	}

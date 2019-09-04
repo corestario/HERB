@@ -3,6 +3,7 @@ package herb
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -387,6 +388,11 @@ func (k *Keeper) setStage(ctx sdk.Context, round uint64, stage string) {
 	store.Set(keyBytes, []byte(stage))
 }
 func (k *Keeper) SetRandomResult(ctx sdk.Context, round uint64) sdk.Error {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("PANIC:", r)
+		}
+	}()
 	dsList, err := k.GetAllDecryptionShares(ctx, round)
 	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't get all decryption shares from store: %v", err))
