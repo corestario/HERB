@@ -151,7 +151,8 @@ node0_id=${node0_full_id:0:12}
 echo "node0: $node0_id"
 echo
 
-while  ! docker exec $node0_id /bin/bash -c "[[ -d /root/.hd ]]" ; do
+ccc=$((n-2))
+while  ! docker exec $node0_id /bin/bash -c "[[ -f $HERBPATH/bots/client$ccc.exp ]]" ; do
 sleep 2
 echo "waiting ..."
 done
