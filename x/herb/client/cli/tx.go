@@ -153,7 +153,7 @@ func GetCmdSetRandomResult(cdc *codec.Codec) *cobra.Command {
 		Short: "Set random result in blockchain",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc).WithAccountDecoder(cdc)
+			cliCtx := context.NewCLIContext().WithCodec(cdc)
 			round, err := strconv.ParseUint(args[0], 10, 64)
 			if err != nil {
 				return fmt.Errorf("id %s not a valid int, please input a valid id", args[1])
