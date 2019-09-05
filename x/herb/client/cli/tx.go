@@ -159,7 +159,10 @@ func GetCmdSetRandomResult(cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("id %s not a valid int, please input a valid id", args[1])
 			}
 			msg := types.NewMsgSetRandomResult(round, cliCtx.GetFromAddress())
+
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
+			txBldr, err = utils.EnrichWithGas(txBldr, cliCtx, []sdk.Msg{msg})
+
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
 		},
 	}
