@@ -7,22 +7,23 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
-	"github.com/cosmos/cosmos-sdk/x/auth/genaccounts"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	"github.com/cosmos/cosmos-sdk/x/distribution"
+	"github.com/cosmos/cosmos-sdk/x/genaccounts"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/params"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/staking"
+	"github.com/cosmos/cosmos-sdk/x/supply"
 
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	cmn "github.com/tendermint/tendermint/libs/common"
-	dbm "github.com/tendermint/tendermint/libs/db"
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
+	dbm "github.com/tendermint/tm-db"
 
 	"github.com/dgamingfoundation/HERB/x/herb"
 )
@@ -45,11 +46,21 @@ var (
 		auth.AppModuleBasic{},
 		bank.AppModuleBasic{},
 		params.AppModuleBasic{},
-		herb.AppModule{},
 		staking.AppModuleBasic{},
 		distribution.AppModuleBasic{},
 		slashing.AppModuleBasic{},
+		supply.AppModuleBasic{},
+
+		herb.AppModule{},
 	)
+
+	// account permissions
+	maccPerms = map[string][]string{
+		auth.FeeCollectorName:     nil,
+		distribution.ModuleName:   nil,
+		staking.BondedPoolName:    {supply.Burner, supply.Staking},
+		staking.NotBondedPoolName: {supply.Burner, supply.Staking},
+	}
 )
 
 type herbApp struct {
@@ -57,29 +68,28 @@ type herbApp struct {
 	cdc *codec.Codec
 
 	// Keys to access the substores
-	keyMain          *sdk.KVStoreKey
-	keyAccount       *sdk.KVStoreKey
-	keyFeeCollection *sdk.KVStoreKey
-	keyStaking       *sdk.KVStoreKey
-	tkeyStaking      *sdk.TransientStoreKey
-	keyDistr         *sdk.KVStoreKey
-	tkeyDistr        *sdk.TransientStoreKey
-	keyHERB          *sdk.KVStoreKey
-	keyCtParts       *sdk.KVStoreKey
-	keyDecShares     *sdk.KVStoreKey
-	keyParams        *sdk.KVStoreKey
-	tkeyParams       *sdk.TransientStoreKey
-	keySlashing      *sdk.KVStoreKey
+	keyMain      *sdk.KVStoreKey
+	keyAccount   *sdk.KVStoreKey
+	keySupply    *sdk.KVStoreKey
+	keyStaking   *sdk.KVStoreKey
+	tkeyStaking  *sdk.TransientStoreKey
+	keyDistr     *sdk.KVStoreKey
+	keyHERB      *sdk.KVStoreKey
+	keyCtParts   *sdk.KVStoreKey
+	keyDecShares *sdk.KVStoreKey
+	keyParams    *sdk.KVStoreKey
+	tkeyParams   *sdk.TransientStoreKey
+	keySlashing  *sdk.KVStoreKey
 
 	// Keepers
-	accountKeeper       auth.AccountKeeper
-	bankKeeper          bank.Keeper
-	stakingKeeper       staking.Keeper
-	slashingKeeper      slashing.Keeper
-	distrKeeper         distribution.Keeper
-	feeCollectionKeeper auth.FeeCollectionKeeper
-	paramsKeeper        params.Keeper
-	herbKeeper          herb.Keeper
+	accountKeeper  auth.AccountKeeper
+	bankKeeper     bank.Keeper
+	stakingKeeper  staking.Keeper
+	slashingKeeper slashing.Keeper
+	distrKeeper    distribution.Keeper
+	supplyKeeper   supply.Keeper
+	paramsKeeper   params.Keeper
+	herbKeeper     herb.Keeper
 
 	// Module Manager
 	mm *module.Manager
@@ -96,19 +106,18 @@ func NewHERBApp(logger log.Logger, db dbm.DB) *herbApp {
 		BaseApp: bApp,
 		cdc:     cdc,
 
-		keyMain:          sdk.NewKVStoreKey(bam.MainStoreKey),
-		keyAccount:       sdk.NewKVStoreKey(auth.StoreKey),
-		keyFeeCollection: sdk.NewKVStoreKey(auth.FeeStoreKey),
-		keyStaking:       sdk.NewKVStoreKey(staking.StoreKey),
-		tkeyStaking:      sdk.NewTransientStoreKey(staking.TStoreKey),
-		keyDistr:         sdk.NewKVStoreKey(distribution.StoreKey),
-		tkeyDistr:        sdk.NewTransientStoreKey(distribution.TStoreKey),
-		keyHERB:          sdk.NewKVStoreKey(herb.StoreKey),
-		keyCtParts:       sdk.NewKVStoreKey(herb.CtStoreKey),
-		keyDecShares:     sdk.NewKVStoreKey(herb.DsStoreKey),
-		keyParams:        sdk.NewKVStoreKey(params.StoreKey),
-		tkeyParams:       sdk.NewTransientStoreKey(params.TStoreKey),
-		keySlashing:      sdk.NewKVStoreKey(slashing.StoreKey),
+		keyMain:      sdk.NewKVStoreKey(bam.MainStoreKey),
+		keyAccount:   sdk.NewKVStoreKey(auth.StoreKey),
+		keySupply:    sdk.NewKVStoreKey(supply.StoreKey),
+		keyStaking:   sdk.NewKVStoreKey(staking.StoreKey),
+		tkeyStaking:  sdk.NewTransientStoreKey(staking.TStoreKey),
+		keyDistr:     sdk.NewKVStoreKey(distribution.StoreKey),
+		keyHERB:      sdk.NewKVStoreKey(herb.StoreKey),
+		keyCtParts:   sdk.NewKVStoreKey(herb.CtStoreKey),
+		keyDecShares: sdk.NewKVStoreKey(herb.DsStoreKey),
+		keyParams:    sdk.NewKVStoreKey(params.StoreKey),
+		tkeyParams:   sdk.NewTransientStoreKey(params.TStoreKey),
+		keySlashing:  sdk.NewKVStoreKey(slashing.StoreKey),
 	}
 
 	// The ParamsKeeper handles parameter storage for the application
@@ -131,16 +140,23 @@ func NewHERBApp(logger log.Logger, db dbm.DB) *herbApp {
 		app.accountKeeper,
 		bankSubspace,
 		bank.DefaultCodespace,
+		app.ModuleAccountAddrs(),
 	)
 
-	// The FeeCollectionKeeper collects transaction fees and renders them to the fee distribution module
-	app.feeCollectionKeeper = auth.NewFeeCollectionKeeper(cdc, app.keyFeeCollection)
+	// The SupplyKeeper collects transaction fees and renders them to the fee distribution module
+	app.supplyKeeper = supply.NewKeeper(
+		app.cdc,
+		app.keySupply,
+		app.accountKeeper,
+		app.bankKeeper,
+		maccPerms,
+	)
 
 	stakingKeeper := staking.NewKeeper(
 		app.cdc,
 		app.keyStaking,
 		app.tkeyStaking,
-		app.bankKeeper,
+		app.supplyKeeper,
 		stakingSubspace,
 		staking.DefaultCodespace,
 	)
@@ -149,10 +165,11 @@ func NewHERBApp(logger log.Logger, db dbm.DB) *herbApp {
 		app.cdc,
 		app.keyDistr,
 		distrSubspace,
-		app.bankKeeper,
 		&stakingKeeper,
-		app.feeCollectionKeeper,
+		app.supplyKeeper,
 		distribution.DefaultCodespace,
+		auth.FeeCollectorName,
+		app.ModuleAccountAddrs(),
 	)
 
 	app.slashingKeeper = slashing.NewKeeper(
@@ -181,12 +198,13 @@ func NewHERBApp(logger log.Logger, db dbm.DB) *herbApp {
 	app.mm = module.NewManager(
 		genaccounts.NewAppModule(app.accountKeeper),
 		genutil.NewAppModule(app.accountKeeper, app.stakingKeeper, app.BaseApp.DeliverTx),
-		auth.NewAppModule(app.accountKeeper, app.feeCollectionKeeper),
+		auth.NewAppModule(app.accountKeeper),
 		bank.NewAppModule(app.bankKeeper, app.accountKeeper),
 		herb.NewAppModule(app.herbKeeper),
-		distribution.NewAppModule(app.distrKeeper),
+		supply.NewAppModule(app.supplyKeeper, app.accountKeeper),
+		distribution.NewAppModule(app.distrKeeper, app.supplyKeeper),
 		slashing.NewAppModule(app.slashingKeeper, app.stakingKeeper),
-		staking.NewAppModule(app.stakingKeeper, app.feeCollectionKeeper, app.distrKeeper, app.accountKeeper),
+		staking.NewAppModule(app.stakingKeeper, app.distrKeeper, app.accountKeeper, app.supplyKeeper),
 	)
 
 	app.mm.SetOrderBeginBlockers(distribution.ModuleName, slashing.ModuleName)
@@ -215,7 +233,7 @@ func NewHERBApp(logger log.Logger, db dbm.DB) *herbApp {
 	app.SetAnteHandler(
 		auth.NewAnteHandler(
 			app.accountKeeper,
-			app.feeCollectionKeeper,
+			app.supplyKeeper,
 			auth.DefaultSigVerificationGasConsumer,
 		),
 	)
@@ -223,11 +241,10 @@ func NewHERBApp(logger log.Logger, db dbm.DB) *herbApp {
 	app.MountStores(
 		app.keyMain,
 		app.keyAccount,
-		app.keyFeeCollection,
+		app.keySupply,
 		app.keyStaking,
 		app.tkeyStaking,
 		app.keyDistr,
-		app.tkeyDistr,
 		app.keySlashing,
 		app.keyHERB,
 		app.keyCtParts,
@@ -297,4 +314,14 @@ func MakeCodec() *codec.Codec {
 	sdk.RegisterCodec(cdc)
 	codec.RegisterCrypto(cdc)
 	return cdc
+}
+
+// ModuleAccountAddrs returns all the app's module account addresses.
+func (app *herbApp) ModuleAccountAddrs() map[string]bool {
+	modAccAddrs := make(map[string]bool)
+	for acc := range maccPerms {
+		modAccAddrs[supply.NewModuleAddress(acc).String()] = true
+	}
+
+	return modAccAddrs
 }

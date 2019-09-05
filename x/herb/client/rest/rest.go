@@ -19,14 +19,14 @@ import (
 
 // RegisterRoutes - Central function to define routes that get registered by the main application
 func RegisterRoutes(cliCtx context.CLIContext, r *mux.Router, storeName string) {
-	r.HandleFunc(
+	/*r.HandleFunc(
 		fmt.Sprintf("%s/ciphertexts/aggregated", storeName),
 		getAggregatedCiphertextHandler(cliCtx, storeName),
 	).Methods("GET")
 	r.HandleFunc(
 		fmt.Sprintf("%s/ciphertext_part", storeName),
 		setCiphertextPartHandler(cliCtx),
-	).Methods("POST")
+	).Methods("POST")*/
 }
 
 // QUERIES
