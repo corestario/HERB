@@ -186,10 +186,10 @@ do
 
     nodeArray+=($nodeN_id)
 
-    docker cp ./node0_config/.hd/config/config.toml $nodeN_id:/root/tmp/
-    docker cp ./node0_config/.hd/config/genesis.json $nodeN_id:/root/tmp/
-    docker cp ./node0_config/.hcli/keys $nodeN_id:/root/tmp/
-    docker cp ./node0_config/bots $nodeN_id:/root/tmp/
+    docker cp ./node0_config/.hd/config/config.toml $nodeN_id:/root/
+    docker cp ./node0_config/.hd/config/genesis.json $nodeN_id:/root/
+    docker cp ./node0_config/.hcli/keys $nodeN_id:/root/
+    docker cp ./node0_config/bots $nodeN_id:/root/
 
     docker start $nodeN_id
 
