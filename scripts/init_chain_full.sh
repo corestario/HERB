@@ -33,7 +33,7 @@ do
 
     hcli keys add "client$i" <<< $pwrd
 
-    hd add-genesis-account $(hcli keys show "client$i" -a) 1000herbtoken,100000000stake
+    hd add-genesis-account $(hcli keys show "client$i" -a) 100000000herbtoken,100000000stake
 
     id=$(cat keys.json | jq .partial_keys[$i].id)
     ID=${id:1:${#id}-2}

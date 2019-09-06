@@ -234,25 +234,26 @@ For Ubuntu:
 
 7. Connect to node-01:
 
-   0. 
+   1. Export environment variables:
+
       ```
       source ~/.profile
       ```
 
-   1. Clone [repository](https://github.com/dgamingfoundation/HERB/tree/master) to the $HOME directory
+   2. Clone [repository](https://github.com/dgamingfoundation/HERB/tree/master) to the $HOME directory
 
       ```
       git clone https://%username%@github.com/dgamingfoundation/HERB
       ```
 
-   2. Install application:
+   3. Install application:
 
       ```
       cd ~/HERB
       make install
       ```
 
-   3. Set node-00 as seed for tendermint:
+   4. Set node-00 as seed for tendermint:
 
       ```
       sed -i 's/seeds = ""/seeds = "%node-00 id%@%node-00 ip%:26656"/' tmp/config.toml
@@ -268,7 +269,7 @@ For Ubuntu:
 
     ```
     cd $HOME/HERB/scripts
-    ./run_testnet.sh servers.txt %first node number% %client per node%
+    ./run_distributed_testnet.sh servers.txt %first node number% %client per node%
     ```
 
     Here are two arguments:

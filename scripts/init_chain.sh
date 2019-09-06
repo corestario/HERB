@@ -17,8 +17,8 @@ hcli config trust-node true
 
 mkdir -p $HOME/.hd/config
 
-cp $HOME/tmp/genesis.json $HOME/.hd/config
-cp $HOME/tmp/config.toml $HOME/.hd/config
-cp -r $HOME/tmp/keys $HOME/.hcli/
-cp -r $HOME/tmp/bots $HOME/HERB/
+cp $HOME/genesis.json $HOME/.hd/config
+cp $HOME/config.toml $HOME/.hd/config
+cp -r $HOME/keys $HOME/.hcli/
+cp -r $HOME/bots $HOME/HERB/
 sed -i 's/moniker = "moniker"/moniker = "node-'"$1"'"/' $HOME/.hd/config/config.toml
