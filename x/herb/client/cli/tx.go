@@ -33,7 +33,6 @@ func GetTxCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 	herbTxCmd.AddCommand(client.PostCommands(
 		GetCmdSetCiphertextPart(cdc),
 		GetCmdSetDecryptionShare(cdc),
-		GetCmdSetRandomResult(cdc),
 	)...)
 
 	return herbTxCmd
@@ -54,8 +53,6 @@ func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("failed to decode common public key: %v", err)
 			}
 
-			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
-
 			ct, dlkProof, rkProof, err := elgamal.RandomCiphertext(group, pubKey)
 			if err != nil {
 				return fmt.Errorf("failed to create random ciphertext: %v", err)
@@ -72,6 +69,7 @@ func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
 		},
@@ -129,8 +127,6 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 				KeyHolderAddr: cliCtx.GetFromAddress(),
 			}
 
-			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
-
 			decryptionShareJSON, err := types.NewDecryptionShareJSON(decryptionShare)
 			if err != nil {
 				return err
@@ -140,29 +136,12 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
-		},
-	}
-}
-
-// GetCmdSetRandomResult implements send random result transaction command.
-func GetCmdSetRandomResult(cdc *codec.Codec) *cobra.Command {
-	return &cobra.Command{
-		Use:   "set-random [round]",
-		Short: "Set random result in blockchain",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cliCtx := context.NewCLIContext().WithCodec(cdc)
-			round, err := strconv.ParseUint(args[0], 10, 64)
-			if err != nil {
-				return fmt.Errorf("id %s not a valid int, please input a valid id", args[1])
-			}
-			msg := types.NewMsgSetRandomResult(round, cliCtx.GetFromAddress())
-
 			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 			txBldr, err = utils.EnrichWithGas(txBldr, cliCtx, []sdk.Msg{msg})
-
+			if err != nil {
+				return err
+			}
+			txBldr = txBldr.WithGas(2 * txBldr.Gas())
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
 		},
 	}

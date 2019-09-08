@@ -135,6 +135,11 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 }
 
 func (k *Keeper) SetAggregatedCiphertext(ctx sdk.Context, round uint64, ct *elgamal.Ciphertext) sdk.Error {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("PANIC:", r)
+		}
+	}()
 	store := ctx.KVStore(k.storeKey)
 	keyBytes := createKeyBytesByRound(round, keyAggregatedCiphertext)
 
@@ -220,6 +225,10 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	}
 
 	if uint64(len(addrList)) >= t {
+		err := k.SetRandomResult(ctx, round)
+		if err != nil {
+			return err
+		}
 		if round == 0 {
 			t := time.Now().UTC()
 			k.resTime = t
