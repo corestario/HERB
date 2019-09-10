@@ -191,13 +191,13 @@ For Ubuntu:
    5. Send configuration files and keys to node-01:
 
       ```
-      scp $HOME/.hd/config/genesis.json root@%node-01-ip%:tmp/
+      scp $HOME/.hd/config/genesis.json root@%node-01-ip%:
       
-      scp -r $HOME/.hcli/keys root@%node-01-ip%:tmp/
+      scp -r $HOME/.hcli/keys root@%node-01-ip%:
       
-      scp $HOME/.hd/config/config.toml root@%node-01-ip%:tmp/
+      scp $HOME/.hd/config/config.toml root@%node-01-ip%:
       
-      scp -r $HOME/HERB/bots root@%node-01-ip%:tmp/
+      scp -r $HOME/HERB/bots root@%node-01-ip%:
       ```
 
    6. Run app daemon:
