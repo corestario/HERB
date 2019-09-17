@@ -38,4 +38,12 @@ func RegisterRoutes(cliCtx context.CLIContext, r *mux.Router, storeName string) 
 		fmt.Sprintf("/%s/decryptionshares/all", storeName),
 		allDecryptionSharesHandler(cliCtx, storeName),
 	).Methods("GET")
+	r.HandleFunc(
+		fmt.Sprintf("/%s/ciphertext/set", storeName),
+		setCiphertextPartHandler(cliCtx),
+	).Methods("POST")
+	r.HandleFunc(
+		fmt.Sprintf("/%sdecryptionshares/set", storeName),
+		setDecryptionShareHandler(cliCtx),
+	).Methods("POST")
 }
