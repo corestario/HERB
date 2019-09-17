@@ -59,6 +59,10 @@ type CiphertextJSON struct {
 	PointB string `json:"point_b"`
 }
 
+func (ct CiphertextJSON) String() string {
+	return fmt.Sprintf("(%s, %s)", ct.PointA, ct.PointB)
+}
+
 func NewCiphertextJSON(ciphertext *Ciphertext, group kyber.Group) (*CiphertextJSON, error) {
 	aJSON, err := kyberenc.PointToStringHex(group, ciphertext.PointA)
 	if err != nil {

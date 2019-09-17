@@ -1,14 +1,7 @@
 package rest
 
 import (
-	"net/http"
-
-	"github.com/dgamingfoundation/HERB/x/herb/types"
-
-	"github.com/cosmos/cosmos-sdk/client/context"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/rest"
-	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 )
 
 type setCiphertextPartReq struct {
@@ -19,7 +12,7 @@ type setCiphertextPartReq struct {
 	Sender          string       `json:"entropyProvider"`
 }
 
-func setCiphertextPartHandler(cliCtx context.CLIContext) http.HandlerFunc {
+/*func setCiphertextPartHandler(cliCtx context.CLIContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cdc := cliCtx.Codec
 		var req setCiphertextPartReq
@@ -58,4 +51,4 @@ func setCiphertextPartHandler(cliCtx context.CLIContext) http.HandlerFunc {
 
 		utils.WriteGenerateStdTxResponse(w, cliCtx, req.BaseReq, []sdk.Msg{msg})
 	}
-}
+}*/

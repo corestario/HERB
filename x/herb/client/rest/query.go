@@ -49,10 +49,9 @@ func aggregatedCiphertextHandler(cliCtx context.CLIContext, storeName string) ht
 
 func currentRoundHandler(cliCtx context.CLIContext, storeName string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", storeName, types.QueryCurrentRound), nil)
 		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, err.Error())
+			rest.WriteErrorResponse(w, http.StatusNotFound, err.Error())
 			return
 		}
 
@@ -86,13 +85,13 @@ func roundStageHandler(cliCtx context.CLIContext, storeName string) http.Handler
 			return
 		}
 
-		stageBytes, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", storeName, types.QueryStage), bz)
+		res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", storeName, types.QueryStage), bz)
 		if err != nil {
 			rest.WriteErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
-		rest.PostProcessResponse(w, cliCtx, stageBytes)
+		rest.PostProcessResponse(w, cliCtx, res)
 	}
 }
 
