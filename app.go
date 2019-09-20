@@ -218,6 +218,7 @@ func NewHERBApp(logger log.Logger, db dbm.DB) *herbApp {
 		bank.ModuleName,
 		slashing.ModuleName,
 		herb.ModuleName,
+		supply.ModuleName,
 		genutil.ModuleName,
 	)
 

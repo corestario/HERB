@@ -23,6 +23,7 @@ func NewGenesisState(thresholdParts uint64, thresholdDecryption uint64) GenesisS
 		ThresholdDecryption: thresholdDecryption,
 		CommonPublicKey:     P256.Point().String(),
 		KeyHolders:          []types.VerificationKeyJSON{},
+		RoundData:           []types.RoundData{},
 	}
 }
 
@@ -50,13 +51,13 @@ func ValidateGenesis(data GenesisState) error {
 }
 
 // DefaultGenesisState returns default testing genesis state
-// TO DO
 func DefaultGenesisState() GenesisState {
 	return GenesisState{
-		ThresholdParts:      1,
-		ThresholdDecryption: 1,
+		ThresholdParts:      0,
+		ThresholdDecryption: 0,
 		CommonPublicKey:     P256.Point().String(),
 		KeyHolders:          []types.VerificationKeyJSON{},
+		RoundData:           []types.RoundData{},
 	}
 }
 
@@ -90,11 +91,57 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.Valid
 }
 
 // ExportGenesis returns a GenesisState for a given context and keeper.
-//TO DO
 func ExportGenesis(ctx sdk.Context, k Keeper) GenesisState {
+	tp, err := k.GetThresholdParts(ctx)
+	if err != nil {
+		panic(err)
+	}
+	td, err := k.GetThresholdDecryption(ctx)
+	if err != nil {
+		panic(err)
+	}
+	commonPK, err := k.GetCommonPublicKey(ctx)
+	if err != nil {
+		panic(err)
+	}
+	keyHolders, err := k.GetVerificationKeys(ctx)
+	if err != nil {
+		panic(err)
+	}
+	var roundData []types.RoundData
+	lastRound := k.CurrentRound(ctx)
+	for i := uint64(0); i < lastRound; i++ {
+		var ctPartsJSON []*types.CiphertextPartJSON
+		ctParts, err := k.GetAllCiphertexts(ctx, i)
+		if err != nil {
+			panic(err)
+		}
+		for _, ct := range ctParts {
+			ctJSON, err := types.NewCiphertextPartJSON(ct)
+			if err != nil {
+				panic(err)
+			}
+			ctPartsJSON = append(ctPartsJSON, ctJSON)
+		}
+		var dSharesJSON []*types.DecryptionShareJSON
+		dShares, err := k.GetAllDecryptionShares(ctx, i)
+		if err != nil {
+			panic(err)
+		}
+		for _, ds := range dShares {
+			dsJSON, err := types.NewDecryptionShareJSON(ds)
+			if err != nil {
+				panic(err)
+			}
+			dSharesJSON = append(dSharesJSON, &dsJSON)
+		}
+		roundData = append(roundData, types.RoundData{i, ctPartsJSON, dSharesJSON})
+	}
 	return GenesisState{
-		ThresholdParts:      1,
-		ThresholdDecryption: 1,
-		KeyHolders:          []types.VerificationKeyJSON{},
+		ThresholdParts:      tp,
+		ThresholdDecryption: td,
+		CommonPublicKey:     commonPK.String(),
+		KeyHolders:          keyHolders,
+		RoundData:           roundData,
 	}
 }
