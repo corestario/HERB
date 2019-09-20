@@ -53,8 +53,6 @@ func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("failed to decode common public key: %v", err)
 			}
 
-			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
-
 			ct, dlkProof, rkProof, err := elgamal.RandomCiphertext(group, pubKey)
 			if err != nil {
 				return fmt.Errorf("failed to create random ciphertext: %v", err)
@@ -71,6 +69,7 @@ func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
 
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
 		},
@@ -128,8 +127,6 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 				KeyHolderAddr: cliCtx.GetFromAddress(),
 			}
 
-			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
-
 			decryptionShareJSON, err := types.NewDecryptionShareJSON(decryptionShare)
 			if err != nil {
 				return err
@@ -139,7 +136,12 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
+			txBldr := auth.NewTxBuilderFromCLI().WithTxEncoder(utils.GetTxEncoder(cdc))
+			txBldr, err = utils.EnrichWithGas(txBldr, cliCtx, []sdk.Msg{msg})
+			if err != nil {
+				return err
+			}
+			txBldr = txBldr.WithGas(2 * txBldr.Gas())
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
 		},
 	}

@@ -134,8 +134,13 @@ func queryResult(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte,
 	if err != nil {
 		return nil, err
 	}
+	
+	if round == keeper.CurrentRound(ctx) {
+		round = round - 1
+	}
 
 	randomBytes, err := keeper.RandomResult(ctx, round)
+
 	if err != nil {
 		return nil, err
 	}

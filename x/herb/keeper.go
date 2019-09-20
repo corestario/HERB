@@ -3,6 +3,7 @@ package herb
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -42,6 +43,11 @@ func NewKeeper(storeKey sdk.StoreKey, storeCiphertextParts *sdk.KVStoreKey, stor
 
 // SetCiphertext store the ciphertext from the entropyProvider to the kv-store
 func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sdk.Error {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("PANIC:", r)
+		}
+	}()
 	if ctPart.EntropyProvider.Empty() {
 		return sdk.ErrInvalidAddress("entropy provider can't be empty!")
 	}
@@ -129,6 +135,11 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 }
 
 func (k *Keeper) SetAggregatedCiphertext(ctx sdk.Context, round uint64, ct *elgamal.Ciphertext) sdk.Error {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("PANIC:", r)
+		}
+	}()
 	store := ctx.KVStore(k.storeKey)
 	keyBytes := createKeyBytesByRound(round, keyAggregatedCiphertext)
 
@@ -146,7 +157,11 @@ func (k *Keeper) SetAggregatedCiphertext(ctx sdk.Context, round uint64, ct *elga
 
 // SetDecryptionShare stores decryption share for the current round
 func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) sdk.Error {
-
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("PANIC:", r)
+		}
+	}()
 	if ds.KeyHolderAddr.Empty() {
 		return sdk.ErrInvalidAddress("key Holder can't be empty!")
 	}
@@ -210,6 +225,10 @@ func (k *Keeper) SetDecryptionShare(ctx sdk.Context, ds *types.DecryptionShare) 
 	}
 
 	if uint64(len(addrList)) >= t {
+		err := k.SetRandomResult(ctx, round)
+		if err != nil {
+			return err
+		}
 		if round == 0 {
 			t := time.Now().UTC()
 			k.resTime = t
@@ -386,11 +405,15 @@ func (k *Keeper) setStage(ctx sdk.Context, round uint64, stage string) {
 	keyBytes := createKeyBytesByRound(round, keyStage)
 	store.Set(keyBytes, []byte(stage))
 }
-
-func (k *Keeper) RandomResult(ctx sdk.Context, round uint64) ([]byte, sdk.Error) {
+func (k *Keeper) SetRandomResult(ctx sdk.Context, round uint64) sdk.Error {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("PANIC:", r)
+		}
+	}()
 	dsList, err := k.GetAllDecryptionShares(ctx, round)
 	if err != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't get all decryption shares from store: %v", err))
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't get all decryption shares from store: %v", err))
 	}
 	ds := make([]*share.PubShare, 0, len(dsList))
 	for _, decShare := range dsList {
@@ -398,21 +421,33 @@ func (k *Keeper) RandomResult(ctx sdk.Context, round uint64) ([]byte, sdk.Error)
 	}
 	aggCt, err := k.GetAggregatedCiphertext(ctx, round)
 	if err != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't get aggregated ciphertext from store: %v", err))
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't get aggregated ciphertext from store: %v", err))
 	}
 
 	n, err := k.GetKeyHoldersNumber(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	resultPoint := elgamal.Decrypt(P256, *aggCt, ds, int(n))
 	hash := P256.Hash()
 	_, err2 := resultPoint.MarshalTo(hash)
 	if err2 != nil {
-		return nil, sdk.ErrInternal(fmt.Sprintf("failed to marshal result point to hash: %v", err))
+		return sdk.ErrInternal(fmt.Sprintf("failed to marshal result point to hash: %v", err))
 	}
 	result := hash.Sum(nil)
+	store := ctx.KVStore(k.storeKey)
+	keyBytes := createKeyBytesByRound(round, keyRandomResult)
+	store.Set(keyBytes, result)
+	return nil
+}
+func (k *Keeper) RandomResult(ctx sdk.Context, round uint64) ([]byte, sdk.Error) {
+	store := ctx.KVStore(k.storeKey)
+	keyBytes := createKeyBytesByRound(round, keyRandomResult)
+	if !store.Has(keyBytes) {
+		return nil, sdk.ErrUnknownRequest("can't get random result from store: %v")
+	}
+	result := store.Get(keyBytes)
 	return result, nil
 }
 

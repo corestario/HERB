@@ -9,6 +9,7 @@ import (
 const (
 	// key prefixes for defining item in the store by round
 	keyAggregatedCiphertext = "keyAggregatedCiphertext" // aggregated ciphertext
+	keyRandomResult         = "keyRandomResult"         // result
 	keyStage                = "keyStage"
 	keyCommonKey            = "keyCommonKey"        //public key
 	keyVerificationKeys     = "keyVerificationKeys" //verification keys with id
