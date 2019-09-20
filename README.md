@@ -3,15 +3,16 @@ HERB is a Publicly Verifiable Random Beacon protocol described in [this]() artic
 
 ### What is it
 
-This repo contains cosmos-application which allows securely generating random numbers. It's based on the HERB-protocol.
+Publicly Verifiable Random Beacon protocol allows securely generating random numbers and any third party can validate results. HERB implementation is a blockchain application and HERB participants are users of this blockchain (not full nodes). 
 
-Simplified protocol description:
+Simplified implementation description:
 
 1. New round *i* is starting. 
-2. Each participant sends *ciphertext part* (protocol message type) to the blockchain (as transaction). 
-3. After receiving *t1* ciphertext parts, the common ciphertext is being aggregated. 
-4. Each participant sends *decryption share* (again, message type) to the blockchain (as transaction).
-5. After receiving *t2* decryption shares, round is completed. New round is *i+1*, go to step 1. 
+2. Each participant sends *the ciphertext part* (encrypted random number) to the blockchain (as a transaction). 
+3. After receiving *t1* ciphertext parts, the common ciphertext (encrypted sum of all sent random numbers) is being aggregated. 
+4. Each participant sends *decryption share* to the blockchain (as a transaction).
+5. After receiving *t2* decryption shares, the round is completed (aggregated ciphertext can be decrypted to the random number). A new round is *i + 1*.
+6.  Go to step 1. 
 
 ###  Table of Contents
 
@@ -30,47 +31,47 @@ Simplified protocol description:
 
 ### Implementation details
 
-This is a Proof-of-Concept implementation, so some details from original paper are simplified here. 
+This is a Proof-of-Concept implementation, so some details from the [original paper]() are simplified here. 
 
-Recall, that there are 3 protocol phase (page 12):
+Recall, that there are 3 protocol phases (page 12):
 
-* Setup phase. Main purpose of the setup phase is keys generating.  DKG phase (Section 3.1, page 13) is skipped in this implementation. `dkgcli` simulates DKG-phase and generates private/public keys. These keys are saved in the `bots` folder. 
+* Setup phase. The main purpose of the setup phase is key generating.  DKG phase (Section 3.1, page 13) is skipped in this implementation. `dkgcli` simulates DKG-phase and generates private/public keys. These keys are saved in the `bots` folder. 
 * Publication phase. Each entropy provider sends ciphertext part and proofs using `hcli tx herb ct-part` command.
-* Disclosure phase. Each key holder sends decryptions share and proofs using `hcli tx herb decrypt` command. 
+* Disclosure phase. Each key holder sends decryption share and proofs using `hcli tx herb decrypt` command. 
 
-Entropy Providers and Key Holders (page 12) are the same set. 
+Entropy Providers and Key Holders (page 12) are the same sets. 
 
 
 
-Let's look at the original HERB protocol (page 17) closer and compare it with this implementation. .
+Let's look at the original HERB protocol (page 17) closer and compare it with this implementation.
 
 > 1. Each entropy provider *e<sub>j</sub>*, *1 ≤ j ≤ m*, generates random point *M<sub>j</sub> ∈ __G__*. Then encrypts it:
 > 2. e<sub>j</sub> publishes *C<sub>j</sub>* along with NIZK of discrete logarithm knowledge for *A<sub>j</sub>* and NIZK of representation knowledge for *B<sub>j</sub>* 
 
-`hcli tx herb ct-part [commonPubKey]` [command](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/client/cli/tx.go#L42) calculates ciphertext part and RK/DLK proofs and sends transaction with a [Ciphertext Part Message](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/types/msgs.go#L13). 
+`hcli tx herb ct-part [commonPubKey]` [command](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/client/cli/tx.go#L42) calculates ciphertext part and RK/DLK proofs and sends a transaction with a [Ciphertext Part Message](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/types/msgs.go#L13). 
 
 > 3.  When *C<sub>j</sub>* is published, participants agree that the ciphertext part is correct, if both conditions __DLK-Verify__*(π<sub>DLK<sub>j</sub></sub>, A<sub>j</sub>, G) = 1* and __RK-Verify__*(π<sub>RK<sub>j</sub></sub>, G, Q, B<sub>j</sub>) = 1* met.
 > 4.  When all correct *C<sub>j</sub>* are published, participants calculate *C = (A, B)*
 
-On the blockchain side, [keeper's function](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/keeper.go#L44) validates the ciphertext part and store it into the blockchain. This function also aggregate the ciphertext with cyphertexts which are already stored. 
+On the blockchain side, [keeper's function](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/keeper.go#L44) verifies the ciphertext part and store it into the blockchain. This function also aggregates new ciphertext with cyphertexts which are already stored. 
 
 Anyone can see stored ciphertexts by query: 
 
 `hcli query herb all-ct [round]`
 
-As soon as *t1* ciphertext parts were stored, application stage changes to "decryption phase" for current round.
+As soon as *t1* ciphertext parts were stored, the application's stage changes to "decryption phase" for the current round.
 
 > 5.  Key holder *id<sub>i</sub>*, *1 ≤ i ≤ n*, publishes decryption shares along with NIZK of discrete logarithm equality
 
-`hcli tx herb decrypt decrypt [privateKey] [ID]` [command](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/client/cli/tx.go#L81) queries an aggregated ciphertext and calculates a decryption share. This command also sends transaction with [Decryption Share message](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/types/msgs.go#L68).
+`hcli tx herb decrypt [privateKey] [ID]` [command](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/client/cli/tx.go#L81) queries the aggregated ciphertext and calculates a decryption share. This command also sends a transaction with [Decryption Share message](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/types/msgs.go#L68).
 
-Anyone can query aggregated ciphertext by command:
+Anyone can query an aggregated ciphertext by command:
 
 `hcli query herb aggregated-ct [round]`
 
 > 6. When *D<sub>i</sub>* is published, participants verify that __DLE-Verify__*(π<sub>DLE<sub>i</sub></sub>,D<sub>i</sub>,A,VK<sub>i</sub>,G) = 1*
 
-On the blockchain side, [keeper's function](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/keeper.go#L148) validates the decryption share and store it into the blockchain. 
+On the blockchain side, [keeper's function](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/keeper.go#L148) verifies the decryption share and store it into the blockchain. 
 
 Anyone can see stored decryption shares by query: 
 
@@ -78,7 +79,7 @@ Anyone can see stored decryption shares by query:
 
 > 7. When *t2* decryption shares published, participants calculate *M*
 
-As soon as *t2* decryption shares were stored, application decrypts an aggregated ciphertext and changes current round stage to "completed". New round is being started. 
+As soon as *t2* decryption shares were stored, application decrypts an aggregated ciphertext and changes current round stage to "completed". A new round is being started. 
 
 Anyone can see generated random number by query:
 
@@ -86,7 +87,7 @@ Anyone can see generated random number by query:
 
 
 
-HERB round changing depends on transactions by Entropy Providers and Key Holders and doesn't depend on underlying blockchain height. So one HERB round can take 1 block or 10 blocks, it depends only on HERB participants and blockchain throughput. Anyone can query current round by command:
+HERB round changing depends on transactions by Entropy Providers and Key Holders and doesn't depend on underlying blockchain's height. So one HERB round can take 1 block or 10 blocks, it depends only on HERB participants and blockchain throughput. Anyone can query current round by command:
 
 `hcli query herb current-round`
 
@@ -100,7 +101,7 @@ There are two types of entities who maintain the system:
 
 * Scripts ([HERB](scripts/HERB)) which represents protocol participants. Let's call them *clients*. 
 
-  Clients use application command line interface for querying app state and sending transactions.
+  Clients use an application command line interface for querying app state and sending transactions.
   
   
 
