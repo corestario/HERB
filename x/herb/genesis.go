@@ -87,7 +87,32 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.Valid
 	keeper.SetKeyHoldersNumber(ctx, uint64(len(keyHolders)))
 	keeper.SetThreshold(ctx, data.ThresholdParts, data.ThresholdDecryption)
 	keeper.SetCommonPublicKey(ctx, data.CommonPublicKey)
+	keeper.setRound(ctx, uint64(0))
+	keeper.setStage(ctx, uint64(0), stageUnstarted)
+	for _, rd := range data.RoundData {
+		for _, ctJSON := range rd.CiphertextParts {
+			ct, err := ctJSON.Deserialize()
+			if err != nil {
+				panic(err)
+			}
+			err = keeper.SetCiphertext(ctx, ct)
+			if err != nil {
+				panic(err)
+			}
+		}
+		for _, dsJSON := range rd.DecryptionShares {
+			ds, err := dsJSON.Deserialize()
+			if err != nil {
+				panic(err)
+			}
+			err = keeper.SetDecryptionShare(ctx, ds)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
 	return []abci.ValidatorUpdate{}
+
 }
 
 // ExportGenesis returns a GenesisState for a given context and keeper.
@@ -135,12 +160,16 @@ func ExportGenesis(ctx sdk.Context, k Keeper) GenesisState {
 			}
 			dSharesJSON = append(dSharesJSON, &dsJSON)
 		}
-		roundData = append(roundData, types.RoundData{i, ctPartsJSON, dSharesJSON})
+		roundData = append(roundData, types.RoundData{ctPartsJSON, dSharesJSON})
+	}
+	cPK, err1 := kyberenc.PointToStringHex(P256, commonPK)
+	if err1 != nil {
+		panic(err1)
 	}
 	return GenesisState{
 		ThresholdParts:      tp,
 		ThresholdDecryption: td,
-		CommonPublicKey:     commonPK.String(),
+		CommonPublicKey:     cPK,
 		KeyHolders:          keyHolders,
 		RoundData:           roundData,
 	}

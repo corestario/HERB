@@ -20,7 +20,6 @@ var P256 = nist.NewBlakeSHA256P256()
 
 //for genesis state
 type RoundData struct {
-	Round            uint64                 `json:"round"`
 	CiphertextParts  []*CiphertextPartJSON  `json:"ciphertext_parts"`
 	DecryptionShares []*DecryptionShareJSON `json:"decryption_shares"`
 }

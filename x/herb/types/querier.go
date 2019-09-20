@@ -48,7 +48,7 @@ type QueryResultRes struct {
 }
 
 func (r QueryResultRes) String() string {
-	return fmt.Sprintf("%s", r.Random)
+	return fmt.Sprintf("%v", r.Random)
 }
 
 type QueryAggregatedCtRes struct {

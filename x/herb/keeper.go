@@ -405,6 +405,14 @@ func (k *Keeper) setStage(ctx sdk.Context, round uint64, stage string) {
 	keyBytes := createKeyBytesByRound(round, keyStage)
 	store.Set(keyBytes, []byte(stage))
 }
+func (k *Keeper) setRound(ctx sdk.Context, round uint64) {
+	currentRound := round
+	store := ctx.KVStore(k.storeKey)
+	roundBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(roundBytes, currentRound)
+	store.Set([]byte(keyCurrentRound), roundBytes)
+}
+
 func (k *Keeper) SetRandomResult(ctx sdk.Context, round uint64) sdk.Error {
 	defer func() {
 		if r := recover(); r != nil {
