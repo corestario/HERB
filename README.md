@@ -3,8 +3,7 @@ HERB is a Publicly Verifiable Random Beacon protocol described in [this]() artic
 
 ### What is it
 
-Publicly Verifiable Random Beacon protocol allows securely generating random numbers and any third party can validate results. HERB implementation is a blockchain application and HERB participants are users of this blockchain (not full nodes). 
-
+Publicly Verifiable Random Beacon protocol allows securely generating random numbers and any third party can validate results. HERB implementation is a blockchain application and HERB participants are users of this blockchain (not full nodes). After setup phase, all process will divide into rounds.
 Simplified implementation description:
 
 1. New round *i* is starting. 
@@ -35,15 +34,15 @@ This is a Proof-of-Concept implementation, so some details from the [original pa
 
 Recall, that there are 3 protocol phases (page 12):
 
-* Setup phase. The main purpose of the setup phase is key generating.  DKG phase (Section 3.1, page 13) is skipped in this implementation. `dkgcli` simulates DKG-phase and generates private/public keys. These keys are saved in the `bots` folder. 
+* Setup phase. The main purpose of the setup phase is key generating.  DKG phase (Section 3.1, page 13) is skipped in this implementation. `dkgcli` simulates DKG-phase and generates private/public keys. These keys  have could found in the `bots` folder. 
 * Publication phase. Each entropy provider sends ciphertext part and proofs using `hcli tx herb ct-part` command.
-* Disclosure phase. Each key holder sends decryption share and proofs using `hcli tx herb decrypt` command. 
+* Disclosure phase. Each key holder sends decryption share and proof using `hcli tx herb decrypt` command. 
 
 Entropy Providers and Key Holders (page 12) are the same sets. 
 
 
 
-Let's look at the original HERB protocol (page 17) closer and compare it with this implementation.
+Let's look at the original HERB protocol (page 17) closer.
 
 > 1. Each entropy provider *e<sub>j</sub>*, *1 ≤ j ≤ m*, generates random point *M<sub>j</sub> ∈ __G__*. Then encrypts it:
 > 2. e<sub>j</sub> publishes *C<sub>j</sub>* along with NIZK of discrete logarithm knowledge for *A<sub>j</sub>* and NIZK of representation knowledge for *B<sub>j</sub>* 
@@ -59,19 +58,20 @@ Anyone can see stored ciphertexts by query:
 
 `hcli query herb all-ct [round]`
 
-As soon as *t1* ciphertext parts were stored, the application's stage changes to "decryption phase" for the current round.
+Query for aggregated ciphertext:
+
+`hcli query herb aggregated-ct [round]`
+
+As soon as *t1* ciphertext parts were stored, the application's stage changes to "disclosure phase" for the current round.
 
 > 5.  Key holder *id<sub>i</sub>*, *1 ≤ i ≤ n*, publishes decryption shares along with NIZK of discrete logarithm equality
 
 `hcli tx herb decrypt [privateKey] [ID]` [command](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/client/cli/tx.go#L81) queries the aggregated ciphertext and calculates a decryption share. This command also sends a transaction with [Decryption Share message](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/types/msgs.go#L68).
 
-Anyone can query an aggregated ciphertext by command:
-
-`hcli query herb aggregated-ct [round]`
 
 > 6. When *D<sub>i</sub>* is published, participants verify that __DLE-Verify__*(π<sub>DLE<sub>i</sub></sub>,D<sub>i</sub>,A,VK<sub>i</sub>,G) = 1*
 
-On the blockchain side, [keeper's function](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/keeper.go#L148) verifies the decryption share and store it into the blockchain. 
+On the blockchain side, [keeper's function](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/keeper.go#L148) verifies the decryption share and stores it into the blockchain. 
 
 Anyone can see stored decryption shares by query: 
 
@@ -87,11 +87,11 @@ Anyone can see generated random number by query:
 
 
 
-HERB round changing depends on transactions by Entropy Providers and Key Holders and doesn't depend on underlying blockchain's height. So one HERB round can take 1 block or 10 blocks, it depends only on HERB participants and blockchain throughput. Anyone can query current round by command:
+HERB round changing depends on transactions by Entropy Providers and Key Holders and doesn't depend on underlying blockchain's height. So one HERB round can take 1 block or 10 blocks, it depends only on HERB participants and blockchain throughput. Anyone can query current round and current stage by commands:
 
 `hcli query herb current-round`
 
-
+`hcli query herb stage`
 
 ### Blockchain and Clients.
 
