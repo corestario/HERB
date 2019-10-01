@@ -53,13 +53,13 @@ func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 				return fmt.Errorf("failed to decode common public key: %v", err)
 			}
 
-			ct, dlkProof, rkProof, err := elgamal.RandomCiphertext(group, pubKey)
+			ct, ceproof, err := elgamal.RandomCiphertext(group, pubKey)
 			if err != nil {
 				return fmt.Errorf("failed to create random ciphertext: %v", err)
 			}
 
 			sender := cliCtx.GetFromAddress()
-			ctPart := types.CiphertextPart{Ciphertext: ct, DLKproof: dlkProof, RKproof: rkProof, EntropyProvider: sender}
+			ctPart := types.CiphertextPart{Ciphertext: ct, CEproof: ceproof, EntropyProvider: sender}
 			ctPartJSON, err := types.NewCiphertextPartJSON(&ctPart)
 			if err != nil {
 				return err

@@ -14,9 +14,9 @@ import (
 	"github.com/dgamingfoundation/HERB/x/herb/types"
 
 	abci "github.com/tendermint/tendermint/abci/types"
-	dbm "github.com/tendermint/tm-db"
 	"github.com/tendermint/tendermint/libs/log"
 	tmtypes "github.com/tendermint/tendermint/types"
+	dbm "github.com/tendermint/tm-db"
 
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/proof"
@@ -72,11 +72,11 @@ func TestHERB(t *testing.T) {
 		for i := 0; i < n; i++ {
 			y := keeper.group.Scalar().SetInt64(int64(r))
 			rr := keeper.group.Scalar().SetInt64(int64(r + i))
-			ct, DLK, RK, err := ciphertextTest(P256, commonkey, y, rr)
+			ct, CE, err := ciphertextTest(P256, commonkey, y, rr)
 			if err != nil {
 				t.Errorf("failed create proofs: %v", err)
 			}
-			ctPart := types.CiphertextPart{ct, DLK, RK, userAddrs[i]}
+			ctPart := types.CiphertextPart{ct, CE, userAddrs[i]}
 			ciphertexts = append(ciphertexts, ctPart.Ciphertext)
 			ciphertextParts = append(ciphertextParts, ctPart)
 			err1 := keeper.SetCiphertext(ctx, &ctPart)
@@ -105,10 +105,7 @@ func TestHERB(t *testing.T) {
 			if !newCiphertexts[i].Ciphertext.Equal(ciphertextParts[i].Ciphertext) {
 				t.Errorf("ciphertexts don't equal, round: %v", round)
 			}
-			if !bytes.Equal(newCiphertexts[i].DLKproof, ciphertextParts[i].DLKproof) {
-				t.Errorf("DLKproofs don't equal , round  %v", round)
-			}
-			if !bytes.Equal(newCiphertexts[i].RKproof, ciphertextParts[i].RKproof) {
+			if !bytes.Equal(newCiphertexts[i].CEproof, ciphertextParts[i].CEproof) {
 				t.Errorf("DLKproofs don't equal , round  %v", round)
 			}
 		}
@@ -204,11 +201,11 @@ func TestSetGetCiphertext(t *testing.T) {
 	for i := 0; i < n; i++ {
 		y := keeper.group.Scalar().SetInt64(int64(r))
 		rr := keeper.group.Scalar().SetInt64(int64(r + i))
-		ct, DLK, RK, err := ciphertextTest(P256, commonkey, y, rr)
+		ct, CE, err := ciphertextTest(P256, commonkey, y, rr)
 		if err != nil {
 			t.Errorf("failed create proofs: %v", err)
 		}
-		ctPart := types.CiphertextPart{Ciphertext: ct, DLKproof: DLK, RKproof: RK, EntropyProvider: userAddrs[i]}
+		ctPart := types.CiphertextPart{Ciphertext: ct, CEproof: CE, EntropyProvider: userAddrs[i]}
 		ciphertextParts = append(ciphertextParts, ctPart)
 		err1 := keeper.SetCiphertext(ctx, &ctPart)
 		if err1 != nil {
@@ -259,17 +256,16 @@ func Initialize(thresholdDecryption uint64, thresholdParts uint64, n uint64) (ct
 	return
 }
 
-func ciphertextTest(group proof.Suite, commonKey kyber.Point, y kyber.Scalar, r kyber.Scalar) (ct elgamal.Ciphertext, dlkProof []byte, rkProof []byte, err error) {
+func ciphertextTest(group proof.Suite, commonKey kyber.Point, y kyber.Scalar, r kyber.Scalar) (ct elgamal.Ciphertext, ceProof []byte, err error) {
 	m := group.Point().Mul(y, nil)
 	s := group.Point().Mul(r, commonKey)
 	a := group.Point().Mul(r, nil)
 	b := s.Add(group.Point().Mul(r, commonKey), m)
 	ct = elgamal.Ciphertext{PointA: a, PointB: b}
-	dlkProof, err = elgamal.DLK(group, group.Point().Base(), r, ct.PointA)
+	ceProof, err = elgamal.CE(group, group.Point().Base(), commonKey, ct.PointA, ct.PointB, r, y)
 	if err != nil {
 		return
 	}
-	rkProof, err = elgamal.RK(group, group.Point().Base(), y, commonKey, r, ct.PointB)
 	return
 }
 

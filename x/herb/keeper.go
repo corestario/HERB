@@ -51,19 +51,15 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctPart *types.CiphertextPart) sd
 	if ctPart.EntropyProvider.Empty() {
 		return sdk.ErrInvalidAddress("entropy provider can't be empty!")
 	}
-	err := elgamal.DLKVerify(P256, ctPart.Ciphertext.PointA, k.group.Point().Base(), ctPart.DLKproof)
-	if err != nil {
-		return sdk.ErrUnknownRequest("dlk proof isn't correct")
-	}
 	round := k.CurrentRound(ctx)
 	stage := k.GetStage(ctx, round)
 	pubKey, err1 := k.GetCommonPublicKey(ctx)
 	if err1 != nil {
 		return err1
 	}
-	err = elgamal.RKVerify(P256, ctPart.Ciphertext.PointB, k.group.Point().Base(), pubKey, ctPart.RKproof)
+	err := elgamal.CEVerify(P256, k.group.Point().Base(), pubKey, ctPart.Ciphertext.PointA, ctPart.Ciphertext.PointB, ctPart.CEproof)
 	if err != nil {
-		return sdk.ErrUnknownRequest(fmt.Sprintf("RK proof isn't correct: %v", err))
+		return sdk.ErrUnknownRequest(fmt.Sprintf("CE proof isn't correct: %v", err))
 	}
 
 	if k.CurrentRound(ctx) == 0 && stage == stageUnstarted {

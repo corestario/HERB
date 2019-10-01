@@ -18,8 +18,7 @@ import (
 type setCiphertextPartReq struct {
 	BaseReq         rest.BaseReq `jcon:"base_req"`
 	Ciphertext      string       `json:"ciphertext"`
-	DLKProof        string       `json:"dlk_proof"`
-	RKProof         string       `json:"rk_proof"`
+	CEProof         string       `json:"ce_proof"`
 	EntropyProvider string       `json:"entropy_provider"`
 }
 
@@ -66,7 +65,7 @@ func setCiphertextPartHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		ctPart := types.CiphertextPartJSON{*ctJSON, []byte(req.DLKProof), []byte(req.RKProof), entropyProvider}
+		ctPart := types.CiphertextPartJSON{*ctJSON, []byte(req.CEProof), entropyProvider}
 
 		msg := types.NewMsgSetCiphertextPart(ctPart, entropyProvider)
 

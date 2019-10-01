@@ -71,15 +71,13 @@ func (vkJSON VerificationKeyJSON) Deserialize() (*VerificationKey, sdk.Error) {
 // CiphertextPart represents ciphertext part and additional information for the first HERB phase.
 type CiphertextPart struct {
 	Ciphertext      elgamal.Ciphertext
-	DLKproof        []byte
-	RKproof         []byte
+	CEproof         []byte
 	EntropyProvider sdk.AccAddress
 }
 
 type CiphertextPartJSON struct {
 	Ciphertext      elgamal.CiphertextJSON `json:"ciphertext"`
-	DLKproof        []byte                 `json:"dlk_proof"`
-	RKproof         []byte                 `json:"rk_proof"`
+	CEproof         []byte                 `json:"ce_proof"`
 	EntropyProvider sdk.AccAddress         `json:"entropy_provider"`
 }
 
@@ -88,8 +86,7 @@ func NewCiphertextPartJSON(ciphertextPart *CiphertextPart) (*CiphertextPartJSON,
 
 	return &CiphertextPartJSON{
 		Ciphertext:      *ctJSON,
-		DLKproof:        ciphertextPart.DLKproof,
-		RKproof:         ciphertextPart.RKproof,
+		CEproof:         ciphertextPart.CEproof,
 		EntropyProvider: ciphertextPart.EntropyProvider,
 	}, nil
 }
@@ -101,8 +98,7 @@ func (ctJSON *CiphertextPartJSON) Deserialize() (*CiphertextPart, sdk.Error) {
 	}
 	return &CiphertextPart{
 		Ciphertext:      *ciphertext,
-		DLKproof:        ctJSON.DLKproof,
-		RKproof:         ctJSON.RKproof,
+		CEproof:         ctJSON.CEproof,
 		EntropyProvider: ctJSON.EntropyProvider,
 	}, nil
 }
