@@ -141,7 +141,7 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			txBldr = txBldr.WithGas(2 * txBldr.Gas())
+			txBldr = txBldr.WithGas(5 * txBldr.Gas())
 			return utils.GenerateOrBroadcastMsgs(cliCtx, txBldr, []sdk.Msg{msg})
 		},
 	}

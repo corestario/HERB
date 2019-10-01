@@ -35,7 +35,7 @@ func Test_ElGamal_Positive(t *testing.T) {
 		})
 	}
 }
-func encCiphertext(group proof.Suite, commonKey kyber.Point) (ct elgamal.Ciphertext, M kyber.Point, DLKproof []byte, RKproof []byte, err error) {
+func encCiphertext(group proof.Suite, commonKey kyber.Point) (ct elgamal.Ciphertext, M kyber.Point, CEproof []byte, err error) {
 	y := group.Scalar().Pick(random.New())
 	M = group.Point().Mul(y, nil)
 	r := group.Scalar().Pick(random.New())
@@ -43,11 +43,10 @@ func encCiphertext(group proof.Suite, commonKey kyber.Point) (ct elgamal.Ciphert
 	A := group.Point().Mul(r, nil)
 	B := S.Add(group.Point().Mul(r, commonKey), M)
 	ct = elgamal.Ciphertext{A, B}
-	DLKproof, err = elgamal.DLK(group, group.Point().Base(), r, ct.PointA)
+	CEproof, err = elgamal.CE(group, group.Point().Base(), commonKey, ct.PointA, ct.PointB, r, y)
 	if err != nil {
 		return
 	}
-	RKproof, err = elgamal.RK(group, group.Point().Base(), y, commonKey, r, ct.PointB)
 	return
 }
 func elGamalPositive(t *testing.T, shares []*kyberDKG.DistKeyShare, verkeys []*kyber.Point, curve proof.Suite, tr int) {
@@ -56,26 +55,20 @@ func elGamalPositive(t *testing.T, shares []*kyberDKG.DistKeyShare, verkeys []*k
 	//Any system user generates some message, encrypts and publishes it
 	//We use our validators set (parties) just for example
 	publishedCiphertextes := make([]elgamal.Ciphertext, n)
-	DLKproofs := make([][]byte, n)
-	RKproofs := make([][]byte, n)
+	CEproofs := make([][]byte, n)
 	newMessages := make([]kyber.Point, n)
 	publishChan := publishMessages(shares, curve)
 	for publishedMessage := range publishChan {
 		i := publishedMessage.id
-		DLKproofs[i] = publishedMessage.DLKproof
-		RKproofs[i] = publishedMessage.RKproof
+		CEproofs[i] = publishedMessage.CEproof
 		newMessages[i] = publishedMessage.msg
 		publishedCiphertextes[i] = publishedMessage.published
 	}
 	//verify all ciphertexts by parties[1]
 	for i := 0; i < n; i++ {
-		errDLK := elgamal.DLKVerify(curve, publishedCiphertextes[i].PointA, curve.Point().Base(), DLKproofs[i])
-		if errDLK != nil {
-			t.Errorf("DLK proof isn't verified with error %q", errDLK)
-		}
-		errRK := elgamal.RKVerify(curve, publishedCiphertextes[i].PointB, curve.Point().Base(), shares[i].Public(), RKproofs[i])
-		if errRK != nil {
-			t.Errorf("RK proof isn't verified with error %q", errRK)
+		errCE := elgamal.CEVerify(curve, curve.Point().Base(), shares[i].Public(), publishedCiphertextes[i].PointA, publishedCiphertextes[i].PointB, CEproofs[i])
+		if errCE != nil {
+			t.Errorf("CE proof isn't verified with error %q", errCE)
 		}
 	}
 
@@ -119,8 +112,7 @@ type publishedMessage struct {
 	id        int
 	msg       kyber.Point
 	published elgamal.Ciphertext
-	DLKproof  []byte
-	RKproof   []byte
+	CEproof   []byte
 }
 
 func publishMessages(shares []*kyberDKG.DistKeyShare, curve proof.Suite) chan publishedMessage {
@@ -133,8 +125,8 @@ func publishMessages(shares []*kyberDKG.DistKeyShare, curve proof.Suite) chan pu
 
 		for i := range shares {
 			go func(id int) {
-				encryptedMessage, message, DLKproof, RKproof, _ := encCiphertext(curve, shares[id].Public())
-				publish <- publishedMessage{id, message, encryptedMessage, DLKproof, RKproof}
+				encryptedMessage, message, CEproof, _ := encCiphertext(curve, shares[id].Public())
+				publish <- publishedMessage{id, message, encryptedMessage, CEproof}
 				wg.Done()
 			}(i)
 		}

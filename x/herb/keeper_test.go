@@ -106,7 +106,7 @@ func TestHERB(t *testing.T) {
 				t.Errorf("ciphertexts don't equal, round: %v", round)
 			}
 			if !bytes.Equal(newCiphertexts[i].CEproof, ciphertextParts[i].CEproof) {
-				t.Errorf("DLKproofs don't equal , round  %v", round)
+				t.Errorf("CEproofs don't equal , round  %v", round)
 			}
 		}
 		ACiphertext := elgamal.AggregateCiphertext(keeper.group, ciphertexts)
