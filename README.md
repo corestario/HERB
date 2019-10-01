@@ -47,9 +47,9 @@ Let's look at the original HERB protocol (page 17) closer.
 > 1. Each entropy provider *e<sub>j</sub>*, *1 ≤ j ≤ m*, generates random point *M<sub>j</sub> ∈ __G__*. Then encrypts it:
 > 2. e<sub>j</sub> publishes *C<sub>j</sub>* along with NIZK of discrete logarithm knowledge for *A<sub>j</sub>* and NIZK of representation knowledge for *B<sub>j</sub>* 
 
-`hcli tx herb ct-part [commonPubKey]` [command](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/client/cli/tx.go#L42) calculates ciphertext part and RK/DLK proofs and sends a transaction with a [Ciphertext Part Message](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/types/msgs.go#L13). 
+`hcli tx herb ct-part [commonPubKey]` [command](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/client/cli/tx.go#L42) calculates ciphertext part and CE proof and sends a transaction with a [Ciphertext Part Message](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/types/msgs.go#L13). 
 
-> 3.  When *C<sub>j</sub>* is published, participants agree that the ciphertext part is correct, if both conditions __DLK-Verify__*(π<sub>DLK<sub>j</sub></sub>, A<sub>j</sub>, G) = 1* and __RK-Verify__*(π<sub>RK<sub>j</sub></sub>, G, Q, B<sub>j</sub>) = 1* met.
+> 3.  When *C<sub>j</sub>* is published, participants agree that the ciphertext part is correct, if  __CE-Verify__*(π<sub>CE<sub>j</sub></sub>,G, Q, A<sub>j</sub>, B<sub>j</sub>) = 1*.
 > 4.  When all correct *C<sub>j</sub>* are published, participants calculate *C = (A, B)*
 
 On the blockchain side, [keeper's function](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/keeper.go#L44) verifies the ciphertext part and store it into the blockchain. This function also aggregates new ciphertext with cyphertexts which are already stored. 
