@@ -18,12 +18,19 @@ import (
 
 var P256 = nist.NewBlakeSHA256P256()
 
+//for genesis state
+type RoundData struct {
+	CiphertextParts  []*CiphertextPartJSON  `json:"ciphertext_parts"`
+	DecryptionShares []*DecryptionShareJSON `json:"decryption_shares"`
+}
+
 // GenesisState - herb genesis state
 type GenesisState struct {
 	ThresholdParts      uint64                `json:"threshold_parts"`
 	ThresholdDecryption uint64                `json:"threshold_decryption"`
 	CommonPublicKey     string                `json:"common_public_key"`
 	KeyHolders          []VerificationKeyJSON `json:"key_holders"`
+	RoundData           []RoundData           `json:"round_data"`
 }
 
 type VerificationKey struct {
@@ -70,21 +77,17 @@ type CiphertextPart struct {
 }
 
 type CiphertextPartJSON struct {
-	Ciphertext      string         `json:"ciphertext"`
-	DLKproof        []byte         `json:"dlk_proof"`
-	RKproof         []byte         `json:"rk_proof"`
-	EntropyProvider sdk.AccAddress `json:"entropy_provider"`
+	Ciphertext      elgamal.CiphertextJSON `json:"ciphertext"`
+	DLKproof        []byte                 `json:"dlk_proof"`
+	RKproof         []byte                 `json:"rk_proof"`
+	EntropyProvider sdk.AccAddress         `json:"entropy_provider"`
 }
 
 func NewCiphertextPartJSON(ciphertextPart *CiphertextPart) (*CiphertextPartJSON, sdk.Error) {
-	ctBuf := bytes.NewBuffer(nil)
-	ctEnc := gob.NewEncoder(ctBuf)
 	ctJSON, _ := elgamal.NewCiphertextJSON(&ciphertextPart.Ciphertext, P256)
-	if err := ctEnc.Encode(ctJSON); err != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode ciphertext: %v", err))
-	}
+
 	return &CiphertextPartJSON{
-		Ciphertext:      base64.StdEncoding.EncodeToString(ctBuf.Bytes()),
+		Ciphertext:      *ctJSON,
 		DLKproof:        ciphertextPart.DLKproof,
 		RKproof:         ciphertextPart.RKproof,
 		EntropyProvider: ciphertextPart.EntropyProvider,
@@ -92,16 +95,7 @@ func NewCiphertextPartJSON(ciphertextPart *CiphertextPart) (*CiphertextPartJSON,
 }
 
 func (ctJSON *CiphertextPartJSON) Deserialize() (*CiphertextPart, sdk.Error) {
-	ciphertextJSONBytes, err := base64.StdEncoding.DecodeString(ctJSON.Ciphertext)
-	if err != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to base64-decode ciphertextJSON: %v", err))
-	}
-	ciphertextJSONDec := gob.NewDecoder(bytes.NewBuffer(ciphertextJSONBytes))
-	ciphertextjson := elgamal.CiphertextJSON{PointA: "", PointB: ""}
-	if err := ciphertextJSONDec.Decode(&ciphertextjson); err != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode ciphertext json : %v", err))
-	}
-	ciphertext, err := ciphertextjson.Deserialize(P256)
+	ciphertext, err := ctJSON.Ciphertext.Deserialize(P256)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode ciphertext: %v", err))
 	}

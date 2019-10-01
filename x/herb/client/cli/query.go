@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"encoding/binary"
 	"fmt"
 	"strconv"
 
@@ -11,7 +10,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
 )
 
@@ -67,12 +65,9 @@ func GetCmdAggregatedCiphertext(queryRoute string, cdc *codec.Codec) *cobra.Comm
 			if err != nil {
 				return err
 			}
-			var outJSON elgamal.CiphertextJSON
-			cdc.MustUnmarshalJSON(res, &outJSON)
-			out, err := outJSON.Deserialize(types.P256)
-			if err != nil {
-				return err
-			}
+			var out types.QueryAggregatedCtRes
+			cdc.MustUnmarshalJSON(res, &out)
+
 			fmt.Println(out.String())
 			return nil
 		},
@@ -109,16 +104,11 @@ func GetCmdAllCiphertexts(queryRoute string, cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			var outJSON []*types.CiphertextPartJSON
-			cdc.MustUnmarshalJSON(res, &outJSON)
-			out, err := types.CiphertextArrayDeserialize(outJSON)
-			if err != nil {
-				return err
-			}
-			for _, ctPart := range out {
-				fmt.Printf("Entropy provider address: %v \n Ciphertext: %v \n", ctPart.EntropyProvider.String(), ctPart.Ciphertext.String())
-			}
-			fmt.Printf("Total ct-parts: %v\n", len(out))
+			var out types.QueryAllCtRes
+			cdc.MustUnmarshalJSON(res, &out)
+
+			fmt.Printf(out.String())
+
 			return nil
 		},
 	}
@@ -155,17 +145,15 @@ func GetCmdAllDecryptionShares(queryRoute string, cdc *codec.Codec) *cobra.Comma
 				return err
 			}
 
-			var outJSON []*types.DecryptionShareJSON
-			cdc.MustUnmarshalJSON(res, &outJSON)
-			out, err := types.DecryptionSharesArrayDeserialize(outJSON)
+			var out types.QueryAllDescryptionSharesRes
+			cdc.MustUnmarshalJSON(res, &out)
 
 			if err != nil {
 				return err
 			}
-			for _, share := range out {
-				fmt.Printf("Key holder address: %v \n Descryption Share: %v \n", share.KeyHolderAddr.String(), share.DecShare.V.String())
-			}
-			fmt.Printf("Total shares: %v\n", len(out))
+
+			fmt.Printf(out.String())
+
 			return nil
 		},
 	}
@@ -179,14 +167,15 @@ func GetCmdCurrentRound(queryRoute string, cdc *codec.Codec) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
 
-			roundBytes, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryCurrentRound), nil)
+			resBytes, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", queryRoute, types.QueryCurrentRound), nil)
 			if err != nil {
 				return err
 			}
 
-			round := binary.LittleEndian.Uint64(roundBytes)
+			var out types.QueryCurrentRoundRes
+			cdc.MustUnmarshalJSON(resBytes, &out)
 
-			fmt.Println(round)
+			fmt.Println(out.Round)
 
 			return nil
 		},
@@ -223,7 +212,10 @@ func GetCmdRoundStage(queryRoute string, cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			fmt.Println(string(stageBytes))
+			var out types.QueryStageRes
+			cdc.MustUnmarshalJSON(stageBytes, &out)
+
+			fmt.Println(out.Stage)
 
 			return nil
 		},
@@ -259,7 +251,11 @@ func GetCmdRoundResult(queryRoute string, cdc *codec.Codec) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf(fmt.Sprintf("%v", err))
 			}
-			fmt.Printf("random data: %v\n", resBytes)
+
+			var out types.QueryResultRes
+			cdc.MustUnmarshalJSON(resBytes, &out)
+
+			fmt.Printf("random data: %v\n", out.String())
 
 			return nil
 		},

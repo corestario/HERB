@@ -1,8 +1,6 @@
 package herb
 
 import (
-	"encoding/binary"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/dgamingfoundation/HERB/x/herb/types"
@@ -46,15 +44,15 @@ func queryAggregatedCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([
 
 	ctJSON, err2 := elgamal.NewCiphertextJSON(aggregatedCt, P256)
 	if err2 != nil {
-		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("coudn't get JSON ciphertext", err2.Error()))
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("coudn't get JSON ciphertext", err2.Error()))
 	}
 
-	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, ctJSON)
+	resBytes, err2 := codec.MarshalJSONIndent(keeper.cdc, types.QueryAggregatedCtRes{*ctJSON})
 	if err2 != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err2.Error()))
 	}
 
-	return bz, nil
+	return resBytes, nil
 }
 func queryGetAllCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
 	round, err := getRoundFromQuery(ctx, req, keeper)
@@ -69,10 +67,10 @@ func queryGetAllCt(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byt
 
 	allCtJSON, err := types.CiphertextArraySerialize(allCt)
 	if err != nil {
-		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("coudn't get JSON ciphertexts", err.Error()))
+		return nil, err
 	}
 
-	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, allCtJSON)
+	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, types.QueryAllCtRes{allCtJSON})
 	if err2 != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err2.Error()))
 	}
@@ -93,15 +91,15 @@ func queryAllDescryptionShares(ctx sdk.Context, req abci.RequestQuery, keeper Ke
 
 	allSharesJSON, err := types.DecryptionSharesArraySerialize(allShares)
 	if err != nil {
-		return nil, sdk.ErrUnknownRequest(sdk.AppendMsgToErr("coudn't get JSON decryption shares", err.Error()))
+		return nil, err
 	}
 
-	bz, err2 := codec.MarshalJSONIndent(keeper.cdc, allSharesJSON)
+	resBytes, err2 := codec.MarshalJSONIndent(keeper.cdc, types.QueryAllDescryptionSharesRes{allSharesJSON})
 	if err2 != nil {
 		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("could not marshal result to JSON", err2.Error()))
 	}
 
-	return bz, nil
+	return resBytes, nil
 }
 
 func queryStage(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
@@ -111,14 +109,24 @@ func queryStage(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, 
 	}
 
 	stage := keeper.GetStage(ctx, round)
-	return []byte(stage), nil
+
+	res, err2 := codec.MarshalJSONIndent(keeper.cdc, types.QueryStageRes{stage})
+	if err2 != nil {
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("stage marshaling failed", err2.Error()))
+	}
+
+	return res, nil
 }
 
 func queryCurrentRound(ctx sdk.Context, keeper Keeper) ([]byte, sdk.Error) {
 	round := keeper.CurrentRound(ctx)
-	roundBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(roundBytes, round)
-	return roundBytes, nil
+
+	res, err := codec.MarshalJSONIndent(keeper.cdc, types.QueryCurrentRoundRes{round})
+	if err != nil {
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("round marshaling failed", err.Error()))
+	}
+
+	return res, nil
 }
 
 func queryResult(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte, sdk.Error) {
@@ -126,11 +134,22 @@ func queryResult(ctx sdk.Context, req abci.RequestQuery, keeper Keeper) ([]byte,
 	if err != nil {
 		return nil, err
 	}
+	
+	if round == keeper.CurrentRound(ctx) {
+		round = round - 1
+	}
 
-	res, err := keeper.RandomResult(ctx, round)
+	randomBytes, err := keeper.RandomResult(ctx, round)
+
 	if err != nil {
 		return nil, err
 	}
+
+	res, err2 := codec.MarshalJSONIndent(keeper.cdc, types.QueryResultRes{randomBytes})
+	if err2 != nil {
+		return nil, sdk.ErrInternal(sdk.AppendMsgToErr("random results marshaling failed", err2.Error()))
+	}
+
 	return res, nil
 }
 
