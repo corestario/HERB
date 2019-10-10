@@ -18,7 +18,7 @@ const (
 	keyThresholdParts       = "keyThresholdParts"
 	keyThresholdDecrypt     = "keyThresholdDecrypt"
 
-	//round stages: ciphertext parts collecting, descryption shares collecting, fresh random number
+	//round stages: ciphertext shares collecting, descryption shares collecting, fresh random number
 	stageCtCollecting = "stageCtCollecting"
 	stageDSCollecting = "stageDSCollecting"
 	stageCompleted    = "stageCompleted"

@@ -7,8 +7,8 @@ Publicly Verifiable Random Beacon protocol allows securely generating random num
 Simplified implementation description:
 
 1. New round *i* is starting. 
-2. Each participant sends *the ciphertext part* (encrypted random number) to the blockchain (as a transaction). 
-3. After receiving *t1* ciphertext parts, the common ciphertext (encrypted sum of all sent random numbers) is being aggregated. 
+2. Each participant sends *the ciphertext share* (encrypted random number) to the blockchain (as a transaction). 
+3. After receiving *t1* ciphertext share, the common ciphertext (encrypted sum of all sent random numbers) is being aggregated. 
 4. Each participant sends *decryption share* to the blockchain (as a transaction).
 5. After receiving *t2* decryption shares, the round is completed (aggregated ciphertext can be decrypted to the random number). A new round is *i + 1*.
 6.  Go to step 1. 
@@ -35,7 +35,7 @@ This is a Proof-of-Concept implementation, so some details from the [original pa
 Recall, that there are 3 protocol phases (page 12):
 
 * Setup phase. The main purpose of the setup phase is key generating.  DKG phase (Section 3.1, page 13) is skipped in this implementation. `dkgcli` simulates DKG-phase and generates private/public keys. These keys  have could found in the `bots` folder. 
-* Publication phase. Each entropy provider sends ciphertext part and proofs using `hcli tx herb ct-part` command.
+* Publication phase. Each entropy provider sends ciphertext share and proofs using `hcli tx herb ct-share` command.
 * Disclosure phase. Each key holder sends decryption share and proof using `hcli tx herb decrypt` command. 
 
 Entropy Providers and Key Holders (page 12) are the same sets. 
@@ -47,12 +47,12 @@ Let's look at the original HERB protocol (page 17) closer.
 > 1. Each entropy provider *e<sub>j</sub>*, *1 ≤ j ≤ m*, generates random point *M<sub>j</sub> ∈ __G__*. Then encrypts it:
 > 2. e<sub>j</sub> publishes *C<sub>j</sub>* along with NIZK of discrete logarithm knowledge for *A<sub>j</sub>* and NIZK of representation knowledge for *B<sub>j</sub>* 
 
-`hcli tx herb ct-part [commonPubKey]` [command](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/client/cli/tx.go#L42) calculates ciphertext part and CE proof and sends a transaction with a [Ciphertext Part Message](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/types/msgs.go#L13). 
+`hcli tx herb ct-share [commonPubKey]` [command](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/client/cli/tx.go#L42) calculates ciphertext share and CE proof and sends a transaction with a [Ciphertext Share Message](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/types/msgs.go#L13). 
 
-> 3.  When *C<sub>j</sub>* is published, participants agree that the ciphertext part is correct, if  __CE-Verify__*(π<sub>CE<sub>j</sub></sub>,G, Q, A<sub>j</sub>, B<sub>j</sub>) = 1*.
+> 3.  When *C<sub>j</sub>* is published, participants agree that the ciphertext share is correct, if  __CE-Verify__*(π<sub>CE<sub>j</sub></sub>,G, Q, A<sub>j</sub>, B<sub>j</sub>) = 1*.
 > 4.  When all correct *C<sub>j</sub>* are published, participants calculate *C = (A, B)*
 
-On the blockchain side, [keeper's function](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/keeper.go#L44) verifies the ciphertext part and store it into the blockchain. This function also aggregates new ciphertext with cyphertexts which are already stored. 
+On the blockchain side, [keeper's function](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/keeper.go#L44) verifies the ciphertext share and store it into the blockchain. This function also aggregates new ciphertext with cyphertexts which are already stored. 
 
 Anyone can see stored ciphertexts by query: 
 
@@ -69,7 +69,7 @@ As soon as *t1* ciphertext parts were stored, the application's stage changes to
 `hcli tx herb decrypt [privateKey] [ID]` [command](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/client/cli/tx.go#L81) queries the aggregated ciphertext and calculates a decryption share. This command also sends a transaction with [Decryption Share message](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/types/msgs.go#L68).
 
 
-> 6. When *D<sub>i</sub>* is published, participants verify that __DLE-Verify__*(π<sub>DLE<sub>i</sub></sub>,D<sub>i</sub>,A,VK<sub>i</sub>,G) = 1*
+> 6. When *D<sub>i</sub>* is published, participants verify that __DLEQ-Verify__*(π<sub>DLEQ<sub>i</sub></sub>,D<sub>i</sub>,A,VK<sub>i</sub>,G) = 1*
 
 On the blockchain side, [keeper's function](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/keeper.go#L148) verifies the decryption share and stores it into the blockchain. 
 

@@ -13,17 +13,17 @@ const (
 )
 
 var (
-	NewMsgSetCiphertextPart = types.NewMsgSetCiphertextPart
+	NewMsgSetCiphertextShare = types.NewMsgSetCiphertextShare
 	ModuleCdc               = types.ModuleCdc
 	RegisterCodec           = types.RegisterCodec
 	P256                    = types.P256
 )
 
 type (
-	MsgSetCiphertextPart  = types.MsgSetCiphertextPart
+	MsgSetCiphertextShare  = types.MsgSetCiphertextShare
 	MsgSetDecryptionShare = types.MsgSetDecryptionShare
-	CiphertextPart        = types.CiphertextPart
-	CiphertextPartJSON    = types.CiphertextPartJSON
+	CiphertextShare        = types.CiphertextShare
+	CiphertextShareJSON    = types.CiphertextShareJSON
 	DecryptionShare       = types.DecryptionShare
 	DecryptionShareJSON   = types.DecryptionShareJSON
 	GenesisState          = types.GenesisState

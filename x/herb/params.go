@@ -80,7 +80,7 @@ func (k *Keeper) GetVerificationKeys(ctx sdk.Context) ([]types.VerificationKeyJS
 	return verificationKeys, nil
 }
 
-// SetThreshold set threshold for decryption and ciphertext parts
+// SetThreshold set threshold for decryption and ciphertext shares
 func (k *Keeper) SetThreshold(ctx sdk.Context, thresholdParts uint64, thresholdDecrypt uint64) {
 	store := ctx.KVStore(k.storeKey)
 	thresholdPartsBytes := make([]byte, 8)
@@ -95,7 +95,7 @@ func (k *Keeper) SetThreshold(ctx sdk.Context, thresholdParts uint64, thresholdD
 func (k *Keeper) GetThresholdParts(ctx sdk.Context) (uint64, sdk.Error) {
 	store := ctx.KVStore(k.storeKey)
 	if !store.Has([]byte(keyThresholdParts)) {
-		return 0, sdk.ErrUnknownRequest("threshold for ciphertext parts is not defined")
+		return 0, sdk.ErrUnknownRequest("threshold for ciphertext shares is not defined")
 	}
 
 	tBytes := store.Get([]byte(keyThresholdParts))

@@ -15,17 +15,17 @@ import (
 	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )
 
-type setCiphertextPartReq struct {
+type setCiphertextShareReq struct {
 	BaseReq         rest.BaseReq `jcon:"base_req"`
 	Ciphertext      string       `json:"ciphertext"`
 	CEProof         string       `json:"ce_proof"`
 	EntropyProvider string       `json:"entropy_provider"`
 }
 
-func setCiphertextPartHandler(cliCtx context.CLIContext) http.HandlerFunc {
+func setCiphertextShareHandler(cliCtx context.CLIContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cdc := cliCtx.Codec
-		var req setCiphertextPartReq
+		var req setCiphertextShareReq
 
 		if !rest.ReadRESTReq(w, r, cdc, &req) {
 			rest.WriteErrorResponse(w, http.StatusBadRequest, "failed to parse request")
@@ -65,9 +65,9 @@ func setCiphertextPartHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		ctPart := types.CiphertextPartJSON{*ctJSON, []byte(req.CEProof), entropyProvider}
+		ctShare := types.CiphertextShareJSON{*ctJSON, []byte(req.CEProof), entropyProvider}
 
-		msg := types.NewMsgSetCiphertextPart(ctPart, entropyProvider)
+		msg := types.NewMsgSetCiphertextShare(ctShare, entropyProvider)
 
 		err = msg.ValidateBasic()
 		if err != nil {
@@ -82,7 +82,7 @@ func setCiphertextPartHandler(cliCtx context.CLIContext) http.HandlerFunc {
 type setDecryptionShareReq struct {
 	BaseReq         rest.BaseReq `jcon:"base_req"`
 	DecryptionShare string       `json:"decryption_share"`
-	DLEProof        string       `json:"dle_proof"`
+	DLEQProof        string       `json:"dleq_proof"`
 	KeyHolder       string       `json:"key_holder"`
 }
 
@@ -107,7 +107,7 @@ func setDecryptionShareHandler(cliCtx context.CLIContext) http.HandlerFunc {
 			return
 		}
 
-		decShare := types.DecryptionShareJSON{DecShare: req.DecryptionShare, DLEproof: req.DLEProof, KeyHolderAddr: keyHolder}
+		decShare := types.DecryptionShareJSON{DecShare: req.DecryptionShare, DLEQproof: req.DLEQProof, KeyHolderAddr: keyHolder}
 		msg := types.NewMsgSetDecryptionShare(decShare, keyHolder)
 
 		err = msg.ValidateBasic()

@@ -40,7 +40,7 @@ func RegisterRoutes(cliCtx context.CLIContext, r *mux.Router, storeName string) 
 	).Methods("GET")
 	r.HandleFunc(
 		fmt.Sprintf("/%s/ciphertext/set", storeName),
-		setCiphertextPartHandler(cliCtx),
+		setCiphertextShareHandler(cliCtx),
 	).Methods("POST")
 	r.HandleFunc(
 		fmt.Sprintf("/%sdecryptionshares/set", storeName),

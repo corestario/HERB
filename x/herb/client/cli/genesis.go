@@ -15,7 +15,7 @@ import (
 	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )
 
-// SetThresholdsCmd  implements command for setting decryption threhold and ciphertext parts threshold
+// SetThresholdsCmd  implements command for setting decryption threhold and ciphertext shares threshold
 func SetThresholdsCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set-threshold [ciphertext-thr] [decryption-thr]",

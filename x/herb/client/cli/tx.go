@@ -31,18 +31,18 @@ func GetTxCmd(storeKey string, cdc *codec.Codec) *cobra.Command {
 	}
 
 	herbTxCmd.AddCommand(client.PostCommands(
-		GetCmdSetCiphertextPart(cdc),
+		GetCmdSetCiphertextShare(cdc),
 		GetCmdSetDecryptionShare(cdc),
 	)...)
 
 	return herbTxCmd
 }
 
-// GetCmdSetCiphertext implements send ciphertext part transaction command.
-func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
+// GetCmdSetCiphertext implements send ciphertext share transaction command.
+func GetCmdSetCiphertextShare(cdc *codec.Codec) *cobra.Command {
 	return &cobra.Command{
-		Use:   "ct-part [commonPubKey]",
-		Short: "send random ciphertext part",
+		Use:   "ct-share [commonPubKey]",
+		Short: "send random ciphertext share",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)
@@ -59,12 +59,12 @@ func GetCmdSetCiphertextPart(cdc *codec.Codec) *cobra.Command {
 			}
 
 			sender := cliCtx.GetFromAddress()
-			ctPart := types.CiphertextPart{Ciphertext: ct, CEproof: ceproof, EntropyProvider: sender}
-			ctPartJSON, err := types.NewCiphertextPartJSON(&ctPart)
+			ctShare := types.CiphertextShare{Ciphertext: ct, CEproof: ceproof, EntropyProvider: sender}
+			ctShareJSON, err := types.NewCiphertextShareJSON(&ctShare)
 			if err != nil {
 				return err
 			}
-			msg := types.NewMsgSetCiphertextPart(*ctPartJSON, cliCtx.GetFromAddress())
+			msg := types.NewMsgSetCiphertextShare(*ctShareJSON, cliCtx.GetFromAddress())
 			err = msg.ValidateBasic()
 			if err != nil {
 				return err
@@ -92,13 +92,13 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 				return err
 			}
 
-			ctPartBytes, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRouter, types.QueryAggregatedCt), bz)
+			ctShareBytes, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", types.QuerierRouter, types.QueryAggregatedCt), bz)
 			if err != nil {
 				return err
 			}
 
 			var ctJSON types.QueryAggregatedCtRes
-			cdc.MustUnmarshalJSON(ctPartBytes, &ctJSON)
+			cdc.MustUnmarshalJSON(ctShareBytes, &ctJSON)
 			aggregatedCt, err := ctJSON.CiphertextJSON.Deserialize(types.P256)
 			if err != nil {
 				return err
@@ -123,7 +123,7 @@ func GetCmdSetDecryptionShare(cdc *codec.Codec) *cobra.Command {
 
 			decryptionShare := &types.DecryptionShare{
 				DecShare:      share.PubShare{I: int(id), V: sharePoint},
-				DLEproof:      proof,
+				DLEQproof:      proof,
 				KeyHolderAddr: cliCtx.GetFromAddress(),
 			}
 

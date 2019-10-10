@@ -75,7 +75,7 @@ type herbApp struct {
 	tkeyStaking  *sdk.TransientStoreKey
 	keyDistr     *sdk.KVStoreKey
 	keyHERB      *sdk.KVStoreKey
-	keyCtParts   *sdk.KVStoreKey
+	keyCtShares   *sdk.KVStoreKey
 	keyDecShares *sdk.KVStoreKey
 	keyParams    *sdk.KVStoreKey
 	tkeyParams   *sdk.TransientStoreKey
@@ -113,7 +113,7 @@ func NewHERBApp(logger log.Logger, db dbm.DB) *herbApp {
 		tkeyStaking:  sdk.NewTransientStoreKey(staking.TStoreKey),
 		keyDistr:     sdk.NewKVStoreKey(distribution.StoreKey),
 		keyHERB:      sdk.NewKVStoreKey(herb.StoreKey),
-		keyCtParts:   sdk.NewKVStoreKey(herb.CtStoreKey),
+		keyCtShares:   sdk.NewKVStoreKey(herb.CtStoreKey),
 		keyDecShares: sdk.NewKVStoreKey(herb.DsStoreKey),
 		keyParams:    sdk.NewKVStoreKey(params.StoreKey),
 		tkeyParams:   sdk.NewTransientStoreKey(params.TStoreKey),
@@ -190,7 +190,7 @@ func NewHERBApp(logger log.Logger, db dbm.DB) *herbApp {
 
 	app.herbKeeper = herb.NewKeeper(
 		app.keyHERB,
-		app.keyCtParts,
+		app.keyCtShares,
 		app.keyDecShares,
 		app.cdc,
 	)
@@ -248,7 +248,7 @@ func NewHERBApp(logger log.Logger, db dbm.DB) *herbApp {
 		app.keyDistr,
 		app.keySlashing,
 		app.keyHERB,
-		app.keyCtParts,
+		app.keyCtShares,
 		app.keyDecShares,
 		app.keyParams,
 		app.tkeyParams,

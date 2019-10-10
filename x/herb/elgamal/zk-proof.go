@@ -6,8 +6,8 @@ import (
 	"go.dedis.ch/kyber/v3/proof/dleq"
 )
 
-func DLE(group proof.Suite, B kyber.Point, X kyber.Point, x kyber.Scalar) (DLEproof *dleq.Proof, xB kyber.Point, xX kyber.Point, err error) {
-	DLEproof, xB, xX, err = dleq.NewDLEQProof(group, B, X, x)
+func DLEQ(group proof.Suite, B kyber.Point, X kyber.Point, x kyber.Scalar) (DLEQproof *dleq.Proof, xB kyber.Point, xX kyber.Point, err error) {
+	DLEQproof, xB, xX, err = dleq.NewDLEQProof(group, B, X, x)
 	return
 }
 func CE(group proof.Suite, G, Q, A, B kyber.Point, r, x kyber.Scalar) (CEproof []byte, err error) {
@@ -19,8 +19,8 @@ func CE(group proof.Suite, G, Q, A, B kyber.Point, r, x kyber.Scalar) (CEproof [
 	return
 }
 
-func DLEVerify(group proof.Suite, DLEproof *dleq.Proof, B kyber.Point, X kyber.Point, xB kyber.Point, xX kyber.Point) (err error) {
-	err = DLEproof.Verify(group, B, X, xB, xX)
+func DLEQVerify(group proof.Suite, DLEQproof *dleq.Proof, B kyber.Point, X kyber.Point, xB kyber.Point, xX kyber.Point) (err error) {
+	err = DLEQproof.Verify(group, B, X, xB, xX)
 	return
 }
 

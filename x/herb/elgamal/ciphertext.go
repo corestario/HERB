@@ -20,7 +20,7 @@ func IdentityCiphertext(group kyber.Group) Ciphertext {
 	return Ciphertext{group.Point().Null(), group.Point().Null()}
 }
 
-//Decrypt takes decrypt parts (shares) from all participants and decrypt the ciphertext C
+//Decrypt takes decrypt shares (shares) from all participants and decrypt the ciphertext C
 func Decrypt(group kyber.Group, C Ciphertext, parts []*share.PubShare, n int) kyber.Point {
 	D, _ := share.RecoverCommit(group, parts, len(parts), n)
 	M := group.Point().Sub(C.PointB, D)
@@ -38,7 +38,7 @@ func (ct Ciphertext) String() string {
 	return str
 }
 
-//AggregateCiphertext takes the set of ciphertextes parts:
+//AggregateCiphertext takes the set of ciphertextes shares:
 //parts[0] = (A0, B0), ..., parts[n] = (An, Bn)
 //and returns aggregated ciphertext C = (A1 + A2 + ... + An, B1 + B2 + ... + Bn)
 func AggregateCiphertext(group kyber.Group, parts []Ciphertext) Ciphertext {

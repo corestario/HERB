@@ -76,24 +76,24 @@ func elGamalPositive(t *testing.T, shares []*kyberDKG.DistKeyShare, verkeys []*k
 	commonCiphertext := elgamal.AggregateCiphertext(curve, publishedCiphertextes)
 
 	//decrypt the random
-	decryptParts := make([]kyber.Point, tr)
-	DLEproofs := make([]*dleq.Proof, tr)
+	decryptShares := make([]kyber.Point, tr)
+	DLEQproofs := make([]*dleq.Proof, tr)
 	decrypted := decryptMessages(shares, curve, commonCiphertext, tr)
 	for msg := range decrypted {
 		i := msg.id
-		decryptParts[i] = msg.msg
-		DLEproofs[i] = msg.DLEproof
+		decryptShares[i] = msg.msg
+		DLEQproofs[i] = msg.DLEQproof
 	}
-	//verify decrypted parts
+	//verify decrypted shares
 	for i := 0; i < tr; i++ {
-		errDLE := elgamal.DLEVerify(curve, DLEproofs[i], curve.Point().Base(), commonCiphertext.PointA, *verkeys[i], decryptParts[i])
-		if errDLE != nil {
-			t.Errorf("DLE proof isn't verified with error %q", errDLE)
+		errDLEQ := elgamal.DLEQVerify(curve, DLEQproofs[i], curve.Point().Base(), commonCiphertext.PointA, *verkeys[i], decryptShares[i])
+		if errDLEQ != nil {
+			t.Errorf("DLEQ proof isn't verified with error %q", errDLEQ)
 		}
 	}
 	decryptShares := make([]*share.PubShare, 0)
 	for i := 0; i < tr; i++ {
-		decryptShares = append(decryptShares, &share.PubShare{I: i, V: decryptParts[i]})
+		decryptShares = append(decryptShares, &share.PubShare{I: i, V: decryptShares[i]})
 	}
 	decryptedMessage := elgamal.Decrypt(curve, commonCiphertext, decryptShares, n)
 
@@ -141,7 +141,7 @@ func publishMessages(shares []*kyberDKG.DistKeyShare, curve proof.Suite) chan pu
 type decryptedMessage struct {
 	id       int
 	msg      kyber.Point
-	DLEproof *dleq.Proof
+	DLEQproof *dleq.Proof
 }
 
 func decryptMessages(shares []*kyberDKG.DistKeyShare, curve proof.Suite, commonCiphertext elgamal.Ciphertext, tr int) chan decryptedMessage {
@@ -155,8 +155,8 @@ func decryptMessages(shares []*kyberDKG.DistKeyShare, curve proof.Suite, commonC
 
 		for i := range parties {
 			go func(id int) {
-				decryptedMsg, DLEpr, _ := elgamal.CreateDecShare(curve, commonCiphertext, shares[id].PriShare().V)
-				decrypted <- decryptedMessage{id, decryptedMsg, DLEpr}
+				decryptedMsg, DLEQpr, _ := elgamal.CreateDecShare(curve, commonCiphertext, shares[id].PriShare().V)
+				decrypted <- decryptedMessage{id, decryptedMsg, DLEQpr}
 				wg.Done()
 			}(i)
 		}

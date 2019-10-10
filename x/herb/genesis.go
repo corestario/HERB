@@ -33,7 +33,7 @@ func ValidateGenesis(data GenesisState) error {
 	partsThreshold := data.ThresholdParts
 	sharesThreshold := data.ThresholdDecryption
 	if partsThreshold < 1 {
-		return errors.New("theshold for ciphertext parts must be positive")
+		return errors.New("theshold for ciphertext shares must be positive")
 	}
 	if sharesThreshold < 1 {
 		return errors.New("theshold for descryption shares must be positive")
@@ -90,7 +90,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.Valid
 	keeper.setRound(ctx, uint64(0))
 	keeper.setStage(ctx, uint64(0), stageUnstarted)
 	for _, rd := range data.RoundData {
-		for _, ctJSON := range rd.CiphertextParts {
+		for _, ctJSON := range rd.CiphertextShares {
 			ct, err := ctJSON.Deserialize()
 			if err != nil {
 				panic(err)
@@ -136,17 +136,17 @@ func ExportGenesis(ctx sdk.Context, k Keeper) GenesisState {
 	var roundData []types.RoundData
 	lastRound := k.CurrentRound(ctx)
 	for i := uint64(0); i < lastRound; i++ {
-		var ctPartsJSON []*types.CiphertextPartJSON
-		ctParts, err := k.GetAllCiphertexts(ctx, i)
+		var ctSharesJSON []*types.CiphertextShareJSON
+		ctShares, err := k.GetAllCiphertexts(ctx, i)
 		if err != nil {
 			panic(err)
 		}
-		for _, ct := range ctParts {
-			ctJSON, err := types.NewCiphertextPartJSON(ct)
+		for _, ct := range ctShares {
+			ctJSON, err := types.NewCiphertextShareJSON(ct)
 			if err != nil {
 				panic(err)
 			}
-			ctPartsJSON = append(ctPartsJSON, ctJSON)
+			ctSharesJSON = append(ctSharesJSON, ctJSON)
 		}
 		var dSharesJSON []*types.DecryptionShareJSON
 		dShares, err := k.GetAllDecryptionShares(ctx, i)
@@ -160,7 +160,7 @@ func ExportGenesis(ctx sdk.Context, k Keeper) GenesisState {
 			}
 			dSharesJSON = append(dSharesJSON, &dsJSON)
 		}
-		roundData = append(roundData, types.RoundData{ctPartsJSON, dSharesJSON})
+		roundData = append(roundData, types.RoundData{ctSharesJSON, dSharesJSON})
 	}
 	cPK, err1 := kyberenc.PointToStringHex(P256, commonPK)
 	if err1 != nil {

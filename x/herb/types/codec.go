@@ -13,10 +13,10 @@ func init() {
 
 // RegisterCodec registers concrete types on the Amino codec
 func RegisterCodec(cdc *codec.Codec) {
-	cdc.RegisterConcrete(MsgSetCiphertextPart{}, "herb/MsgSetCiphertextPart", nil)
+	cdc.RegisterConcrete(MsgSetCiphertextShare{}, "herb/MsgSetCiphertextShare", nil)
 	cdc.RegisterConcrete(MsgSetDecryptionShare{}, "herb/MsgSetDecryptionShare", nil)
-	cdc.RegisterConcrete(CiphertextPartJSON{}, "herb/CiphertextPartJSON", nil)
-	cdc.RegisterConcrete(CiphertextPart{}, "herb/CiphertextPart", nil)
+	cdc.RegisterConcrete(CiphertextShareJSON{}, "herb/CiphertextShareJSON", nil)
+	cdc.RegisterConcrete(CiphertextShare{}, "herb/CiphertextShare", nil)
 
 	cdc.RegisterConcrete(elgamal.Ciphertext{}, "elgamal/ciphertext", nil)
 }

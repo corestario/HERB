@@ -11,7 +11,7 @@ do
 
   currentround=$(hcli query herb current-round)
 
-  while !  hcli tx herb ct-part $commonkey -y --from $user> /dev/null
+  while !  hcli tx herb ct-share $commonkey -y --from $user> /dev/null
   do
     sleep $sleeptime
 

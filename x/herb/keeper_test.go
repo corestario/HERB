@@ -62,7 +62,7 @@ func TestHERB(t *testing.T) {
 	}
 
 	for round, r := range testCases {
-		var ciphertextParts []types.CiphertextPart
+		var ciphertextShares []types.CiphertextShare
 		var ciphertexts []elgamal.Ciphertext
 		var decryptionShares []types.DecryptionShare
 		var dshares []*share.PubShare
@@ -76,10 +76,10 @@ func TestHERB(t *testing.T) {
 			if err != nil {
 				t.Errorf("failed create proofs: %v", err)
 			}
-			ctPart := types.CiphertextPart{ct, CE, userAddrs[i]}
-			ciphertexts = append(ciphertexts, ctPart.Ciphertext)
-			ciphertextParts = append(ciphertextParts, ctPart)
-			err1 := keeper.SetCiphertext(ctx, &ctPart)
+			ctShare := types.CiphertextShare{ct, CE, userAddrs[i]}
+			ciphertexts = append(ciphertexts, ctShare.Ciphertext)
+			ciphertextShares = append(ciphertextShares, ctShare)
+			err1 := keeper.SetCiphertext(ctx, &ctShare)
 			if err1 != nil {
 				t.Errorf("failed set ciphertext: %v", err1)
 			}
@@ -93,19 +93,19 @@ func TestHERB(t *testing.T) {
 		}
 		for i := 0; i < n; i++ {
 			providerFound := false
-			originalProvider := ciphertextParts[i].EntropyProvider
+			originalProvider := ciphertextShares[i].EntropyProvider
 			for _, nCt := range newCiphertexts {
 				if nCt.EntropyProvider.Equals(originalProvider) {
 					providerFound = true
 				}
 			}
 			if !providerFound {
-				t.Errorf("new slice doesn't contains original entropy provider, round: %v, expected: %v", round, ciphertextParts[i].EntropyProvider.String())
+				t.Errorf("new slice doesn't contains original entropy provider, round: %v, expected: %v", round, ciphertextShares[i].EntropyProvider.String())
 			}
-			if !newCiphertexts[i].Ciphertext.Equal(ciphertextParts[i].Ciphertext) {
+			if !newCiphertexts[i].Ciphertext.Equal(ciphertextShares[i].Ciphertext) {
 				t.Errorf("ciphertexts don't equal, round: %v", round)
 			}
-			if !bytes.Equal(newCiphertexts[i].CEproof, ciphertextParts[i].CEproof) {
+			if !bytes.Equal(newCiphertexts[i].CEproof, ciphertextShares[i].CEproof) {
 				t.Errorf("CEproofs don't equal , round  %v", round)
 			}
 		}
@@ -119,11 +119,11 @@ func TestHERB(t *testing.T) {
 		}
 		keeper.forceRoundStage(ctx, uint64(round), stageDSCollecting)
 		for i := 0; i < trh; i++ {
-			ds, dle, err := elgamal.CreateDecShare(P256, ACiphertext, partKeys[i])
+			ds, dleq, err := elgamal.CreateDecShare(P256, ACiphertext, partKeys[i])
 			if err != nil {
 				t.Errorf("failed creating decryption share: %v", err)
 			}
-			decShare := types.DecryptionShare{share.PubShare{I: Verkeys[i].KeyHolderID, V: ds}, dle, userAddrs[i]}
+			decShare := types.DecryptionShare{share.PubShare{I: Verkeys[i].KeyHolderID, V: ds}, dleq, userAddrs[i]}
 			decryptionShares = append(decryptionShares, decShare)
 			dshares = append(dshares, &share.PubShare{I: Verkeys[i].KeyHolderID, V: ds})
 			err = keeper.SetDecryptionShare(ctx, &decShare)
@@ -149,11 +149,11 @@ func TestHERB(t *testing.T) {
 			if !newDecryptionShares[i].DecShare.V.Equal(decryptionShares[i].DecShare.V) {
 				t.Errorf("decryption shares don't equal, round: %v", round)
 			}
-			if !newDecryptionShares[i].DLEproof.C.Equal(decryptionShares[i].DLEproof.C) ||
-				!newDecryptionShares[i].DLEproof.R.Equal(decryptionShares[i].DLEproof.R) ||
-				!newDecryptionShares[i].DLEproof.VG.Equal(decryptionShares[i].DLEproof.VG) ||
-				!newDecryptionShares[i].DLEproof.VH.Equal(decryptionShares[i].DLEproof.VH) {
-				t.Errorf("dle proofs don't equal")
+			if !newDecryptionShares[i].DLEQproof.C.Equal(decryptionShares[i].DLEQproof.C) ||
+				!newDecryptionShares[i].DLEQproof.R.Equal(decryptionShares[i].DLEQproof.R) ||
+				!newDecryptionShares[i].DLEQproof.VG.Equal(decryptionShares[i].DLEQproof.VG) ||
+				!newDecryptionShares[i].DLEQproof.VH.Equal(decryptionShares[i].DLEQproof.VH) {
+				t.Errorf("dleq proofs don't equal")
 			}
 		}
 		resultPoint := elgamal.Decrypt(keeper.group, ACiphertext, dshares, n)
@@ -179,7 +179,7 @@ func TestSetGetCiphertext(t *testing.T) {
 	n := 3
 	trh := 3
 	ctx, keeper, _ := Initialize(uint64(trh), uint64(n), uint64(n))
-	var ciphertextParts []types.CiphertextPart
+	var ciphertextShares []types.CiphertextShare
 	userAddrs := createTestAddrs(n)
 	keeper.forceRoundStage(ctx, uint64(round), stageCtCollecting)
 	keeper.forceCurrentRound(ctx, uint64(round))
@@ -205,9 +205,9 @@ func TestSetGetCiphertext(t *testing.T) {
 		if err != nil {
 			t.Errorf("failed create proofs: %v", err)
 		}
-		ctPart := types.CiphertextPart{Ciphertext: ct, CEproof: CE, EntropyProvider: userAddrs[i]}
-		ciphertextParts = append(ciphertextParts, ctPart)
-		err1 := keeper.SetCiphertext(ctx, &ctPart)
+		ctShare := types.CiphertextShare{Ciphertext: ct, CEproof: CE, EntropyProvider: userAddrs[i]}
+		ciphertextShares = append(ciphertextShares, ctShare)
+		err1 := keeper.SetCiphertext(ctx, &ctShare)
 		if err1 != nil {
 			t.Errorf("failed set ciphertext: %v", err1)
 		}
@@ -217,10 +217,10 @@ func TestSetGetCiphertext(t *testing.T) {
 		t.Errorf("failed get all ciphertexts: %v", err)
 	}
 	for i := 0; i < n; i++ {
-		if newCiphertexts[i].EntropyProvider.String() != ciphertextParts[i].EntropyProvider.String() {
+		if newCiphertexts[i].EntropyProvider.String() != ciphertextShares[i].EntropyProvider.String() {
 			t.Errorf("new map doesn't contains original entropy provider, round: %v, expected: %v", round, ciphertextParts[i].EntropyProvider.String())
 		}
-		if !newCiphertexts[i].Ciphertext.Equal(ciphertextParts[i].Ciphertext) {
+		if !newCiphertexts[i].Ciphertext.Equal(ciphertextShares[i].Ciphertext) {
 			t.Errorf("ciphertexts don't equal, round: %v", round)
 		}
 	}

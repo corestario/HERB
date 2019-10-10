@@ -32,7 +32,7 @@ func Test_CEproof_Positive(t *testing.T) {
 	}
 }
 
-func Test_DLEproof_Positive(t *testing.T) {
+func Test_DLEQproof_Positive(t *testing.T) {
 	suite := nist.NewBlakeSHA256P256()
 	B := suite.Point().Base()
 	X := suite.Point().Mul(suite.Scalar().SetInt64(25), B)
@@ -40,11 +40,11 @@ func Test_DLEproof_Positive(t *testing.T) {
 	for _, y := range testCases {
 		t.Run("start", func(t *testing.T) {
 			x := suite.Scalar().SetInt64(y)
-			DLEproof, xB, xX, err := elgamal.DLE(suite, B, X, x)
+			DLEQproof, xB, xX, err := elgamal.DLEQ(suite, B, X, x)
 			if err != nil {
 				t.Errorf("can't doing ZKProof with error %q", err)
 			}
-			res := elgamal.DLEVerify(suite, DLEproof, B, X, xB, xX)
+			res := elgamal.DLEQVerify(suite, DLEQproof, B, X, xB, xX)
 			if res != nil {
 				t.Errorf("Zkproof isn't valid because of %q", res)
 			}

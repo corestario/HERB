@@ -24,9 +24,9 @@ func RandomCiphertext(group proof.Suite, commonKey kyber.Point) (ct Ciphertext, 
 }
 
 // create decryption shares and proof
-func CreateDecShare(group proof.Suite, C Ciphertext, partKey kyber.Scalar) (decShare kyber.Point, DLEproof *dleq.Proof, err error) {
+func CreateDecShare(group proof.Suite, C Ciphertext, partKey kyber.Scalar) (decShare kyber.Point, DLEQproof *dleq.Proof, err error) {
 	decShare = group.Point().Mul(partKey, C.PointA)
-	DLEproof, _, _, err = DLE(group, group.Point().Base(), C.PointA, partKey)
+	DLEQproof, _, _, err = DLEQ(group, group.Point().Base(), C.PointA, partKey)
 	if err != nil {
 		return nil, nil, err
 	}

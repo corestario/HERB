@@ -12,8 +12,8 @@ import (
 func NewHandler(keeper Keeper) sdk.Handler {
 	return func(ctx sdk.Context, msg sdk.Msg) sdk.Result {
 		switch msg := msg.(type) {
-		case MsgSetCiphertextPart:
-			return handleMsgSetCiphertextPart(ctx, &keeper, msg)
+		case MsgSetCiphertextShare:
+			return handleMsgSetCiphertextShare(ctx, &keeper, msg)
 		case MsgSetDecryptionShare:
 			return handleMsgSetDecryptionShare(ctx, &keeper, msg)
 		default:
@@ -23,12 +23,12 @@ func NewHandler(keeper Keeper) sdk.Handler {
 	}
 }
 
-func handleMsgSetCiphertextPart(ctx sdk.Context, keeper *Keeper, msg types.MsgSetCiphertextPart) sdk.Result {
-	ctPart, err := msg.CiphertextPart.Deserialize()
+func handleMsgSetCiphertextShare(ctx sdk.Context, keeper *Keeper, msg types.MsgSetCiphertextShare) sdk.Result {
+	ctShare, err := msg.CiphertextShare.Deserialize()
 	if err != nil {
-		return sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize ciphertext part: %v", err)).Result()
+		return sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialize ciphertext share: %v", err)).Result()
 	}
-	if err := keeper.SetCiphertext(ctx, ctPart); err != nil {
+	if err := keeper.SetCiphertext(ctx, ctShare); err != nil {
 		return err.Result()
 	}
 	return sdk.Result{}

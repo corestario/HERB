@@ -9,39 +9,39 @@ import (
 // RouterKey is they name of the herb module
 const RouterKey = ModuleName
 
-// MsgSetCiphertextPart defines message for the first HERB phase (collecting ciphertext part)
-type MsgSetCiphertextPart struct {
-	CiphertextPart CiphertextPartJSON `json:"ciphertext_part"`
-	Sender         sdk.AccAddress     `json:"sender"`
+// MsgSetCiphertextshare defines message for the first HERB phase (collecting ciphertext share)
+type MsgSetCiphertextShare struct {
+	CiphertextShare CiphertextShareJSON `json:"ciphertext_share"`
+	Sender          sdk.AccAddress      `json:"sender"`
 }
 
-// NewMsgSetCiphertextPart is a constructor for set ciphertext part message (first HERB phase)
-func NewMsgSetCiphertextPart(ctPart CiphertextPartJSON, sender sdk.AccAddress) MsgSetCiphertextPart {
-	return MsgSetCiphertextPart{
-		CiphertextPart: ctPart,
-		Sender:         sender,
+// NewMsgSetCiphertextShare is a constructor for set ciphertext share message (first HERB phase)
+func NewMsgSetCiphertextShare(ctShare CiphertextShareJSON, sender sdk.AccAddress) MsgSetCiphertextShare {
+	return MsgSetCiphertextShare{
+		CiphertextShare: ctShare,
+		Sender:          sender,
 	}
 }
 
 // Route returns the name of the module
-func (msg MsgSetCiphertextPart) Route() string { return RouterKey }
+func (msg MsgSetCiphertextShare) Route() string { return RouterKey }
 
 // Type returns the action
-func (msg MsgSetCiphertextPart) Type() string { return "setCiphertextPart" }
+func (msg MsgSetCiphertextShare) Type() string { return "setCiphertextShare" }
 
 // ValidateBasic runs stateless checks on the message
-func (msg MsgSetCiphertextPart) ValidateBasic() sdk.Error {
+func (msg MsgSetCiphertextShare) ValidateBasic() sdk.Error {
 	if msg.Sender.Empty() {
 		return sdk.ErrInvalidAddress("missing entropy provider address")
 	}
 
-	ctPart, err := msg.CiphertextPart.Deserialize()
+	ctShare, err := msg.CiphertextShare.Deserialize()
 
 	if err != nil {
 		return sdk.ErrUnknownRequest(fmt.Sprintf("can't deserialaize ciphertext: %v", err))
 	}
 
-	if !ctPart.EntropyProvider.Equals(msg.Sender) {
+	if !ctShare.EntropyProvider.Equals(msg.Sender) {
 		return sdk.ErrUnauthorized("entropy provider and sender are not equal")
 	}
 
@@ -49,22 +49,22 @@ func (msg MsgSetCiphertextPart) ValidateBasic() sdk.Error {
 }
 
 // GetSignBytes encodes the message for signing
-func (msg MsgSetCiphertextPart) GetSignBytes() []byte {
+func (msg MsgSetCiphertextShare) GetSignBytes() []byte {
 	return sdk.MustSortJSON(ModuleCdc.MustMarshalJSON(msg))
 }
 
 // GetSigners defines whose signature is required
-func (msg MsgSetCiphertextPart) GetSigners() []sdk.AccAddress {
+func (msg MsgSetCiphertextShare) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{msg.Sender}
 }
 
-// MsgSetCiphertextPart defines message for the first HERB phase (collecting ciphertext part)
+// MsgSetCiphertextShare defines message for the first HERB phase (collecting ciphertext share)
 type MsgSetDecryptionShare struct {
 	DecryptionShare DecryptionShareJSON `json:"decryption_share"`
 	Sender          sdk.AccAddress      `json:"sender"`
 }
 
-// NewMsgSetCiphertextPart is a constructor for set ciphertext part message (first HERB phase)
+// NewMsgSetCiphertextShare is a constructor for set ciphertext share message (first HERB phase)
 func NewMsgSetDecryptionShare(decryptionShare DecryptionShareJSON, sender sdk.AccAddress) MsgSetDecryptionShare {
 	return MsgSetDecryptionShare{
 		DecryptionShare: decryptionShare,

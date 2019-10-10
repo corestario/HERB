@@ -60,15 +60,15 @@ func (r QueryAggregatedCtRes) String() string {
 }
 
 type QueryAllCtRes struct {
-	CiphertextParts []*CiphertextPartJSON `json:"ciphertext_parts"`
+	CiphertextShares []*CiphertextShareJSON `json:"ciphertext_shares"`
 }
 
 func (r QueryAllCtRes) String() string {
 	str := ""
-	for _, ctPart := range r.CiphertextParts {
-		str = str + fmt.Sprintf("Entropy provider address: %v \n Ciphertext: %v \n", ctPart.EntropyProvider.String(), ctPart.Ciphertext.String())
+	for _, ctShare := range r.CiphertextShares {
+		str = str + fmt.Sprintf("Entropy provider address: %v \n Ciphertext: %v \n", ctShare.EntropyProvider.String(), ctShare.Ciphertext.String())
 	}
-	str = str + fmt.Sprintf("Total ct-parts: %v\n", len(r.CiphertextParts))
+	str = str + fmt.Sprintf("Total ct-shares: %v\n", len(r.CiphertextShares))
 	return str
 }
 

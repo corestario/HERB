@@ -9,7 +9,7 @@ while test $# -gt 0; do
       echo " "
       echo "options:"
       echo "-h, --help                    show brief help"
-      echo "-ct, --ct_treshhold=ct        specify a ciphertext parts treshhold"
+      echo "-ct, --ct_treshhold=ct        specify a ciphertext shares treshhold"
       echo "-t, --decryption_threshold=t  specify a decryption threshold"
       echo "-n, --maximum_clients=n       specify maximum clients count"
       echo "-c, --node_count=c            specify node count"
@@ -21,7 +21,7 @@ while test $# -gt 0; do
       if test $# -gt 0; then
         export t1=$1
       else
-        echo "no cipertext parts treshhold specified"
+        echo "no cipertext shares treshhold specified"
         exit 1
       fi
       shift
