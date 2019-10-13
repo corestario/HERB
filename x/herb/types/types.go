@@ -20,7 +20,7 @@ var P256 = nist.NewBlakeSHA256P256()
 
 //for genesis state
 type RoundData struct {
-	CiphertextParts  []*CiphertextPartJSON  `json:"ciphertext_parts"`
+	CiphertextShares []*CiphertextShareJSON `json:"ciphertext_shares"`
 	DecryptionShares []*DecryptionShareJSON `json:"decryption_shares"`
 }
 
@@ -68,35 +68,35 @@ func (vkJSON VerificationKeyJSON) Deserialize() (*VerificationKey, sdk.Error) {
 	}, nil
 }
 
-// CiphertextPart represents ciphertext part and additional information for the first HERB phase.
-type CiphertextPart struct {
+// CiphertextShare represents ciphertext share and additional information for the first HERB phase.
+type CiphertextShare struct {
 	Ciphertext      elgamal.Ciphertext
 	CEproof         []byte
 	EntropyProvider sdk.AccAddress
 }
 
-type CiphertextPartJSON struct {
+type CiphertextShareJSON struct {
 	Ciphertext      elgamal.CiphertextJSON `json:"ciphertext"`
 	CEproof         []byte                 `json:"ce_proof"`
 	EntropyProvider sdk.AccAddress         `json:"entropy_provider"`
 }
 
-func NewCiphertextPartJSON(ciphertextPart *CiphertextPart) (*CiphertextPartJSON, sdk.Error) {
-	ctJSON, _ := elgamal.NewCiphertextJSON(&ciphertextPart.Ciphertext, P256)
+func NewCiphertextShareJSON(ciphertextShare *CiphertextShare) (*CiphertextShareJSON, sdk.Error) {
+	ctJSON, _ := elgamal.NewCiphertextJSON(&ciphertextShare.Ciphertext, P256)
 
-	return &CiphertextPartJSON{
+	return &CiphertextShareJSON{
 		Ciphertext:      *ctJSON,
-		CEproof:         ciphertextPart.CEproof,
-		EntropyProvider: ciphertextPart.EntropyProvider,
+		CEproof:         ciphertextShare.CEproof,
+		EntropyProvider: ciphertextShare.EntropyProvider,
 	}, nil
 }
 
-func (ctJSON *CiphertextPartJSON) Deserialize() (*CiphertextPart, sdk.Error) {
+func (ctJSON *CiphertextShareJSON) Deserialize() (*CiphertextShare, sdk.Error) {
 	ciphertext, err := ctJSON.Ciphertext.Deserialize(P256)
 	if err != nil {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode ciphertext: %v", err))
 	}
-	return &CiphertextPart{
+	return &CiphertextShare{
 		Ciphertext:      *ciphertext,
 		CEproof:         ctJSON.CEproof,
 		EntropyProvider: ctJSON.EntropyProvider,
@@ -105,12 +105,12 @@ func (ctJSON *CiphertextPartJSON) Deserialize() (*CiphertextPart, sdk.Error) {
 
 type DecryptionShare struct {
 	DecShare      share.PubShare
-	DLEproof      *dleq.Proof
+	DLEQproof     *dleq.Proof
 	KeyHolderAddr sdk.AccAddress
 }
 type DecryptionShareJSON struct {
 	DecShare      string         `json:"decryption_share"`
-	DLEproof      string         `json:"dle_proof"`
+	DLEQproof     string         `json:"dleq_proof"`
 	KeyHolderAddr sdk.AccAddress `json:"key_holder"`
 }
 
@@ -120,14 +120,14 @@ func NewDecryptionShareJSON(decShares *DecryptionShare) (DecryptionShareJSON, sd
 	if err := dsEnc.Encode(decShares.DecShare); err != nil {
 		return DecryptionShareJSON{}, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode decryption shares: %v", err))
 	}
-	dleBuf := bytes.NewBuffer(nil)
-	dleEnc := gob.NewEncoder(dleBuf)
-	if err := dleEnc.Encode(decShares.DLEproof); err != nil {
-		return DecryptionShareJSON{}, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode dle proof: %v", err))
+	dleqBuf := bytes.NewBuffer(nil)
+	dleqEnc := gob.NewEncoder(dleqBuf)
+	if err := dleqEnc.Encode(decShares.DLEQproof); err != nil {
+		return DecryptionShareJSON{}, sdk.ErrUnknownRequest(fmt.Sprintf("failed to encode dleq proof: %v", err))
 	}
 	return DecryptionShareJSON{
 		DecShare:      base64.StdEncoding.EncodeToString(dsBuf.Bytes()),
-		DLEproof:      base64.StdEncoding.EncodeToString(dleBuf.Bytes()),
+		DLEQproof:     base64.StdEncoding.EncodeToString(dleqBuf.Bytes()),
 		KeyHolderAddr: decShares.KeyHolderAddr,
 	}, nil
 }
@@ -142,26 +142,26 @@ func (dsJSON DecryptionShareJSON) Deserialize() (*DecryptionShare, sdk.Error) {
 		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode decryption share : %v", err))
 	}
 
-	dleBytes, err := base64.StdEncoding.DecodeString(dsJSON.DLEproof)
+	dleqBytes, err := base64.StdEncoding.DecodeString(dsJSON.DLEQproof)
 	if err != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to base64-decode DLE proof: %v", err))
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to base64-decode DLEQ proof: %v", err))
 	}
-	dleDec := gob.NewDecoder(bytes.NewBuffer(dleBytes))
-	dleproof := dleq.Proof{C: P256.Scalar().Zero(), R: P256.Scalar().Zero(), VG: P256.Point().Base(), VH: P256.Point().Base()}
-	if err := dleDec.Decode(&dleproof); err != nil {
-		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode DLE proof : %v", err))
+	dleqDec := gob.NewDecoder(bytes.NewBuffer(dleqBytes))
+	dleqproof := dleq.Proof{C: P256.Scalar().Zero(), R: P256.Scalar().Zero(), VG: P256.Point().Base(), VH: P256.Point().Base()}
+	if err := dleqDec.Decode(&dleqproof); err != nil {
+		return nil, sdk.ErrUnknownRequest(fmt.Sprintf("failed to decode DLEQ proof : %v", err))
 	}
 	return &DecryptionShare{
 		DecShare:      decshare,
-		DLEproof:      &dleproof,
+		DLEQproof:     &dleqproof,
 		KeyHolderAddr: dsJSON.KeyHolderAddr,
 	}, nil
 }
 
-func CiphertextArraySerialize(ctArray []*CiphertextPart) ([]*CiphertextPartJSON, sdk.Error) {
-	ctJSONArray := make([]*CiphertextPartJSON, 0)
+func CiphertextArraySerialize(ctArray []*CiphertextShare) ([]*CiphertextShareJSON, sdk.Error) {
+	ctJSONArray := make([]*CiphertextShareJSON, 0)
 	for _, ct := range ctArray {
-		pt, err := NewCiphertextPartJSON(ct)
+		pt, err := NewCiphertextShareJSON(ct)
 		if err != nil {
 			return nil, sdk.ErrUnknownRequest(fmt.Sprintf("can't serialize array: %v", err))
 		}
@@ -169,8 +169,8 @@ func CiphertextArraySerialize(ctArray []*CiphertextPart) ([]*CiphertextPartJSON,
 	}
 	return ctJSONArray, nil
 }
-func CiphertextArrayDeserialize(ctJSONArray []*CiphertextPartJSON) ([]*CiphertextPart, sdk.Error) {
-	ctArray := make([]*CiphertextPart, 0)
+func CiphertextArrayDeserialize(ctJSONArray []*CiphertextShareJSON) ([]*CiphertextShare, sdk.Error) {
+	ctArray := make([]*CiphertextShare, 0)
 	for _, ct := range ctJSONArray {
 		ct := ct
 		pt, err := ct.Deserialize()

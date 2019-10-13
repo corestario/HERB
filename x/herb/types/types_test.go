@@ -20,28 +20,28 @@ func TestCiphertextSerialization(t *testing.T) {
 	ct := elgamal.Ciphertext{PointA: g1, PointB: g2}
 	userPk1 := ed25519.GenPrivKey().PubKey()
 	userAddr1 := sdk.AccAddress(userPk1.Address())
-	ctPart := CiphertextPart{ct, []byte("example"), []byte("example3"), userAddr1}
-	ctPartJSON, err := NewCiphertextPartJSON(&ctPart)
+	ctShare := CiphertextShare{ct, []byte("example"), []byte("example3"), userAddr1}
+	ctShareJSON, err := NewCiphertextShareJSON(&ctShare)
 	if err != nil {
 		t.Errorf("failed to json: %v", err)
 	}
-	ctPartBytes, err1 := ModuleCdc.MarshalJSON(ctPartJSON)
+	ctShareBytes, err1 := ModuleCdc.MarshalJSON(ctShareJSON)
 	if err1 != nil {
 		t.Errorf("failed marshal: %v", err1)
 	}
-	var newctPartJSON CiphertextPartJSON
-	err1 = ModuleCdc.UnmarshalJSON(ctPartBytes, &newctPartJSON)
+	var newctShareJSON CiphertextShareJSON
+	err1 = ModuleCdc.UnmarshalJSON(ctShareBytes, &newctShareJSON)
 	if err1 != nil {
 		t.Errorf("failed unmarshal: %v", err1)
 	}
-	newctPart, err := newctPartJSON.Deserialize()
+	newctShare, err := newctShareJSON.Deserialize()
 	if err != nil {
 		t.Errorf("failed to json: %v", err)
 	}
-	if !ctPart.EntropyProvider.Equals(newctPart.EntropyProvider) {
+	if !ctShare.EntropyProvider.Equals(newctShare.EntropyProvider) {
 		t.Errorf("addresses are not equal")
 	}
-	if !ctPart.Ciphertext.Equal(newctPart.Ciphertext) {
+	if !ctShare.Ciphertext.Equal(newctShare.Ciphertext) {
 		t.Errorf("ciphertexts are not equal")
 	}
 }
@@ -54,11 +54,11 @@ func TestDecryptionSharesSerialization(t *testing.T) {
 	g2 := suite.Point().Mul(x, g1)
 	userPk1 := ed25519.GenPrivKey().PubKey()
 	userAddr1 := sdk.AccAddress(userPk1.Address())
-	dleProof, _, _, err := elgamal.DLE(suite, g1, g2, x)
+	dleqProof, _, _, err := elgamal.DLEQ(suite, g1, g2, x)
 	if err != nil {
-		t.Errorf("can't create dle proof")
+		t.Errorf("can't create dleq proof")
 	}
-	decShare := DecryptionShare{share.PubShare{I: 0, V: g2}, dleProof, userAddr1}
+	decShare := DecryptionShare{share.PubShare{I: 0, V: g2}, dleqProof, userAddr1}
 	decShareJSON, err1 := NewDecryptionShareJSON(&decShare)
 	if err1 != nil {
 		t.Errorf("failed to json: %v", err1)
@@ -82,11 +82,11 @@ func TestDecryptionSharesSerialization(t *testing.T) {
 	if !newdecShare.DecShare.V.Equal(decShare.DecShare.V) {
 		t.Errorf("decryption shares are not equal")
 	}
-	if !newdecShare.DLEproof.C.Equal(decShare.DLEproof.C) ||
-		!newdecShare.DLEproof.R.Equal(decShare.DLEproof.R) ||
-		!newdecShare.DLEproof.VG.Equal(decShare.DLEproof.VG) ||
-		!newdecShare.DLEproof.VH.Equal(decShare.DLEproof.VH) {
-		t.Errorf("dle proofs are not equal")
+	if !newdecShare.DLEQproof.C.Equal(decShare.DLEQproof.C) ||
+		!newdecShare.DLEQproof.R.Equal(decShare.DLEQproof.R) ||
+		!newdecShare.DLEQproof.VG.Equal(decShare.DLEQproof.VG) ||
+		!newdecShare.DLEQproof.VH.Equal(decShare.DLEQproof.VH) {
+		t.Errorf("dleq proofs are not equal")
 	}
 }
 func TestEncodingDecodingPoint(t *testing.T) {
