@@ -26,11 +26,11 @@ type RoundData struct {
 
 // GenesisState - herb genesis state
 type GenesisState struct {
-	ThresholdParts      uint64                `json:"threshold_parts"`
-	ThresholdDecryption uint64                `json:"threshold_decryption"`
-	CommonPublicKey     string                `json:"common_public_key"`
-	KeyHolders          []VerificationKeyJSON `json:"key_holders"`
-	RoundData           []RoundData           `json:"round_data"`
+	ThresholdCiphertexts uint64                `json:"threshold_ciphertexts"`
+	ThresholdDecryption  uint64                `json:"threshold_decryption"`
+	CommonPublicKey      string                `json:"common_public_key"`
+	KeyHolders           []VerificationKeyJSON `json:"key_holders"`
+	RoundData            []RoundData           `json:"round_data"`
 }
 
 type VerificationKey struct {

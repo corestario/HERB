@@ -76,7 +76,7 @@ func (k *Keeper) SetCiphertext(ctx sdk.Context, ctShare *types.CiphertextShare) 
 	}
 	ctStore := ctx.KVStore(k.storeCiphertextSharesKey)
 	keyBytesAllCt := []byte(fmt.Sprintf("rd_%d", round))
-	t, err1 := k.GetThresholdParts(ctx)
+	t, err1 := k.GetThresholdCiphertexts(ctx)
 	if err1 != nil {
 		return err1
 	}

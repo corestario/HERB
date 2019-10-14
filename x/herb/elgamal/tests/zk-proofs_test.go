@@ -1,8 +1,6 @@
 package tests
 
 import (
-	"errors"
-	"math/big"
 	"testing"
 
 	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
@@ -50,18 +48,4 @@ func Test_DLEQproof_Positive(t *testing.T) {
 			}
 		})
 	}
-}
-
-//(N-1)*B == -1*B in kyber ?
-func Test_EqualityPoints_Positive(t *testing.T) {
-	suite := nist.NewBlakeSHA256P256()
-	t.Run("start", func(t *testing.T) {
-		z := new(big.Int).Sub(suite.Order(), big.NewInt(1))
-		A := suite.Point().Mul(suite.Scalar().SetInt64(-1), suite.Point().Base())
-		B := suite.Point().Mul(suite.Scalar().SetBytes(z.Bytes()), suite.Point().Base())
-		if !A.Equal(B) {
-			err := errors.New("(N-1)Base != -1Base")
-			t.Errorf("Equality isn't satisfied with error %q", err)
-		}
-	})
 }

@@ -20,9 +20,9 @@ func IdentityCiphertext(group kyber.Group) Ciphertext {
 	return Ciphertext{group.Point().Null(), group.Point().Null()}
 }
 
-//Decrypt takes decrypt shares (shares) from all participants and decrypt the ciphertext C
-func Decrypt(group kyber.Group, C Ciphertext, parts []*share.PubShare, n int) kyber.Point {
-	D, _ := share.RecoverCommit(group, parts, len(parts), n)
+//Decrypt takes decryption shares from all participants and decrypt the ciphertext C
+func Decrypt(group kyber.Group, C Ciphertext, shares []*share.PubShare, n int) kyber.Point {
+	D, _ := share.RecoverCommit(group, shares, len(shares), n)
 	M := group.Point().Sub(C.PointB, D)
 	return M
 }
@@ -39,16 +39,16 @@ func (ct Ciphertext) String() string {
 }
 
 //AggregateCiphertext takes the set of ciphertextes shares:
-//parts[0] = (A0, B0), ..., parts[n] = (An, Bn)
+//shares[0] = (A0, B0), ..., shares[n] = (An, Bn)
 //and returns aggregated ciphertext C = (A1 + A2 + ... + An, B1 + B2 + ... + Bn)
-func AggregateCiphertext(group kyber.Group, parts []Ciphertext) Ciphertext {
-	if len(parts) == 0 {
+func AggregateCiphertext(group kyber.Group, shares []Ciphertext) Ciphertext {
+	if len(shares) == 0 {
 		return IdentityCiphertext(group)
 	}
-	ct := Ciphertext{parts[0].PointA, parts[0].PointB}
-	for i := 1; i < len(parts); i++ {
-		ct.PointA = group.Point().Add(ct.PointA, parts[i].PointA)
-		ct.PointB = group.Point().Add(ct.PointB, parts[i].PointB)
+	ct := Ciphertext{shares[0].PointA, shares[0].PointB}
+	for i := 1; i < len(shares); i++ {
+		ct.PointA = group.Point().Add(ct.PointA, shares[i].PointA)
+		ct.PointB = group.Point().Add(ct.PointB, shares[i].PointB)
 	}
 
 	return ct

@@ -22,7 +22,7 @@ func SetThresholdsCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 		Short: "add number of the key holder accounts to the genesis file",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			thresholdParts, err := strconv.ParseUint(args[0], 10, 64)
+			thresholdCiphertexts, err := strconv.ParseUint(args[0], 10, 64)
 			if err != nil {
 				return fmt.Errorf("ciphertext-thr %s not a valid uint, please input a valid number", args[0])
 			}
@@ -41,7 +41,7 @@ func SetThresholdsCmd(ctx *server.Context, cdc *codec.Codec) *cobra.Command {
 			genesisStateJSON := appState[types.ModuleName]
 			var genesisState types.GenesisState
 			types.ModuleCdc.MustUnmarshalJSON(genesisStateJSON, &genesisState)
-			genesisState.ThresholdParts = thresholdParts
+			genesisState.ThresholdCiphertexts = thresholdCiphertexts
 			genesisState.ThresholdDecryption = thresholdDecryption
 			newGenesisState := types.ModuleCdc.MustMarshalJSON(genesisState)
 			appState[types.ModuleName] = newGenesisState

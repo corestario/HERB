@@ -1,7 +1,6 @@
 package types
 
 import (
-	"fmt"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -10,17 +9,16 @@ import (
 
 	"go.dedis.ch/kyber/v3/group/nist"
 	"go.dedis.ch/kyber/v3/share"
-	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )
 
-func TestCiphertextSerialization(t *testing.T) {
+func TestCiphertextSerialization_Positive(t *testing.T) {
 	suite := nist.NewBlakeSHA256P256()
 	g1 := suite.Point().Base()
 	g2 := suite.Point().Mul(suite.Scalar().SetInt64(2), g1)
 	ct := elgamal.Ciphertext{PointA: g1, PointB: g2}
 	userPk1 := ed25519.GenPrivKey().PubKey()
 	userAddr1 := sdk.AccAddress(userPk1.Address())
-	ctShare := CiphertextShare{ct, []byte("example"), []byte("example3"), userAddr1}
+	ctShare := CiphertextShare{ct, []byte("example"), userAddr1}
 	ctShareJSON, err := NewCiphertextShareJSON(&ctShare)
 	if err != nil {
 		t.Errorf("failed to json: %v", err)
@@ -46,7 +44,7 @@ func TestCiphertextSerialization(t *testing.T) {
 	}
 }
 
-func TestDecryptionSharesSerialization(t *testing.T) {
+func TestDecryptionSharesSerialization_Positive(t *testing.T) {
 	suite := nist.NewBlakeSHA256P256()
 	g := suite.Point().Base()
 	x := suite.Scalar().SetInt64(2)
@@ -88,22 +86,4 @@ func TestDecryptionSharesSerialization(t *testing.T) {
 		!newdecShare.DLEQproof.VH.Equal(decShare.DLEQproof.VH) {
 		t.Errorf("dleq proofs are not equal")
 	}
-}
-func TestEncodingDecodingPoint(t *testing.T) {
-	group := P256
-	mult := group.Scalar().SetInt64(3)
-	key := group.Point().Mul(mult, nil)
-	str, err := kyberenc.PointToStringHex(group, key)
-	if err != nil {
-		t.Errorf("failed to encode key as a string: %v", err)
-	}
-	fmt.Print(str)
-	newKey, err := kyberenc.StringHexToPoint(group, str)
-	if err != nil {
-		t.Errorf("failed to decode key: %v", err)
-	}
-	if !newKey.Equal(key) {
-		t.Errorf("keys are not equal")
-	}
-
 }

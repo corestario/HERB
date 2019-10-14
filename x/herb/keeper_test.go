@@ -24,7 +24,7 @@ import (
 	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )
 
-func TestHERB(t *testing.T) {
+func TestHERB_Positive(t *testing.T) {
 	n := 10
 	trh := 8
 	testCases := make([]int, n)
@@ -72,7 +72,7 @@ func TestHERB(t *testing.T) {
 		for i := 0; i < n; i++ {
 			y := keeper.group.Scalar().SetInt64(int64(r))
 			rr := keeper.group.Scalar().SetInt64(int64(r + i))
-			ct, CE, err := ciphertextTest(P256, commonkey, y, rr)
+			ct, CE, err := createCiphertext(P256, commonkey, y, rr)
 			if err != nil {
 				t.Errorf("failed create proofs: %v", err)
 			}
@@ -173,7 +173,7 @@ func TestHERB(t *testing.T) {
 	}
 }
 
-func TestSetGetCiphertext(t *testing.T) {
+func TestSetGetCiphertext_Positive(t *testing.T) {
 	round := 1
 	r := 2
 	n := 3
@@ -201,7 +201,7 @@ func TestSetGetCiphertext(t *testing.T) {
 	for i := 0; i < n; i++ {
 		y := keeper.group.Scalar().SetInt64(int64(r))
 		rr := keeper.group.Scalar().SetInt64(int64(r + i))
-		ct, CE, err := ciphertextTest(P256, commonkey, y, rr)
+		ct, CE, err := createCiphertext(P256, commonkey, y, rr)
 		if err != nil {
 			t.Errorf("failed create proofs: %v", err)
 		}
@@ -218,7 +218,7 @@ func TestSetGetCiphertext(t *testing.T) {
 	}
 	for i := 0; i < n; i++ {
 		if newCiphertexts[i].EntropyProvider.String() != ciphertextShares[i].EntropyProvider.String() {
-			t.Errorf("new map doesn't contains original entropy provider, round: %v, expected: %v", round, ciphertextParts[i].EntropyProvider.String())
+			t.Errorf("new map doesn't contains original entropy provider, round: %v, expected: %v", round, ciphertextShares[i].EntropyProvider.String())
 		}
 		if !newCiphertexts[i].Ciphertext.Equal(ciphertextShares[i].Ciphertext) {
 			t.Errorf("ciphertexts don't equal, round: %v", round)
@@ -226,7 +226,7 @@ func TestSetGetCiphertext(t *testing.T) {
 	}
 }
 
-func Initialize(thresholdDecryption uint64, thresholdParts uint64, n uint64) (ctx sdk.Context, keeperInstance Keeper, cdc *codec.Codec) {
+func Initialize(thresholdDecryption uint64, thresholdCiphertexts uint64, n uint64) (ctx sdk.Context, keeperInstance Keeper, cdc *codec.Codec) {
 	cdc = codec.New()
 	types.RegisterCodec(cdc)
 	codec.RegisterCrypto(cdc)
@@ -245,7 +245,7 @@ func Initialize(thresholdDecryption uint64, thresholdParts uint64, n uint64) (ct
 	}
 	ctx = sdk.NewContext(ms, abci.Header{ChainID: "test-chain"}, true, log.NewNopLogger())
 	keeperInstance.SetKeyHoldersNumber(ctx, n)
-	keeperInstance.SetThreshold(ctx, thresholdParts, thresholdDecryption)
+	keeperInstance.SetThreshold(ctx, thresholdCiphertexts, thresholdDecryption)
 	ctx = ctx.WithConsensusParams(
 		&abci.ConsensusParams{
 			Validator: &abci.ValidatorParams{
@@ -256,7 +256,7 @@ func Initialize(thresholdDecryption uint64, thresholdParts uint64, n uint64) (ct
 	return
 }
 
-func ciphertextTest(group proof.Suite, commonKey kyber.Point, y kyber.Scalar, r kyber.Scalar) (ct elgamal.Ciphertext, ceProof []byte, err error) {
+func createCiphertext(group proof.Suite, commonKey kyber.Point, y kyber.Scalar, r kyber.Scalar) (ct elgamal.Ciphertext, ceProof []byte, err error) {
 	m := group.Point().Mul(y, nil)
 	s := group.Point().Mul(r, commonKey)
 	a := group.Point().Mul(r, nil)

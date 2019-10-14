@@ -81,24 +81,24 @@ func (k *Keeper) GetVerificationKeys(ctx sdk.Context) ([]types.VerificationKeyJS
 }
 
 // SetThreshold set threshold for decryption and ciphertext shares
-func (k *Keeper) SetThreshold(ctx sdk.Context, thresholdParts uint64, thresholdDecrypt uint64) {
+func (k *Keeper) SetThreshold(ctx sdk.Context, thresholdCiphertexts uint64, thresholdDecrypt uint64) {
 	store := ctx.KVStore(k.storeKey)
-	thresholdPartsBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(thresholdPartsBytes, thresholdParts)
-	store.Set([]byte(keyThresholdParts), thresholdPartsBytes)
+	thresholdCiphertextsBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(thresholdCiphertextsBytes, thresholdCiphertexts)
+	store.Set([]byte(keyThresholdCiphertexts), thresholdCiphertextsBytes)
 	thresholdDecryptBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(thresholdDecryptBytes, thresholdDecrypt)
 	store.Set([]byte(keyThresholdDecrypt), thresholdDecryptBytes)
 }
 
-// GetThresholdParts returns the total number of ciphertexts which required by HERB settings
-func (k *Keeper) GetThresholdParts(ctx sdk.Context) (uint64, sdk.Error) {
+// GetThresholdCiphertexts returns the total number of ciphertexts which required by HERB settings
+func (k *Keeper) GetThresholdCiphertexts(ctx sdk.Context) (uint64, sdk.Error) {
 	store := ctx.KVStore(k.storeKey)
-	if !store.Has([]byte(keyThresholdParts)) {
+	if !store.Has([]byte(keyThresholdCiphertexts)) {
 		return 0, sdk.ErrUnknownRequest("threshold for ciphertext shares is not defined")
 	}
 
-	tBytes := store.Get([]byte(keyThresholdParts))
+	tBytes := store.Get([]byte(keyThresholdCiphertexts))
 	t := binary.LittleEndian.Uint64(tBytes)
 	return t, nil
 }

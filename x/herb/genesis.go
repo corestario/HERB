@@ -17,22 +17,22 @@ import (
 )
 
 // NewGenesisState creates new instance GenesisState
-func NewGenesisState(thresholdParts uint64, thresholdDecryption uint64) GenesisState {
+func NewGenesisState(thresholdCiphertexts uint64, thresholdDecryption uint64) GenesisState {
 	return GenesisState{
-		ThresholdParts:      thresholdParts,
-		ThresholdDecryption: thresholdDecryption,
-		CommonPublicKey:     P256.Point().String(),
-		KeyHolders:          []types.VerificationKeyJSON{},
-		RoundData:           []types.RoundData{},
+		ThresholdCiphertexts: thresholdCiphertexts,
+		ThresholdDecryption:  thresholdDecryption,
+		CommonPublicKey:      P256.Point().String(),
+		KeyHolders:           []types.VerificationKeyJSON{},
+		RoundData:            []types.RoundData{},
 	}
 }
 
 // ValidateGenesis validates the provided herb genesis state to ensure the
 // expected invariants holds.
 func ValidateGenesis(data GenesisState) error {
-	partsThreshold := data.ThresholdParts
+	ctsThreshold := data.ThresholdCiphertexts
 	sharesThreshold := data.ThresholdDecryption
-	if partsThreshold < 1 {
+	if ctsThreshold < 1 {
 		return errors.New("theshold for ciphertext shares must be positive")
 	}
 	if sharesThreshold < 1 {
@@ -53,11 +53,11 @@ func ValidateGenesis(data GenesisState) error {
 // DefaultGenesisState returns default testing genesis state
 func DefaultGenesisState() GenesisState {
 	return GenesisState{
-		ThresholdParts:      0,
-		ThresholdDecryption: 0,
-		CommonPublicKey:     P256.Point().String(),
-		KeyHolders:          []types.VerificationKeyJSON{},
-		RoundData:           []types.RoundData{},
+		ThresholdCiphertexts: 0,
+		ThresholdDecryption:  0,
+		CommonPublicKey:      P256.Point().String(),
+		KeyHolders:           []types.VerificationKeyJSON{},
+		RoundData:            []types.RoundData{},
 	}
 }
 
@@ -85,7 +85,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.Valid
 		}
 	}()
 	keeper.SetKeyHoldersNumber(ctx, uint64(len(keyHolders)))
-	keeper.SetThreshold(ctx, data.ThresholdParts, data.ThresholdDecryption)
+	keeper.SetThreshold(ctx, data.ThresholdCiphertexts, data.ThresholdDecryption)
 	keeper.SetCommonPublicKey(ctx, data.CommonPublicKey)
 	keeper.setRound(ctx, uint64(0))
 	keeper.setStage(ctx, uint64(0), stageUnstarted)
@@ -117,7 +117,7 @@ func InitGenesis(ctx sdk.Context, keeper Keeper, data GenesisState) []abci.Valid
 
 // ExportGenesis returns a GenesisState for a given context and keeper.
 func ExportGenesis(ctx sdk.Context, k Keeper) GenesisState {
-	tp, err := k.GetThresholdParts(ctx)
+	tp, err := k.GetThresholdCiphertexts(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -167,10 +167,10 @@ func ExportGenesis(ctx sdk.Context, k Keeper) GenesisState {
 		panic(err1)
 	}
 	return GenesisState{
-		ThresholdParts:      tp,
-		ThresholdDecryption: td,
-		CommonPublicKey:     cPK,
-		KeyHolders:          keyHolders,
-		RoundData:           roundData,
+		ThresholdCiphertexts: tp,
+		ThresholdDecryption:  td,
+		CommonPublicKey:      cPK,
+		KeyHolders:           keyHolders,
+		RoundData:            roundData,
 	}
 }
