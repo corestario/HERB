@@ -12,7 +12,7 @@ import (
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
 
-	app "github.com/dgamingfoundation/HERB"
+	app "github.com/corestario/HERB"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 

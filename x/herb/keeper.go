@@ -6,10 +6,10 @@ import (
 	"log"
 	"time"
 
+	"github.com/corestario/HERB/x/herb/elgamal"
+	"github.com/corestario/HERB/x/herb/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
-	"github.com/dgamingfoundation/HERB/x/herb/types"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/share"
 )

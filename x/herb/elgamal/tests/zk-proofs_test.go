@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
+	"github.com/corestario/HERB/x/herb/elgamal"
 	"go.dedis.ch/kyber/v3/group/nist"
 )
 

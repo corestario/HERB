@@ -1,7 +1,7 @@
 package herb
 
 import (
-	"github.com/dgamingfoundation/HERB/x/herb/types"
+	"github.com/corestario/HERB/x/herb/types"
 )
 
 const (

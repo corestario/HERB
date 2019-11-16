@@ -2,8 +2,8 @@ package herb
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
-	"github.com/dgamingfoundation/HERB/x/herb/types"
+	"github.com/corestario/HERB/x/herb/elgamal"
+	"github.com/corestario/HERB/x/herb/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"

@@ -3,7 +3,7 @@ package herb
 import (
 	"encoding/binary"
 
-	"github.com/dgamingfoundation/HERB/x/herb/types"
+	"github.com/corestario/HERB/x/herb/types"
 	"go.dedis.ch/kyber/v3"
 	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 

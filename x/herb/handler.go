@@ -3,7 +3,7 @@ package herb
 import (
 	"fmt"
 
-	"github.com/dgamingfoundation/HERB/x/herb/types"
+	"github.com/corestario/HERB/x/herb/types"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )

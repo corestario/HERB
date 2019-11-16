@@ -7,8 +7,8 @@ RUN mkdir /root/tmp
 ENV GO111MODULE=off
 ENV PATH /go/bin:$PATH
 ENV GOPATH /go
-ENV HERBPATH /go/src/github.com/dgamingfoundation/HERB
-RUN mkdir /go/src/github.com && mkdir /go/src/github.com/dgamingfoundation && mkdir /go/src/github.com/dgamingfoundation/HERB
+ENV HERBPATH /go/src/github.com/corestario/HERB
+RUN mkdir /go/src/github.com && mkdir /go/src/github.com/corestario && mkdir /go/src/github.com/corestario/HERB
 COPY . $HERBPATH
 COPY . /root/HERB
 

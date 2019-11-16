@@ -25,7 +25,7 @@ import (
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
-	"github.com/dgamingfoundation/HERB/x/herb"
+	"github.com/corestario/HERB/x/herb"
 )
 
 const appName = "herb"

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/dgamingfoundation/HERB/dkg"
-	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
+	"github.com/corestario/HERB/dkg"
+	"github.com/corestario/HERB/x/herb/elgamal"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/group/nist"
 	"go.dedis.ch/kyber/v3/proof"

@@ -12,8 +12,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/dgamingfoundation/HERB/x/herb/client/cli"
-	"github.com/dgamingfoundation/HERB/x/herb/client/rest"
+	"github.com/corestario/HERB/x/herb/client/cli"
+	"github.com/corestario/HERB/x/herb/client/rest"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 )

@@ -8,9 +8,9 @@ import (
 
 	"github.com/tendermint/tendermint/libs/cli"
 
-	app "github.com/dgamingfoundation/HERB"
-	"github.com/dgamingfoundation/HERB/dkg"
-	"github.com/dgamingfoundation/HERB/x/herb"
+	app "github.com/corestario/HERB"
+	"github.com/corestario/HERB/dkg"
+	"github.com/corestario/HERB/x/herb"
 	"github.com/spf13/cobra"
 
 	"go.dedis.ch/kyber/v3"

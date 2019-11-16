@@ -1,8 +1,8 @@
 package types
 
 import (
+	"github.com/corestario/HERB/x/herb/elgamal"
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 )
 
 var ModuleCdc = codec.New()

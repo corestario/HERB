@@ -9,9 +9,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/dgamingfoundation/HERB/dkg"
-	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
-	"github.com/dgamingfoundation/HERB/x/herb/types"
+	"github.com/corestario/HERB/dkg"
+	"github.com/corestario/HERB/x/herb/elgamal"
+	"github.com/corestario/HERB/x/herb/types"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"

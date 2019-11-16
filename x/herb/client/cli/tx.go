@@ -11,8 +11,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 
-	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
-	"github.com/dgamingfoundation/HERB/x/herb/types"
+	"github.com/corestario/HERB/x/herb/elgamal"
+	"github.com/corestario/HERB/x/herb/types"
 
 	"github.com/spf13/cobra"
 

@@ -3,8 +3,8 @@ package types
 import (
 	"testing"
 
+	"github.com/corestario/HERB/x/herb/elgamal"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 
 	"go.dedis.ch/kyber/v3/group/nist"

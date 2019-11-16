@@ -9,8 +9,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/cosmos/cosmos-sdk/x/auth/client/utils"
 
-	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
-	"github.com/dgamingfoundation/HERB/x/herb/types"
+	"github.com/corestario/HERB/x/herb/elgamal"
+	"github.com/corestario/HERB/x/herb/types"
 
 	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 )

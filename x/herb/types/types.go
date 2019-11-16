@@ -12,8 +12,8 @@ import (
 	"go.dedis.ch/kyber/v3/share"
 	kyberenc "go.dedis.ch/kyber/v3/util/encoding"
 
+	"github.com/corestario/HERB/x/herb/elgamal"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
 )
 
 var P256 = nist.NewBlakeSHA256P256()

@@ -20,8 +20,8 @@ import (
 	tmtypes "github.com/tendermint/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
-	app "github.com/dgamingfoundation/HERB"
-	herbcli "github.com/dgamingfoundation/HERB/x/herb/client/cli"
+	app "github.com/corestario/HERB"
+	herbcli "github.com/corestario/HERB/x/herb/client/cli"
 )
 
 func main() {

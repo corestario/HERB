@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/dgamingfoundation/HERB/x/herb/elgamal"
+	"github.com/corestario/HERB/x/herb/elgamal"
 )
 
 const (
