@@ -1,5 +1,5 @@
 # HERB - Homomorphic Encryption Random Beacon
-HERB is a Publicly Verifiable Random Beacon protocol described in [this]() article. This repository is HERB implementation written in [Golang](https://golang.org) as [Cosmos](https://github.com/cosmos/cosmos-sdk) application using [Kyber](https://github.com/dedis/kyber) library.
+HERB is a Publicly Verifiable Random Beacon protocol described in [this](https://eprint.iacr.org/2019/1320.pdf) article. This repository is HERB implementation written in [Golang](https://golang.org) as [Cosmos](https://github.com/cosmos/cosmos-sdk) application using [Kyber](https://github.com/dedis/kyber) library.
 
 ### What is it
 
@@ -30,7 +30,7 @@ Simplified implementation description:
 
 ### Implementation details
 
-This is a Proof-of-Concept implementation, so some details from the [original paper]() are simplified here. 
+This is a Proof-of-Concept implementation, so some details from the [original paper](https://eprint.iacr.org/2019/1320.pdf) are simplified here. 
 
 Recall, that there are 3 protocol phases (page 12):
 
@@ -47,12 +47,12 @@ Let's look at the original HERB protocol (page 17) closer.
 > 1. Each entropy provider *e<sub>j</sub>*, *1 ≤ j ≤ m*, generates random point *M<sub>j</sub> ∈ __G__*. Then encrypts it:
 > 2. e<sub>j</sub> publishes *C<sub>j</sub>* along with NIZK of discrete logarithm knowledge for *A<sub>j</sub>* and NIZK of representation knowledge for *B<sub>j</sub>* 
 
-`hcli tx herb ct-share [commonPubKey]` [command](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/client/cli/tx.go#L42) calculates ciphertext share and CE proof and sends a transaction with a [Ciphertext Share Message](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/types/msgs.go#L13). 
+`hcli tx herb ct-share [commonPubKey]` [command](https://github.com/corestario/HERB/blob/master/x/herb/client/cli/tx.go#L42) calculates ciphertext share and CE proof and sends a transaction with a [Ciphertext Share Message](https://github.com/corestario/HERB/blob/master/x/herb/types/msgs.go#L13). 
 
 > 3.  When *C<sub>j</sub>* is published, participants agree that the ciphertext share is correct, if  __CE-Verify__*(π<sub>CE<sub>j</sub></sub>,G, Q, A<sub>j</sub>, B<sub>j</sub>) = 1*.
 > 4.  When all correct *C<sub>j</sub>* are published, participants calculate *C = (A, B)*
 
-On the blockchain side, [keeper's function](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/keeper.go#L44) verifies the ciphertext share and store it into the blockchain. This function also aggregates new ciphertext with cyphertexts which are already stored. 
+On the blockchain side, [keeper's function](https://github.com/corestario/HERB/blob/master/x/herb/keeper.go#L44) verifies the ciphertext share and store it into the blockchain. This function also aggregates new ciphertext with cyphertexts which are already stored. 
 
 Anyone can see stored ciphertexts by query: 
 
@@ -66,12 +66,12 @@ As soon as *t1* ciphertext parts were stored, the application's stage changes to
 
 > 5.  Key holder *id<sub>i</sub>*, *1 ≤ i ≤ n*, publishes decryption shares along with NIZK of discrete logarithm equality
 
-`hcli tx herb decrypt [privateKey] [ID]` [command](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/client/cli/tx.go#L81) queries the aggregated ciphertext and calculates a decryption share. This command also sends a transaction with [Decryption Share message](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/types/msgs.go#L68).
+`hcli tx herb decrypt [privateKey] [ID]` [command](https://github.com/corestario/HERB/blob/master/x/herb/client/cli/tx.go#L81) queries the aggregated ciphertext and calculates a decryption share. This command also sends a transaction with [Decryption Share message](https://github.com/corestario/HERB/blob/master/x/herb/types/msgs.go#L68).
 
 
 > 6. When *D<sub>i</sub>* is published, participants verify that __DLEQ-Verify__*(π<sub>DLEQ<sub>i</sub></sub>,D<sub>i</sub>,A,VK<sub>i</sub>,G) = 1*
 
-On the blockchain side, [keeper's function](https://github.com/dgamingfoundation/HERB/blob/master/x/herb/keeper.go#L148) verifies the decryption share and stores it into the blockchain. 
+On the blockchain side, [keeper's function](https://github.com/corestario/HERB/blob/master/x/herb/keeper.go#L148) verifies the decryption share and stores it into the blockchain. 
 
 Anyone can see stored decryption shares by query: 
 
@@ -99,7 +99,7 @@ There are two types of entities who maintain the system:
 
 * Blockchain full nodes who run application daemon (hd). Let's denote them as *nodes*. 
 
-* Scripts ([HERB](scripts/HERB)) which represents protocol participants. Let's call them *clients*. 
+* Scripts ([HERB](scripts/HERB.sh)) which represents protocol participants. Let's call them *clients*. 
 
   Clients use an application command line interface for querying app state and sending transactions.
   
@@ -119,7 +119,7 @@ There are two types of entities who maintain the system:
 
    
 
-3. Clone [repository](https://github.com/dgamingfoundation/HERB/tree/master) to the $HOME directory
+3. Clone [repository](https://github.com/corestario/HERB/tree/master) to the $HOME directory
 
 4. Install application:
 
@@ -241,10 +241,10 @@ For Ubuntu:
       source ~/.profile
       ```
 
-   2. Clone [repository](https://github.com/dgamingfoundation/HERB/tree/master) to the $HOME directory.
+   2. Clone [repository](https://github.com/corestario/HERB/tree/master) to the $HOME directory.
 
       ```
-      git clone https://%username%@github.com/dgamingfoundation/HERB
+      git clone https://%username%@github.com/corestario/HERB
       ```
 
    3. Install application:
@@ -322,10 +322,10 @@ For Ubuntu:
       source ~/.profile
       ```
 
-   2. Clone [repository](https://github.com/dgamingfoundation/HERB/tree/master) to the $HOME directory
+   2. Clone [repository](https://github.com/corestario/HERB/tree/master) to the $HOME directory
 
       ```
-      git clone https://%username%@github.com/dgamingfoundation/HERB
+      git clone https://%username%@github.com/corestario/HERB
       ```
 
    3. Install application:
