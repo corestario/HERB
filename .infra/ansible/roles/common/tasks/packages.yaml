@@ -1,0 +1,17 @@
+# Package manager
+- name: Install packages
+  become: true
+  environment:
+    PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin'
+  apt:
+    name: "{{ item }}"
+    update_cache: true
+  with_items: "{{ shared_packages }}"
+
+- name: Install extra packages
+  become: true
+  environment:
+    PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin'
+  apt:
+    name: "{{ item }}"
+  with_items: "{{ extra_packages }}"

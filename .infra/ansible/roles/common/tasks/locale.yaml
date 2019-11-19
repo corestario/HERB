@@ -1,0 +1,9 @@
+- name: Generate en_US.UTF-8 default locale | common-timezone
+  locale_gen:
+    name: en_US.UTF-8
+    state: present
+
+- name: Generate ru_RU.UTF-8 default locale | common-timezone
+  locale_gen:
+    name: ru_RU.UTF-8
+    state: present

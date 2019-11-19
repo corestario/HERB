@@ -1,0 +1,93 @@
+# PostgreSQL
+- name: Create PostgreSQL directory | dwh-infrastructure
+  file:
+    path: "/opt/dwh/postgres"
+    mode: 0755
+    state: directory
+    recurse: true
+
+- name: Create PostgreSQL container | dwh-infrastructure
+  docker_container:
+    name: "dwh-postgres"
+    image: "{{ postgres_image }}"
+    state: "started"
+    restart_policy: "unless-stopped"
+    ports:
+      - "{{ private_addr }}:5432:5432"
+    networks:
+      - name: "dwh"
+    volumes:
+      - "/opt/dwh/postgres:/var/lib/postgres"
+    env:
+      POSTGRES_USER: dgaming
+      POSTGRES_PASSWORD: dgaming
+      POSTGRES_DB: dgaming
+
+# MongoDB
+- name: Create MongoDB directory | dwh-infrastructure
+  file:
+    path: "/opt/dwh/mongo"
+    mode: 0755
+    state: directory
+    recurse: true
+
+- name: Create MongoDB container | dwh-infrastructure
+  docker_container:
+    name: "dwh-mongo"
+    image: "{{ mongo_image }}"
+    state: "started"
+    restart_policy: "unless-stopped"
+    ports:
+      - "{{ private_addr }}:27017:27017"
+    networks:
+      - name: "dwh"
+    volumes:
+      - "/opt/dwh/mongo:/data/db"
+    env:
+      MONGODB_USER: dgaming
+      MONGODB_PASS: dgaming
+      MONGODB_DATABASE: dgaming
+      MONGO_INITDB_DATABASE: dgaming
+      MONGO_INITDB_ROOT_USERNAME: dgaming
+      MONGO_INITDB_ROOT_PASSWORD: dgaming
+
+# RabbitMQ
+- name: Create RabbitMQ directory | dwh-infrastructure
+  file:
+    path: "/opt/dwh/rabbitmq"
+    mode: 0755
+    state: directory
+    recurse: true
+
+- name: Create RabbitMQ container | dwh-infrastructure
+  docker_container:
+    name: "dwh-rabbitmq"
+    image: "{{ rabbitmq_image }}"
+    state: "started"
+    restart_policy: "unless-stopped"
+    ports:
+      - "{{ private_addr }}:5672:5672"
+      - "{{ private_addr }}:15672:15672"
+    networks:
+      - name: "dwh"
+    volumes:
+      - "/opt/dwh/rabbitmq:/var/lib/rabbitmq"
+    env:
+      RABBITMQ_DEFAULT_USER: dgaming
+      RABBITMQ_DEFAULT_PASS: dgaming
+
+# GraphQL
+- name: Create GraphQL container | dwh-infrastructure
+  docker_container:
+    name: "dwh-graphql"
+    image: "{{ graphql_image }}"
+    state: "started"
+    restart_policy: "unless-stopped"
+    ports:
+      - "{{ private_addr }}:8080:8080"
+    networks:
+      - name: "dwh"
+    env:
+      HASURA_GRAPHQL_DATABASE_URL: postgres://dgaming:dgaming@dwh-postgres:5432/dgaming
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
+

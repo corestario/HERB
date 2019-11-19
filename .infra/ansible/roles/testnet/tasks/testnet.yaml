@@ -1,0 +1,190 @@
+- name: Make base directory for testnet dependencies | testnet
+  file:
+    path: "/opt/testnet"
+    mode: 0755
+    state: directory
+    recurse: true
+
+- name: Create service network | tesnet
+  docker_network:
+    name: testnet
+
+- name: Login to registry containing testnet image | testnet
+  command: "docker login -u {{ docker_testnet_pull_token_login }} -p {{ docker_testnet_pull_token_password }} {{ testnet_image }}"
+
+# Data for every node should be saved in subdirectory for a future sync
+- name: Make base directory for testnet node files | testnet
+  file:
+    path: "/opt/testnet/{{ inventory_hostname }}"
+    mode: 0755
+    state: directory
+    recurse: true
+
+- name: Bootstrap first node | testnet
+  run_once: true
+  block:
+    - name: Run node0 prebootstrap commands | testnet-bootstrap
+      command: |
+        docker run -i --name testnet_preinit -v /opt/testnet/{{ inventory_hostname }}:/root/ {{ testnet_image }} bash -c "
+        dkgcli gen-key-file {{ herb_threshold_2 }} {{ testnet_clients_amount }};
+        "
+      args:
+        creates: "/opt/testnet/{{ inventory_hostname }}/.dkgcli/keys.json"
+
+    - name: Save prebootstrap logs | testnet-bootstrap
+      shell: docker logs testnet_preinit > /opt/testnet/prebootstrap.log
+      args:
+        creates: "/opt/testnet/prebootstrap.log"
+
+    - name: Fetch prebootstrap logs | testnet
+      fetch:
+        src: "/opt/testnet/prebootstrap.log"
+        dest: "fetch/prebootstrap.log"
+        flat: true
+
+    - name: Fetch prebootstrap keys | testnet
+      fetch:
+        src: "/opt/testnet/{{ inventory_hostname }}/.dkgcli/keys.json"
+        dest: "fetch/dkgcli_keys.json"
+        flat: true
+
+    - name: Get dkgcli_keys.json as variable | testnet-bootstrap
+      include_vars:
+        name: "dkgcli_keys"
+        file: "fetch/dkgcli_keys.json"
+
+    - name: Run node0 bootstrap commands | testnet-bootstrap
+      command: |
+        docker run -i --name testnet_init -v /opt/testnet/{{ inventory_hostname }}:/root/ {{ testnet_image }} bash -c "
+        hd init {{ inventory_hostname }} --chain-id {{ env_name }};
+
+        for i in $(seq 1 {{ testnet_clients_amount }}); do
+          hcli keys add user$i <<< '{{ testnet_client_password }}';
+        done;
+        hcli keys add sellerBeneficiary <<< '{{ testnet_client_password }}';
+        hcli keys add buyerBeneficiary <<< '{{ testnet_client_password }}';
+        hcli keys add dgaming <<< '{{ testnet_client_password }}';
+
+        for i in $(seq 1 {{ testnet_clients_amount }}); do
+          hd add-genesis-account $(hcli keys show user$i -a) 100000000herbtoken,100000000stake;
+        done;
+        hd add-genesis-account $(hcli keys show sellerBeneficiary -a) 100000000herbtoken,100000000stake;
+        hd add-genesis-account $(hcli keys show buyerBeneficiary -a) 100000000herbtoken,100000000stake;
+        hd add-genesis-account $(hcli keys show dgaming -a) 100000000herbtoken,100000000stake;
+
+        hd set-threshold {{ herb_threshold_1 }} {{ herb_threshold_2 }}
+        hd set-common-key {{ dkgcli_keys.common_key }}
+
+        hcli config chain-id {{ env_name }};
+        hcli config output json;
+        hcli config indent true;
+        hcli config trust-node true;
+
+        hd gentx --name user1 --ip {{ ansible_host }} <<< '{{ testnet_client_password }}';
+        hd collect-gentxs;
+        hd validate-genesis;
+        "
+      args:
+        creates: "/opt/testnet/{{ inventory_hostname }}/.hd/config/genesis.json"
+
+    - name: Save bootstrap logs | testnet-bootstrap
+      shell: docker logs testnet_init > /opt/testnet/bootstrap.log
+      args:
+        creates: "/opt/testnet/bootstrap.log"
+
+    - name: Fetch bootstrap logs | testnet
+      fetch:
+        src: "/opt/testnet/bootstrap.log"
+        dest: "fetch/bootstrap.log"
+        flat: true
+
+    - name: Make proxy_app to 0.0.0.0 in hd config | testnet-bootstrap
+      lineinfile:
+        path: "/opt/testnet/{{ inventory_hostname }}/.hd/config/config.toml"
+        regexp: '^proxy_app ='
+        line: 'proxy_app = "tcp://0.0.0.0:26658"'
+
+    - name: Make prof_laddr to 0.0.0.0 in hd config | testnet-bootstrap
+      lineinfile:
+        path: "/opt/testnet/{{ inventory_hostname }}/.hd/config/config.toml"
+        regexp: '^prof_laddr ='
+        line: 'prof_laddr = "0.0.0.0:{{ testnet_prometheus_port }}"'
+
+    - name: Make rpc laddr to 0.0.0.0 in hd config | testnet-bootstrap
+      lineinfile:
+        path: "/opt/testnet/{{ inventory_hostname }}/.hd/config/config.toml"
+        regexp: '^laddr = "tcp://.*:26657"'
+        line: 'laddr = "tcp://0.0.0.0:26657"'
+
+    # Fetched here so we could lookup it for address
+    - name: Fetch hd genesis | testnet
+      fetch:
+        src: "/opt/testnet/{{ inventory_hostname }}/.hd/config/genesis.json"
+        dest: "fetch/genesis.json"
+        flat: true
+
+    - name: Get genesis.json as variable | testnet-bootstrap
+      include_vars:
+        name: "testnet_genesis"
+        file: "fetch/genesis.json"
+
+    - name: Set seeds in hd config | testnet-bootstrap
+      lineinfile:
+        path: "/opt/testnet/{{ inventory_hostname }}/.hd/config/config.toml"
+        regexp: '^seeds = '
+        line: 'seeds = "{{ testnet_genesis.app_state.genutil.gentxs[0].value.memo }}"'
+
+    - name: Set persistent_peers in hd config | testnet-bootstrap
+      lineinfile:
+        path: "/opt/testnet/{{ inventory_hostname }}/.hd/config/config.toml"
+        regexp: '^persistent_peers = '
+        line: 'persistent_peers = "{{ testnet_genesis.app_state.genutil.gentxs[0].value.memo }}"'
+
+    - name: Fetch hd config | testnet
+      fetch:
+        src: "/opt/testnet/{{ inventory_hostname }}/.hd/config/config.toml"
+        dest: "fetch/config.toml"
+        flat: true
+
+- name: Sync the fetched nodes files on each host | testnet
+  synchronize:
+    src: "fetch"
+    dest: /opt/testnet/
+    archive: yes
+
+- name: Make base directory for testnet dependencies | testnet
+  file:
+    path: "/opt/testnet/{{ inventory_hostname }}/.hd/config"
+    mode: 0755
+    state: directory
+    recurse: true
+
+- name: Copy .hd/config/config.toml from synced node0 data to local data | testnet
+  copy:
+    src: /opt/testnet/fetch/config.toml
+    dest: /opt/testnet/{{ inventory_hostname }}/.hd/config/config.toml
+    remote_src: yes
+
+- name: Copy .hd/config/genesis.json from synced node0 data to local data | testnet
+  copy:
+    src: /opt/testnet/fetch/genesis.json
+    dest: /opt/testnet/{{ inventory_hostname }}/.hd/config/genesis.json
+    remote_src: yes
+
+- name: Make moniker to invetory_hostname in hd config | testnet
+  lineinfile:
+    path: "/opt/testnet/{{ inventory_hostname }}/.hd/config/config.toml"
+    regexp: '^moniker ='
+    line: 'moniker = "{{ inventory_hostname }}"'
+
+- name: Run testnet containers | testnet
+  docker_container:
+    name: testnet
+    restart_policy: unless-stopped
+    image: "{{ testnet_image }}"
+    ports:
+      - "0.0.0.0:26656:26656"
+      - "0.0.0.0:26657:26657"
+      - "0.0.0.0:{{ testnet_prometheus_port }}:{{ testnet_prometheus_port }}"
+    volumes:
+      - "/opt/testnet/{{ inventory_hostname }}:/root/"

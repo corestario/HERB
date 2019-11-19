@@ -1,0 +1,81 @@
+#domain: ""
+#hostname: ""
+
+ssh_port: 22
+
+change_timezone: true
+timezone: UTC
+
+default_shell: bash
+
+shared_packages:
+  # System tools
+  - sudo
+  - openssh-server
+  - psmisc
+  - net-tools
+  - parted
+  # Archivers
+  - unzip
+  # Package managers
+  - python-pip
+  - python3-pip
+  # Network tools
+  - curl
+  - wget
+  - telnet
+  # System diag tools
+  - htop
+  - lsof
+  - iftop
+  - iotop
+  - tcpdump
+  - sysstat
+  # Terminal multiplexors
+  - screen
+  # Shells
+  - bash-completion
+  - zsh
+  # Editors
+  - mc
+  - vim
+  - nano
+  # Dev tools
+  - git
+  - libffi-dev
+  - libffi6
+
+extra_packages: []
+
+users: []
+#  - login: vozerov
+#    description: "Vasiliy Ozerov (Fevlake)"
+#    shell: bash
+#    state: present
+#    ssh_keys:
+#      - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCtCGJinXDwKlenUFSsGWisxaF0DcNiV8utVEmfka3se0CW2yNIr1vDCeJxPdAlxGG0O/28WLWuTArLiDsTJjYqN+VchXLAfQmCn+5A313RjZlJK0KSxgL8IP6Q68diUzuCKdisjhKIKISTCzfL7uTKE0JEsUsF7bfSYvOEBtYFLWD1XH4qmi6HeFpSsnr7EPVC7FZzFdOgpZ6Vm6fwS7ygdVLapm6SH1lkNm0Xnt3WjaPkZaWRcAmUxC0RWT36QNwbBKTVLaFbfuF4FBeuBm7cwt2a/nnQzpbk9lVkeZYhFxH/5Zi8Uv8LYYJwTBvYzXaceDdH2zSxYwltiCTaKiYl vozerov"
+#    dirs:
+#      - dir: ".docker"
+#        mode: "0644"
+#    configs:
+#      - src: "https://example.com"
+#        dst: "dummy"
+#        mode: "0644"
+#    groups:
+#      - wheel
+#      - docker
+#      - sudo
+#    ansible_groups:
+#      - all
+
+# May be crypted or cleartext
+root_password: ""
+
+# Extra sudo configs (put in sudo include dir)
+# XXX Test on one host with opened root, because syntax error will break sudo! (in case if this happened, you may try to login as root with su command IF you've set root password)
+extra_sudoers_configs: []
+#  - name: fevlake
+#    content: |
+#      # Managed by Ansible
+#      %fevlake   ALL=(ALL:ALL) NOPASSWD:ALL
+

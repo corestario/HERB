@@ -1,0 +1,62 @@
+[indexer]
+  state_path = "./indexer.state"
+  reset_database = false
+  marketplace_addr = "tcp://{{ hostvars[groups['testnet'][0]].ansible_host }}:26657"
+  cli_home = ".mpcli"
+  chain_id = "{{ env_name }}"
+
+[rabbitmq]
+  queue_scheme = "amqp"
+  queue_addr = "dwh-rabbitmq"
+  queue_port = 5672
+  queue_username = "dgaming"
+  queue_password = "dgaming"
+  exchange_name = "dwh_direct_exchange"
+
+[img_resizer_service]
+  img_queue_name = "dwh_img_tasks"
+  img_max_priority = 10
+  img_prefetch_count = 1
+  interpolation_method = 2
+  [[resolutions]]
+    width = 120
+    height = 90
+
+  [[resolutions]]
+    width = 200
+    height = 150
+
+[img_storage_service]
+  storage_addr = "http://dwh-imgstorage"
+  storage_port = 11535
+  storage_is_compressed = false
+  storage_path = "/root/dwh_storage"
+
+[token_metadata_service]
+  uri_queue_name = "dwh_uri_tasks"
+  uri_max_priority = 10
+  uri_prefetch_count = 1
+
+[mongo_daemon_service]
+  daemon_task_queue_name = "daemon_mongo_tasks"
+  daemon_delayed_task_queue_name = "daemon_delayed_mongo_tasks"
+  daemon_task_max_priority = 10
+  daemon_task_prefetch_count = 1
+  # 60*60*6 seconds == 6 hours
+  daemon_ttl_seconds = 21600
+  daemon_update_percent = 20
+
+[mongo_db]
+  mongo_user_name = "dgaming"
+  mongo_user_pass = "dgaming"
+  mongo_host = "dwh-mongo:27017"
+  mongo_database = "dgaming"
+  mongo_collection = "token_metadata"
+
+[postgres_db]
+  postgres_user_name = "dgaming"
+  postgres_user_pass = "dgaming"
+  postgres_host = "dwh-postgres"
+  postgres_port = 5432
+  postgres_db_name = "dgaming"
+

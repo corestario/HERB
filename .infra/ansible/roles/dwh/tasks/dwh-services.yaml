@@ -1,0 +1,123 @@
+# General
+- name: Login to registry containing DWH image | dwh-service
+  command: "docker login -u {{ docker_dwh_pull_token_login }} -p {{ docker_dwh_pull_token_password }} {{ dwh_image }}"
+
+- name: Render shared config | dwh-services
+  template:
+    src: dwh_config.toml.j2
+    dest: /opt/dwh/config.toml
+
+# imgstorage
+- name: Create imgstorage directory | dwh-services
+  file:
+    path: "/opt/dwh/imgstorage"
+    mode: 0755
+    state: directory
+    recurse: true
+
+- name: Create imgstorage container | dwh-services
+  docker_container:
+    name: "dwh-imgstorage"
+    image: "{{ dwh_image }}"
+    state: "started"
+    command: "/app/imgstorage"
+    restart_policy: "unless-stopped"
+    ports:
+      - "0.0.0.0:11535:11535"
+    networks:
+      - name: "dwh"
+    volumes:
+      - "/opt/dwh/imgstorage:/root"
+      - "/opt/dwh/config.toml:/root/config.toml"
+
+# imgworker
+- name: Create imgworker directory | dwh-services
+  file:
+    path: "/opt/dwh/imgworker"
+    mode: 0755
+    state: directory
+    recurse: true
+
+- name: Create imgworker container | dwh-services
+  docker_container:
+    name: "dwh-imgworker"
+    image: "{{ dwh_image }}"
+    state: "started"
+    command: "/app/imgworker"
+    restart_policy: "unless-stopped"
+    networks:
+      - name: "dwh"
+    volumes:
+      - "/opt/dwh/imgworker:/root"
+      - "/opt/dwh/config.toml:/root/config.toml"
+
+# indexer
+- name: Create indexer directory | dwh-services
+  file:
+    path: "/opt/dwh/indexer"
+    mode: 0755
+    state: directory
+    recurse: true
+
+- name: Render indexer config template | dwh-services
+  template:
+    src: indexer.yml.j2
+    dest: /opt/dwh/indexer/indexer.yml
+
+- name: Create indexer container | dwh-services
+  docker_container:
+    name: "dwh-indexer"
+    image: "{{ dwh_image }}"
+    state: "started"
+    command: "/app/indexer"
+    restart_policy: "unless-stopped"
+    ports:
+      - "{{ ansible_host }}:{{ dwh_prometheus_port }}:{{ dwh_prometheus_port }}"
+    networks:
+      - name: "dwh"
+    volumes:
+      - "/opt/dwh/indexer:/root"
+      - "/opt/dwh/config.toml:/root/config.toml"
+      - "/opt/dwh/indexer/indexer.yml:/root/.dwh/config/indexer.yml"
+
+# mongoDaemon
+- name: Create mongoDaemon directory | dwh-services
+  file:
+    path: "/opt/dwh/mongoDaemon"
+    mode: 0755
+    state: directory
+    recurse: true
+
+- name: Create mongoDaemon container | dwh-services
+  docker_container:
+    name: "dwh-mongoDaemon"
+    image: "{{ dwh_image }}"
+    state: "started"
+    command: "/app/mongoDaemon"
+    restart_policy: "unless-stopped"
+    networks:
+      - name: "dwh"
+    volumes:
+      - "/opt/dwh/mongoDaemon:/root"
+      - "/opt/dwh/config.toml:/root/config.toml"
+
+# tokenMetadataWorker
+- name: Create tokenMetadataWorker directory | dwh-services
+  file:
+    path: "/opt/dwh/tokenMetadataWorker"
+    mode: 0755
+    state: directory
+    recurse: true
+
+- name: Create tokenMetadataWorker container | dwh-services
+  docker_container:
+    name: "dwh-tokenMetadataWorker"
+    image: "{{ dwh_image }}"
+    state: "started"
+    command: "/app/tokenMetadataWorker"
+    restart_policy: "unless-stopped"
+    networks:
+      - name: "dwh"
+    volumes:
+      - "/opt/dwh/tokenMetadataWorker:/root"
+      - "/opt/dwh/config.toml:/root/config.toml"

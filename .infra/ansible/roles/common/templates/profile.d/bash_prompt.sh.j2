@@ -1,0 +1,14 @@
+# Managed by Ansible
+CLR='\[\033[00m\]'
+RED='\[\033[00;31m\]'
+GRN='\[\033[00;32m\]'
+YLW='\[\033[00;33m\]'
+BLU='\[\033[00;34m\]'
+CYN='\[\033[00;36m\]'
+DIM='\e[2m'
+
+if [[ `id -u` == 0 ]] ; then
+  export PS1="$DIM"''"$RED"'\u'"$GRN"'@\H '"$YLW"'\t '"$RED"'\w\$'"$CLR"' '
+else
+  export PS1="$CLR"'\u'"$GRN"'@\H '"$YLW"'\t '"$BLU"'\w\$'"$CLR"' '
+fi

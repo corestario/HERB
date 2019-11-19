@@ -1,0 +1,15 @@
+users:
+  - login: "provisioner"
+    description: "CI/CD provisioner"
+    shell: "bash"
+    state: present
+    ssh_keys:
+      - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC65eD3+TEL6yUySO+BLK/QHOIx4M0y26olGdI14NwYs/NVeU0MIzCb63oPmR9oKWUhAa5sC2PxxKcxvKaxCjfR7IEevuZIuODR8BugsknvBOldbvverx3yRjWkwaxmyEPdrb0QL09t+BS1kfwkJCpA5OVrcFQt+NqFxo6P7vH+/JPlLp3IfSnp+Jz4pk1dOGS2Qe3S/jzDT1T/BThOFFH67K2E5D9hLuD9jXF11NALYItTPqqp5q/BmIp0NsiUMHei2ZIx1pmfqy88unEjLnIB0MU9WH/IKvAsA40qmiUBOKkoIO7y3vCUM5740dZGEB6XTbLQEKHEz79Qo0UaPV3mpRf2lDOJf69ECDpmggiMXF9INIq3hQbdU7tq9z2HBnt/Mn6mZkitEmo0gs96csUDJ3S64/bwEyUe8NedMewrBmtscuv6nyMXtOg86JjxAsYRhRfjYkVNZ2H+av/k5kvV0TxhMOMxOe+WwdFdllCwCJDyzhZNosQPjq5/c3rm7a8="
+    groups:
+      - wheel
+      - sudo
+      - docker
+      - libvirtd
+    ansible_groups:
+      - all
+

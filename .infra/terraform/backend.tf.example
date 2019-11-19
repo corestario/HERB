@@ -1,0 +1,16 @@
+# Required for remote storage of terraform state
+# Based on https://www.digitalocean.com/community/questions/spaces-as-terraform-backend
+terraform {
+  backend "s3" {
+    skip_requesting_account_id = true
+    skip_credentials_validation = true
+    skip_get_ec2_platforms = true
+    skip_metadata_api_check = true
+    region = "us-east-1"
+    endpoint = "https://xxx.digitaloceanspaces.com"
+    bucket = "TOFILL"
+    access_key = "TOFILL"
+    secret_key = "TOFILL"
+  }
+}
+

@@ -1,0 +1,9 @@
+- name: Sysctl settings | common-sysctl
+  template:
+    src: sysctl.conf.j2
+    dest: /etc/sysctl.conf
+  register: sysctl_config
+
+- name: Restart sysctl if config changed | common-sysctl
+  command: sysctl -p
+  when: sysctl_config.changed

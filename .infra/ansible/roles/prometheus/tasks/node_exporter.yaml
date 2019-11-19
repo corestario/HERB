@@ -1,0 +1,27 @@
+- name: "Create text exporter directory | prometheus-node_exporter"
+  file:
+    path: "/opt/node_exporter/text_exporter"
+    mode: 0755
+    state: directory
+    recurse: true
+
+- name: "Create container with exporter | prometheus-node_exporter"
+  docker_container:
+    name: "node_exporter"
+    image: "{{ node_exporter_docker_image }}"
+    state: "started"
+    restart_policy: "unless-stopped"
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points'
+      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+      - '--web.listen-address=0.0.0.0:9100'
+      - '--collector.textfile.directory="/text_exporter/"'
+    ports:
+      - "0.0.0.0:9100:9100"
+    volumes:
+      - "/opt/node_exporter/text_exporter:/text_exporter/"
+      - "/proc:/host/proc:ro"
+      - "/sys:/host/sys:ro"
+      - "/:/rootfs:ro"

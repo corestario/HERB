@@ -1,0 +1,25 @@
+- name: Add docker official repo key | docker
+  apt_key:
+    url: https://download.docker.com/linux/debian/gpg
+
+- name: Add docker official repo | docker
+  apt_repository:
+    repo: deb [arch=amd64] https://download.docker.com/linux/{{ ansible_distribution|lower }} {{ ansible_lsb.codename }} stable
+
+- name: Setup Docker runtime environment | zookeeper-docker
+  apt:
+    name: docker-ce
+
+- name: Add module docker-compose | docker
+  pip:
+    name: docker-compose
+
+- name: Copy config file for docker | docker
+  template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+  register: docker_daemon_config
+  notify: Restart Docker
+
+- name: Flush handlers to make Docker restarted if required | docker
+  meta: flush_handlers

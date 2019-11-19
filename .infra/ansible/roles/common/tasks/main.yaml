@@ -1,0 +1,16 @@
+- name: Configure root account
+  import_tasks: root.yaml
+  tags:
+  - init
+
+- name: Install packages | common-main
+  import_tasks: packages.yaml
+
+- name: Setup config files
+  import_tasks: configs.yaml
+
+- name: Add users
+  import_tasks: users.yaml
+  tags:
+  - users
+  - init

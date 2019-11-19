@@ -1,0 +1,4 @@
+- name: Bootstrap testnet | testnet
+  import_tasks: testnet.yaml
+  tags:
+  - testnet

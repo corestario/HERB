@@ -1,0 +1,5 @@
+- name: Format issue file | common-issue
+  command: bash -c 'echo `ip a sh | grep -e "inet " | grep -v "host lo" | grep -v "docker"| head -1` \\n \\l >/etc/issue && mkdir -p /opt/ansible_creates && touch /opt/ansible_creates/role_common__issue'
+  args:
+    creates: /opt/ansible_creates/role_common__issue
+  become: true

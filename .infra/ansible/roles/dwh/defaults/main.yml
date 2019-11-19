@@ -1,0 +1,13 @@
+## should be provided by ansible-playbook
+#dwh_image: "" 
+#dwh_prometheus_port: ""
+#testnet_chain_id: ""
+#testnet_addr: ""
+#env_name: ""
+#docker_dwh_pull_token_login: ""
+#docker_dwh_pull_token_password: ""
+
+postgres_image: postgres:11-alpine
+mongo_image: mongo:3
+rabbitmq_image: rabbitmq:3.8-management
+graphql_image: hasura/graphql-engine:latest

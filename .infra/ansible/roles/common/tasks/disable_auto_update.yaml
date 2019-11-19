@@ -1,0 +1,96 @@
+- name: Disable Periodic Update-Package-Lists | common-disable_auto_update
+  lineinfile:
+    path: /etc/apt/apt.conf.d/20auto-upgrades
+    regexp: '^APT::Periodic::Update-Package-Lists "1";'
+    line: 'APT::Periodic::Update-Package-Lists "0";'
+  when: ansible_distribution == 'Ubuntu'
+  ignore_errors: yes
+
+- name: Disable Periodic Unattended-Upgrade | common-disable_auto_update
+  lineinfile:
+    path: /etc/apt/apt.conf.d/20auto-upgrades
+    regexp: '^APT::Periodic::Unattended-Upgrade "1";'
+    line: 'APT::Periodic::Unattended-Upgrade "0";'
+  when: ansible_distribution == 'Ubuntu'
+  ignore_errors: yes
+
+- name: Disable periodic enable | common-disable_auto_update
+  lineinfile:
+    path: /usr/lib/apt/apt.systemd.daily
+    regexp: '^APT::Periodic::Enable "1";'
+    line: 'APT::Periodic::Enable "0";'
+  when: ansible_distribution == 'Debian'
+  ignore_errors: yes
+
+- name: Disable Update-Package-Lists | common-disable_auto_update
+  lineinfile:
+    path: /usr/lib/apt/apt.systemd.daily
+    regexp: 'APT::Periodic::Update-Package-Lists "1";'
+    line: 'APT::Periodic::Update-Package-Lists "0";'
+  when: ansible_distribution == 'Debian'
+  ignore_errors: yes
+
+- name: Disable Update-Package-Lists | common-disable_auto_update
+  lineinfile:
+    path: /usr/lib/apt/apt.systemd.daily
+    regexp: 'APT::Periodic::Unattended-Upgrade "1";'
+    line: 'APT::Periodic::Unattended-Upgrade "0";'
+  when: ansible_distribution == 'Debian'
+  ignore_errors: yes
+
+- name: Stop the systemd apt-daily.timer | common-disable_auto_update
+  service:
+    name: apt-daily.timer
+    state: stopped
+  when: ansible_service_mgr == "systemd"
+  ignore_errors: yes
+
+- name: Disable the systemd apt-daily.timer | common-disable_auto_update
+  service:
+    name: apt-daily.timer
+    enabled: no
+  when: ansible_service_mgr == "systemd"
+  ignore_errors: yes
+
+- name: Disable the systemd apt-daily.service | common-disable_auto_update
+  service:
+    name: apt-daily.service
+    state: stopped
+  when: ansible_service_mgr == "systemd"
+  ignore_errors: yes
+
+- name: Disable the systemd apt-daily.service | common-disable_auto_update
+  service:
+    name: apt-daily.service
+    enabled: no
+  when: ansible_service_mgr == "systemd"
+  ignore_errors: yes
+
+- name: Disable the systemd apt-daily-upgrade.service | common-disable_auto_update
+  service:
+    name: apt-daily.service
+    state: stopped
+  when: ansible_service_mgr == "systemd"
+  ignore_errors: yes
+
+- name: Disable the systemd apt-daily-upgrade.service | common-disable_auto_update
+  service:
+    name: apt-daily.service
+    enabled: no
+  when: ansible_service_mgr == "systemd"
+  ignore_errors: yes
+
+- name: Disable the systemd apt-daily-upgrade.timer | common-disable_auto_update
+  service:
+    name: apt-daily-upgrade.timer
+    state: stopped
+  when: ansible_service_mgr == "systemd"
+  ignore_errors: yes
+
+- name: Disable the systemd apt-daily-upgrade.timer | common-disable_auto_update
+  service:
+    name: apt-daily-upgrade.timer
+    enabled: no
+  when: ansible_service_mgr == "systemd"
+  ignore_errors: yes
+

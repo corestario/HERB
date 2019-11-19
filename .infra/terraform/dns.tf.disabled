@@ -1,0 +1,61 @@
+# testnet
+resource "digitalocean_record" "testnet-public" {
+  count = length(digitalocean_droplet.testnet)
+  domain = var.domain
+  type = "A"
+  name= "node${count.index}.${var.env_name}"
+  value = "${digitalocean_droplet.testnet[count.index].ipv4_address}"
+}
+
+resource "digitalocean_record" "testnet-prometheus-discovery" {
+  count = length(digitalocean_droplet.testnet)
+  domain = var.domain
+  type = "SRV"
+  name = "_testnet._tcp"
+  value = "node${count.index}.${var.env_name}"
+  port = var.testnet_prometheus_port
+  priority = 10
+  weight = 10
+}
+
+resource "digitalocean_record" "testnet-node-exporter-discovery" {
+  count = length(digitalocean_droplet.testnet)
+  domain = var.domain
+  type = "SRV"
+  name = "_node_exporter._tcp"
+  value = "node${count.index}.${var.env_name}"
+  port = 9100
+  priority = 10
+  weight = 10
+}
+
+# dwh
+resource "digitalocean_record" "dwh-public" {
+  count = length(digitalocean_droplet.dwh)
+  domain = var.domain
+  type = "A"
+  name= "node${count.index}.${var.env_name}"
+  value = "${digitalocean_droplet.dwh[count.index].ipv4_address}"
+}
+
+resource "digitalocean_record" "dwh-prometheus-discovery" {
+  count = length(digitalocean_droplet.dwh)
+  domain = var.domain
+  type = "SRV"
+  name = "_dwh._tcp"
+  value = "node${count.index}.${var.env_name}"
+  port = var.dwh_prometheus_port
+  priority = 10
+  weight = 10
+}
+
+resource "digitalocean_record" "dwh-node-exporter-discovery" {
+  count = length(digitalocean_droplet.dwh)
+  domain = var.domain
+  type = "SRV"
+  name = "_node_exporter._tcp"
+  value = "dwh.${var.env_name}"
+  port = 9100
+  priority = 10
+  weight = 10
+}

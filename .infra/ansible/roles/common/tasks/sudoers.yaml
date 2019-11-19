@@ -1,0 +1,25 @@
+- name: Create sudo group if does not exist | common-sudoers
+  group:
+    name: sudo
+    system: yes
+
+- name: Copy sudoers to make sudo passwordless | common-sudoers
+  copy:
+    src: sudoers
+    dest: "{{ '/usr/local/etc/sudoers' if ansible_distribution == 'FreeBSD' else '/etc/sudoers' }}"
+    mode: 0440
+  become: true
+
+- name: Create /etc/sudoers.d dir for subconfigs | common-sudoers
+  file:
+    path: /etc/sudoers.d
+    state: directory
+    mode: 0750
+
+- name: Put extra sudoers files in /etc/sudoers.d | common-sudoers
+  copy:
+    content: "{{ item.content }}"
+    dest: "/etc/sudoers.d/{{ item.name }}"
+    mode: 0440
+  with_items:
+    - "{{ extra_sudoers_configs }}"

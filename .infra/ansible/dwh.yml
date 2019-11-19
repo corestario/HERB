@@ -1,0 +1,5 @@
+- hosts: dwh
+  become: true
+  gather_facts: true
+  roles:
+    - dwh

@@ -1,0 +1,26 @@
+- name: Make base directory for DWH dependencies | dwh
+  file:
+    path: "/opt/dwh"
+    mode: 0755
+    state: directory
+    recurse: true
+  tags:
+  - dwh
+
+- name: Create service network | dwh-infrastructure
+  docker_network:
+    name: dwh
+  tags:
+  - dwh
+
+- name: Setup infrastructure dependencies | dwh
+  import_tasks: infrastructure.yaml
+  tags:
+  - infrastructure
+  - dwh
+
+- name: Setup DWH services | dwh
+  import_tasks: dwh-services.yaml
+  tags:
+  - services
+  - dwh
