@@ -1,4 +1,4 @@
-FROM golang:1.12-alpine3.10
+FROM alpine:3.10
 
 RUN apk add bash # required for automated chain generation
 

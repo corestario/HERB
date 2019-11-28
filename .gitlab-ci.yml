@@ -18,7 +18,7 @@
 #   - HERB_THRESHOLD_1 - HERB Threshold 1 used in `hd set-threshold` command
 #   - HERB_THRESHOLD_2 - HERB Threshold 2 used in `hd set-threshold` command
 
-image: golang:1.12-alpine3.10
+image: golang:1.13-alpine3.10
 
 services:
 - docker:dind
