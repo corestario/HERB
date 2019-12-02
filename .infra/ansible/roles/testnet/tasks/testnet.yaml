@@ -61,16 +61,10 @@
         for i in $(seq 1 {{ testnet_clients_amount }}); do
           hcli keys add user$i <<< '{{ testnet_client_password }}';
         done;
-        hcli keys add sellerBeneficiary <<< '{{ testnet_client_password }}';
-        hcli keys add buyerBeneficiary <<< '{{ testnet_client_password }}';
-        hcli keys add dgaming <<< '{{ testnet_client_password }}';
 
         for i in $(seq 1 {{ testnet_clients_amount }}); do
           hd add-genesis-account $(hcli keys show user$i -a) 100000000herbtoken,100000000stake;
         done;
-        hd add-genesis-account $(hcli keys show sellerBeneficiary -a) 100000000herbtoken,100000000stake;
-        hd add-genesis-account $(hcli keys show buyerBeneficiary -a) 100000000herbtoken,100000000stake;
-        hd add-genesis-account $(hcli keys show dgaming -a) 100000000herbtoken,100000000stake;
 
         hd set-threshold {{ herb_threshold_1 }} {{ herb_threshold_2 }}
         hd set-common-key {{ dkgcli_keys.common_key }}

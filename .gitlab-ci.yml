@@ -3,8 +3,6 @@
 #   * TERRAFORM_DO_TOKEN - DigitalOcean token used by Terraform
 #   * TERRAFORM_BACKEND_B64 - secret configuration with backend configuration for remote storage. Example may be found in `.infra/terraform/backend.tf.example`. Encoded with base64
 #   * DOCKER_AUTH_CONFIG - docker config used for pushing to repos
-#   * DOCKER_DWH_PULL_TOKEN_LOGIN - docker login used for pulling DWH image
-#   * DOCKER_DWH_PULL_TOKEN_PASSWORD - docker password used for pulling DWH image
 #   * DOCKER_TESTNET_PULL_TOKEN_LOGIN - docker login used for pulling testnet image
 #   * DOCKER_TESTNET_PULL_TOKEN_PASSWORD - docker password used for pulling testnet image
 #
@@ -12,7 +10,6 @@
 # - step: Start testnet
 #   variables:
 #   - TESTNET_NODES_B64 - base64 encoded `.infra/terraform/config_nodes.auto.tfvars` substitude. May be empty
-#   - DWH_IMAGE - docker image for dwh
 #   - TESTNET_CLIENTS_AMOUNT - amount of clients to generate
 #   - TESTNET_CLIENT_PASSWORD - password for generated clients
 #   - HERB_THRESHOLD_1 - HERB Threshold 1 used in `hd set-threshold` command
@@ -189,7 +186,6 @@ Publish docker image:
     - ansible-playbook -i hosts.yml docker.yml
     - ansible-playbook -i hosts.yml prometheus.yml
     - ansible-playbook -i hosts.yml testnet.yml -e testnet_image=$DOCKERHUB_URL/$IMAGE_NAME:$CI_PIPELINE_ID -e docker_testnet_pull_token_login=$DOCKER_TESTNET_PULL_TOKEN_LOGIN -e docker_testnet_pull_token_password=$DOCKER_TESTNET_PULL_TOKEN_PASSWORD
-    - ansible-playbook -i hosts.yml dwh.yml -e dwh_image=$DWH_IMAGE -e testnet_chain_id=$CI_ENVIRONMENT_SLUG -e docker_dwh_pull_token_login=$DOCKER_DWH_PULL_TOKEN_LOGIN -e docker_dwh_pull_token_password=$DOCKER_DWH_PULL_TOKEN_PASSWORD
 
 (short) Provision testnet:
   <<: *provisioning_template

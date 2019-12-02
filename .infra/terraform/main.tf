@@ -16,10 +16,6 @@ variable "testnet_prometheus_port" {
   type = string
   description = "Prometheus port of testnet"
 }
-variable "dwh_prometheus_port" {
-  type = string
-  description = "Prometheus port of DWH"
-}
 variable "testnet_clients_amount" {
   type = number
   description = "Testnet clients amount to be generated"
@@ -48,10 +44,6 @@ variable "ansible_workdir" {
 variable "do_token" {
   type = string
   description = "DigitalOcean API key used by Terraform (!!! Secret data, should not be placed in repository)"
-}
-variable "dwh_region" {
-  type = string
-  description = "DigitalOcean region that should be used for DWH VM deployment (i.e. fra1)"
 }
 variable "do_image" {
   type = string

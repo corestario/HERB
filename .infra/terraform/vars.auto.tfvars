@@ -12,7 +12,6 @@ testnet_clients_amount = 1 # should be redefined by CI/CD
 
 testnet_prometheus_port = 6060
 testnet_client_password = "alicealice"
-dwh_prometheus_port = 9081
 
 herb_threshold_1 = 0 # should be redefined by CI/CD
 herb_threshold_2 = 0 # should be redefined by CI/CD
@@ -23,9 +22,6 @@ ansible_workdir = "../ansible"
 
 #-----
 # DigitalOcean
-## Region
-dwh_region = "fra1"
-
 ## Tested only on Ubuntu
 do_image = "ubuntu-18-04-x64"
 
