@@ -1,0 +1,25 @@
+- name: "Set task facts | common-users | {{ user.login }} | {{ dest }}"
+  set_fact:
+    is_url: "{{ true if config.src | urlsplit('hostname') | mandatory else false }}"
+    dest: "/home/{{ user.login }}/{{ config.dst }}"
+  changed_when: false
+
+- name: "Transfer configs | common-users | {{ user.login }} | copy {{ dest }}"
+  copy:
+    src: "{{ config.src }}"
+    dest: "{{ dest }}"
+    owner: "{{ user.login }}"
+    group: "{{ user.login }}"
+    mode: "{{ config.mode | default(0644) }}"
+  ignore_errors: true
+  when: not is_url
+
+- name: "Transfer configs | common-users | {{ user.login }} | download {{ dest }}"
+  get_url:
+    url: "{{ config.src }}"
+    dest: "{{ dest }}"
+    owner: "{{ user.login }}"
+    group: "{{ user.login }}"
+    mode: "{{ config.mode | default(0644) }}"
+  ignore_errors: true
+  when: is_url

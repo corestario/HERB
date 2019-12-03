@@ -1,0 +1,28 @@
+# Bash
+- name: /etc/skel/.bashrc file | common-skel
+  copy:
+    src: skel/bashrc
+    dest: /etc/skel/.bashrc
+    mode: 0644
+  become: true
+
+- name: /etc/profile.d/bash_prompt.sh file | common-skel
+  template:
+    src: profile.d/bash_prompt.sh.j2
+    dest: /etc/profile.d/bash_prompt.sh
+    mode: 0644
+  become: true
+
+- name: /etc/profile.d/bash_prompt.sh file for root | common-skel
+  copy:
+    src: skel/bashrc
+    dest: /root/.bashrc
+    mode: 0644
+  become: true
+
+- name: /etc/bash.bashrc file | common-skel
+  copy:
+    src: bash.bashrc
+    dest: /etc/bash.bashrc
+    mode: 0644
+  become: true

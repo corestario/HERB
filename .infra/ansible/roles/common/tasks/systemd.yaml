@@ -1,0 +1,27 @@
+- name: /etc/systemd/system.conf file | common-systemd
+  copy:
+    src: systemd/system.conf
+    dest: /etc/systemd/system.conf
+    mode: 0644
+  become: true
+  register: systemd_config
+
+- name: /etc/systemd/journald.conf | common-systemd
+  copy:
+    src: systemd/journald.conf
+    dest: /etc/systemd/journald.conf
+    mode: 0644
+  become: true
+  register: journald_config
+
+- name: Reload systemd services | common-systemd
+  command: systemctl daemon-reload
+  become: true
+  when: systemd_config.changed
+
+- name: Restart systemd services | common-systemd
+  service:
+    name: systemd-journald
+    state: restarted
+  become: true
+  when: systemd_config.changed

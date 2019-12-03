@@ -1,0 +1,9 @@
+- name: Configure hostname | common-hostname
+  hostname:
+    name: "{{ hostname | default(inventory_hostname) }}"
+
+- name: Add /etc/hosts record | common-hostname
+  lineinfile:
+    dest: /etc/hosts
+    regexp: ".*{{ hostname | default(inventory_hostname) }}$"
+    line: "{{ ansible_host }} {{ hostname | default(inventory_hostname) }}.{{ domain }} {{ hostname | default(inventory_hostname) }}"

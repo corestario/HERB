@@ -1,0 +1,21 @@
+- import_tasks: hostname.yaml
+- import_tasks: sshd.yaml
+  tags:
+    - sshd
+- import_tasks: login_defs.yaml
+- import_tasks: issue.yaml
+- import_tasks: skel.yaml
+- import_tasks: limits.yaml
+- import_tasks: motd.yaml
+- import_tasks: systemd.yaml
+  when: ansible_service_mgr == "systemd"
+- import_tasks: locale.yaml
+- import_tasks: disable_auto_update.yaml
+- import_tasks: sysctl.yaml
+- import_tasks: sudoers.yaml
+  tags:
+  - sudoers
+  - init
+
+- import_tasks: timezone.yaml
+  when: change_timezone == True

@@ -1,0 +1,20 @@
+# Assuming 3 cases - len 0 (no passwd), $6$ in link (crypted), not any of those - cleartext
+- name: Set root password | common-root
+  block:
+    - name: If no password supplied | common-root-no_pass
+      user:
+        name: root
+        password: '*'
+      when: "root_password|length == 0"
+
+    - name: If password is crypted | common-root-crypted
+      user:
+        name: root
+        password: "{{ root_password }}"
+      when: "'$6$' in root_password"
+
+    - name: If password is cleartext | common-root-cleartext
+      user:
+        name: root
+        password: "{{ root_password | password_hash('sha512', 'fevlake') }}"
+      when: "('$6$' not in root_password) and (root_password|length != 0)"

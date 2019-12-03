@@ -1,0 +1,6 @@
+- name: Setup node exporter
+  import_tasks: node_exporter.yaml
+  tags:
+  - node_exporter
+  - prometheus
+  - exporter

@@ -1,0 +1,6 @@
+- name: Setting motd update network script | common-motd
+  copy:
+    src: motd-network.sh
+    dest: /etc/update-motd.d/92-network
+    mode: 0755
+  become: true

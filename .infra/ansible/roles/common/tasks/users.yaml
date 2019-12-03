@@ -1,0 +1,32 @@
+# Presetup facts
+- name: "Get default shell status on remote host | common-users"
+  stat:
+    path: "{{ item }}"
+  loop:
+    - "/bin/{{ default_shell }}"
+    - "/usr/bin/{{ default_shell }}"
+    - "/usr/local/bin/{{ default_shell }}"
+  register: default_shell_stat
+
+- name: "Select existing default shell | common-users"
+  set_fact:
+    default_shell_path: "{{ item.item }}"
+  loop: "{{ default_shell_stat.results }}"
+  when: item.stat.exists
+
+# Get list of existing groups
+- name: Get OS group list | common-users
+  shell: "cat /etc/group | awk -F':' '{print $1}'"
+  register: ugroup_raw
+  changed_when: false
+
+- name: Define system groups array | common-users
+  set_fact:
+    ugroups: "{{ ugroup_raw.stdout_lines }}"
+
+- name: Create users in loop | common-users
+  include_tasks: user_subtask.yaml
+  loop: "{{ users }}"
+  loop_control:
+    loop_var: user
+

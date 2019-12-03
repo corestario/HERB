@@ -1,0 +1,266 @@
+# Required secret repo vars:
+#   * DOCKER_GIT_CREDENTIALS - file with list of credentials - one per line. Used to clone private repos
+#   * TERRAFORM_DO_TOKEN - DigitalOcean token used by Terraform
+#   * TERRAFORM_BACKEND_B64 - secret configuration with backend configuration for remote storage. Example may be found in `.infra/terraform/backend.tf.example`. Encoded with base64
+#   * DOCKER_AUTH_CONFIG - docker config used for pushing to repos
+#   * DOCKER_TESTNET_PULL_TOKEN_LOGIN - docker login used for pulling testnet image
+#   * DOCKER_TESTNET_PULL_TOKEN_PASSWORD - docker password used for pulling testnet image
+#
+# Required variables during execution:
+# - step: Start testnet
+#   variables:
+#   - TESTNET_NODES_B64 - base64 encoded `.infra/terraform/config_nodes.auto.tfvars` substitude. May be empty
+#   - TESTNET_CLIENTS_AMOUNT - amount of clients to generate
+#   - TESTNET_CLIENT_PASSWORD - password for generated clients
+#   - HERB_THRESHOLD_1 - HERB Threshold 1 used in `hd set-threshold` command
+#   - HERB_THRESHOLD_2 - HERB Threshold 2 used in `hd set-threshold` command
+
+image: golang:1.13-alpine3.10
+
+services:
+- docker:dind
+
+stages:
+- lint
+- verify
+- unit_tests
+- build
+- publish
+- start_testing
+- provision_testing
+- run_tests
+- stop_testing
+
+variables:
+  DOCKERHUB_URL: gitlab.fevlake.com:4567
+  IMAGE_NAME: dgaming/herb
+
+before_script:
+# Docker creds
+- mkdir -p $HOME/.docker
+- echo "${DOCKER_AUTH_CONFIG}" > $HOME/.docker/config.json
+- chmod 600 $HOME/.docker/config.json
+# GitHub private repos access (http://smartystreets.com/blog/2018/09/private-dependencies-in-docker-and-go - option 4)
+- apk add git
+- git config --global credential.helper store
+- echo "${DOCKER_GIT_CREDENTIALS}" > $HOME/.git-credentials
+
+# lint
+Lint code:
+  stage: lint
+  image: golangci/golangci-lint:v1.21.0-alpine
+  allow_failure: true
+  script:
+    - golangci-lint run
+    - find . -name '*.go' -type f -not -path "./vendor*" -not -path "*.git*" | xargs gofmt -d -s
+
+# verify
+Ensure dependencies have not been modified:
+  stage: verify
+  allow_failure: false
+  script:
+    - GO111MODULE=on go mod verify
+    - GO111MODULE=on go mod vendor
+    - GO111MODULE=off
+    - chmod 0777 ./go.sum
+    - chmod -R 0777 ./vendor
+  artifacts:
+    when: on_success
+    expire_in: 1 day
+    paths:
+      - go.sum
+      - vendor
+
+# tests
+Run unit tests:
+  stage: unit_tests
+  allow_failure: true
+  dependencies:
+    - Ensure dependencies have not been modified
+  script:
+    - apk add bash ca-certificates libc-dev
+    - export GO111MODULE=on
+    - export PATH=/go/bin:$PATH
+    - export GOPATH=/go
+    - CGO_ENABLED=0 go test -mod vendor ${BUILD_FLAGS} ./cmd/dkgcli
+    - CGO_ENABLED=0 go test -mod vendor ${BUILD_FLAGS} ./cmd/hcli
+    - CGO_ENABLED=0 go test -mod vendor ${BUILD_FLAGS} ./cmd/hd
+
+# build
+Build binary:
+  stage: build
+  allow_failure: false
+  dependencies:
+    - Ensure dependencies have not been modified
+  script:
+    # basically taken from dockerfile, but Dockerfile does not support mounting of private data
+    - apk add bash ca-certificates libc-dev
+    - export GO111MODULE=on
+    - export PATH=/go/bin:$PATH
+    - export GOPATH=/go
+    - go build -mod vendor ${BUILD_FLAGS} -o dist/dkgcli ./cmd/dkgcli
+    - go build -mod vendor ${BUILD_FLAGS} -o dist/hcli ./cmd/hcli
+    - go build -mod vendor ${BUILD_FLAGS} -o dist/hd ./cmd/hd
+  artifacts:
+    when: on_success
+    expire_in: 1 day
+    paths:
+      - dist
+
+# publish
+Publish docker image:
+  stage: publish
+  image: docker:latest
+  allow_failure: false
+  dependencies:
+    - Build binary
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY || true
+    - docker build -t ${DOCKERHUB_URL}/${IMAGE_NAME}:latest -t ${DOCKERHUB_URL}/${IMAGE_NAME}:${CI_PIPELINE_ID} -f .infra/Dockerfile .
+    - docker push ${DOCKERHUB_URL}/${IMAGE_NAME}:latest
+    - docker push ${DOCKERHUB_URL}/${IMAGE_NAME}:${CI_PIPELINE_ID}
+
+# start_testing
+.terraform_create: &terraform_create_template
+  stage: start_testing
+  image: 
+    name: hashicorp/terraform:0.12.13
+    entrypoint: [""]
+  allow_failure: false
+  when: manual
+  variables:
+    TESTNET_NODES_B64: ""
+    TESTNET_CLIENTS_AMOUNT: "3"
+    TESTNET_CLIENT_PASSWORD: alicealice
+    #HERB_THRESHOLD_1: "2"
+    #HERB_THRESHOLD_2: "2"
+  script:
+    - cd .infra/terraform
+    - echo ${TERRAFORM_BACKEND_B64} | base64 -d > backend.tf
+    - (if [ ! -z "$TESTNET_NODES_B64" ]; then
+        echo ${TESTNET_NODES_B64} | base64 -d > config_nodes.auto.tfvars;
+      fi)
+    # https://github.com/hashicorp/terraform/pull/20428
+    - terraform init -backend-config="key=$CI_ENVIRONMENT_SLUG/terraform.tfstate"
+    # Preparing ssh credentials
+    ## Check if private ssh keys in outputs
+    - (if terraform output provisioner_ssh_key_private_b64 > /dev/null; then
+        terraform output provisioner_ssh_key_private_b64 | base64 -d > ../id_rsa && chmod 600 ../id_rsa;
+      else
+        ssh-keygen -b 4096 -t rsa -f -q -N "" -f ../id_rsa;
+      fi)
+    # Pass ssh keys as variables
+    - terraform apply -auto-approve -input=false -var provisioner_ssh_key_public="$(ssh-keygen -f ../id_rsa -y)" -var provisioner_ssh_key_private_b64="$(base64 ../id_rsa | tr -d '\n')" -var do_token=$TERRAFORM_DO_TOKEN -var env_name=$CI_ENVIRONMENT_SLUG -var testnet_clients_amount=$TESTNET_CLIENTS_AMOUNT -var testnet_client_password=$TESTNET_CLIENT_PASSWORD -var herb_threshold_1=$HERB_THRESHOLD_1 -var herb_threshold_2=$HERB_THRESHOLD_2
+  artifacts:
+    when: on_success
+    expire_in: 30 day
+    paths:
+      - .infra/ansible/hosts.yml
+      - .infra/id_rsa
+
+(short) Start testnet:
+  <<: *terraform_create_template
+  environment:
+    name: short/$CI_COMMIT_REF_SLUG
+    on_stop: (short) Destroy testnet
+
+(long) Start testnet:
+  <<: *terraform_create_template
+  environment:
+    name: long/$CI_COMMIT_REF_SLUG
+    on_stop: (long) Destroy testnet
+
+# provision_testing
+.provisioning: &provisioning_template
+  stage: provision_testing
+  image: cytopia/ansible:2.8-tools
+  allow_failure: false
+  variables:
+    ANSIBLE_HOST_KEY_CHECKING: "False"
+  script:
+    - apk add rsync
+    - mkdir ~/.ssh && chmod 700 ~/.ssh
+    - cp .infra/id_rsa ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+    - cd .infra/ansible
+    - ansible-playbook -i hosts.yml common.yml
+    - ansible-playbook -i hosts.yml docker.yml
+    - ansible-playbook -i hosts.yml prometheus.yml
+    - ansible-playbook -i hosts.yml testnet.yml -e testnet_image=$DOCKERHUB_URL/$IMAGE_NAME:$CI_PIPELINE_ID -e docker_testnet_pull_token_login=$DOCKER_TESTNET_PULL_TOKEN_LOGIN -e docker_testnet_pull_token_password=$DOCKER_TESTNET_PULL_TOKEN_PASSWORD
+
+(short) Provision testnet:
+  <<: *provisioning_template
+  needs:
+    - (short) Start testnet
+  dependencies:
+    - (short) Start testnet
+  environment:
+    name: short/$CI_COMMIT_REF_SLUG
+    on_stop: (short) Destroy testnet
+  artifacts:
+    when: on_success
+    expire_in: 30 day
+    paths:
+      - .infra/ansible/fetch
+
+(long) Provision testnet:
+  <<: *provisioning_template
+  needs:
+    - (long) Start testnet
+  dependencies:
+    - (long) Start testnet
+  environment:
+    name: long/$CI_COMMIT_REF_SLUG
+    on_stop: (long) Destroy testnet
+  artifacts:
+    when: on_success
+    expire_in: 30 day
+    paths:
+      - .infra/ansible/fetch
+
+# run_tests
+(short) Run tests:
+  stage: run_tests
+  image: cytopia/ansible:2.8-tools
+  allow_failure: true
+  needs:
+    - (short) Start testnet
+    - (short) Provision testnet
+  dependencies:
+    - (short) Start testnet
+  script:
+    - echo Add tests directives here
+  environment:
+    name: short/$CI_COMMIT_REF_SLUG
+    on_stop: (short) Destroy testnet
+
+# stop_testing
+.terraform_destroy: &terraform_destroy_template
+  stage: stop_testing
+  image:
+    name: hashicorp/terraform:0.12.13
+    entrypoint: [""]
+  allow_failure: false
+  when: manual
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - cd .infra/terraform
+    - echo ${TERRAFORM_BACKEND_B64} | base64 -d > backend.tf
+    - terraform init -backend-config="key=$CI_ENVIRONMENT_SLUG/terraform.tfstate"
+    - terraform destroy -var do_token=$TERRAFORM_DO_TOKEN -auto-approve
+
+(short) Destroy testnet:
+  <<: *terraform_destroy_template
+  needs:
+    - (short) Start testnet
+  environment:
+    name: short/$CI_COMMIT_REF_SLUG
+    action: stop
+
+(long) Destroy testnet:
+  <<: *terraform_destroy_template
+  needs:
+    - (long) Start testnet
+  environment:
+    name: long/$CI_COMMIT_REF_SLUG
+    action: stop

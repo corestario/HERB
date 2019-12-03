@@ -1,0 +1,74 @@
+# Presetup facts
+- name: "Choose shell for user | common-users | {{ user.login }}"
+  set_fact:
+    shell_name: "{{ (user.shell is defined and user.shell|length > 0) | ternary (user.shell, default_shell) }}"
+    user_state: "{{ user.state | default('present') }}"
+    shell: false
+  changed_when: false
+
+- name: "Get shell status on remote host | common-users | {{ user.login }}"
+  stat:
+    path: "{{ item }}"
+  loop:
+    - "/bin/{{ shell_name }}"
+    - "/usr/bin/{{ shell_name }}"
+    - "/usr/local/bin/{{ shell_name }}"
+  register: shell_stat
+
+- name: "Select existing shell | common-users | {{ user.login }}"
+  set_fact:
+    shell_path: "{{ item.item }}"
+  loop: "{{ shell_stat.results }}"
+  when: item.stat.exists
+
+# Create user
+- block:
+  - name: "Create user | common-users | {{ user.login }}"
+    user:
+      name: "{{ user.login }}"
+      comment: "{{ user.description | default('') }}"
+      shell: "{{ shell_path | default(default_shell_path) }}"
+      state: "{{ user_state }}"
+
+  - name: "Create personal dirs | common-users | {{ user.login }}"
+    file:
+      path: "/home/{{ user.login }}/{{ item.dir }}"
+      state: directory
+      owner: "{{ user.login }}"
+      group: "{{ user.login }}"
+      mode: "{{ item.mode | default(0644)}}"
+    loop: "{{ user.dirs }}"
+    when: user.dirs is defined and user.dirs|length > 0
+
+  - name: "Add user to groups | common-users | {{ user.login }}"
+    user:
+      name: "{{ user.login }}"
+      append: yes
+      groups: "{{ item }}"
+    loop: "{{ user.groups }}"
+    when: item in ugroups
+
+  - name: "Configure public keys | common-users | {{ user.login }}"
+    authorized_key:
+      user: "{{ user.login }}"
+      key: "{{ lookup('url', item) if item | urlsplit('hostname') | mandatory else item }}"
+    loop: "{{ user.ssh_keys }}"
+    when: user.ssh_keys is defined
+
+  - name: "Transfer configs | common-users | {{ user.login }}"
+    include_tasks: user_config.yaml
+    loop: "{{ user.configs }}"
+    loop_control:
+      loop_var: config
+    when: config is defined
+  when: "(user_state == 'present') and ((group_names | intersect(user.ansible_groups) | length > 0) or ('all' in user.ansible_groups))"
+
+# Delete user
+- block:
+  - name: "Remove homedir | common-users | {{ user.login }}"
+    file:
+      path: "/home/{{ user.login }}"
+      state: absent
+
+    # TODO delete user key in other users homedir
+  when: user_state == 'absent'

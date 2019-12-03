@@ -1,0 +1,6 @@
+- name: /etc/security/limits.conf file | common-limits
+  copy:
+    src: security/limits.conf
+    dest: /etc/security/limits.conf
+    mode: 0644
+  become: true

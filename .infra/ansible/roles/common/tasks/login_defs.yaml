@@ -1,0 +1,6 @@
+- name: Forming /etc/login.defs file | common-login_defs
+  copy:
+    src: login.defs
+    dest: /etc/login.defs
+    mode: 0644
+  become: true
